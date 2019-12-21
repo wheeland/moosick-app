@@ -251,6 +251,8 @@ bool Library::commit(const LibraryChange &change)
 #undef requireThat
 #undef fetchItem
 
+    m_revision += 1;
+
     return true;
 }
 
