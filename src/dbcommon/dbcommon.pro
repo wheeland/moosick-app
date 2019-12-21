@@ -9,6 +9,7 @@ SOURCES += \
 
 HEADERS += \
     include/type_ids.hpp \
+    include/itemcollection.hpp \
     include/library.hpp \
 
 INCLUDEPATH += \

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "type_ids.hpp"
+#include "itemcollection.hpp"
 #include <QHash>
 
 namespace Moosick {
@@ -40,42 +41,6 @@ struct LibraryChange
     QString name;
 };
 
-template <class T, class IntType = quint32>
-class Collection
-{
-public:
-    Collection() {}
-    ~Collection() {}
-
-    void add(IntType id, const T &value)
-    {
-        m_data.insert(id, value);
-        m_nextId = qMax(m_nextId, id + 1);
-    }
-
-    void remove(IntType id)
-    {
-        m_data.remove(id);
-    }
-
-    T *find(IntType id)
-    {
-        const auto it = m_data.find(id);
-        return (it != m_data.end()) ? (&it.value()) : nullptr;
-    }
-
-    QPair<IntType, T*> create()
-    {
-        const auto it = m_data.insert(m_nextId, T());
-        m_nextId += 1;
-        return qMakePair(m_nextId - 1, &it.value());
-    }
-
-private:
-    QHash<IntType, T> m_data;
-    IntType m_nextId = 1;
-};
-
 class Library
 {
 public:
@@ -91,10 +56,10 @@ private:
     struct Tag;
 
     quint32 m_revision = 0;
-    Collection<Song> m_songs;
-    Collection<Album> m_albums;
-    Collection<Artist> m_artists;
-    Collection<Tag> m_tags;
+    ItemCollection<Song> m_songs;
+    ItemCollection<Album> m_albums;
+    ItemCollection<Artist> m_artists;
+    ItemCollection<Tag> m_tags;
 };
 
 } // namespace Moosick
