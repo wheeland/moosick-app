@@ -13,7 +13,7 @@ public:
 
     void add(IntType id, const T &value)
     {
-        insert(id, value);
+        this->insert(id, value);
         m_nextId = qMax(m_nextId, id + 1);
     }
 
