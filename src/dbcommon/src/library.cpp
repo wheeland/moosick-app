@@ -7,6 +7,7 @@ struct Library::Song
 {
     QString name;
     AlbumId album;
+    quint32 fileEnding;
     TagIdList tags;
 };
 
@@ -247,7 +248,107 @@ bool Library::commit(const LibraryChange &change)
     }
     }
 
+#undef requireThat
+#undef fetchItem
+
     return true;
 }
+
+#define FETCH(name, Collection, id) \
+    auto name = library.Collection.find(id); \
+    if (!name) return {};
+
+AlbumId SongId::album(const Library &library) const
+{
+    FETCH(song, m_songs, m_value);
+    return song->album;
+}
+
+ArtistId SongId::artist(const Library &library) const
+{
+    FETCH(song, m_songs, m_value);
+    FETCH(album, m_albums, song->album);
+    return album->artist;
+}
+
+TagIdList SongId::tags(const Library &library) const
+{
+    FETCH(song, m_songs, m_value);
+    return song->tags;
+}
+
+QString SongId::name(const Library &library) const
+{
+    FETCH(song, m_songs, m_value);
+    return song->name;
+}
+
+QString SongId::filePath(const Library &library) const
+{
+    FETCH(song, m_songs, m_value);
+    FETCH(ending, m_fileEndings, song->fileEnding);
+    return song->name + ending;
+}
+
+ArtistId AlbumId::artist(const Library &library) const
+{
+    FETCH(album, m_albums, m_value);
+    return album->artist;
+}
+
+SongIdList AlbumId::songs(const Library &library) const
+{
+    FETCH(album, m_albums, m_value);
+    return album->songs;
+}
+
+TagIdList AlbumId::tags(const Library &library) const
+{
+    FETCH(album, m_albums, m_value);
+    return album->tags;
+}
+
+QString AlbumId::name(const Library &library) const
+{
+    FETCH(album, m_albums, m_value);
+    return album->name;
+}
+
+AlbumIdList ArtistId::albums(const Library &library) const
+{
+    FETCH(artist, m_artists, m_value);
+    return artist->albums;
+}
+
+TagIdList ArtistId::tags(const Library &library) const
+{
+    FETCH(artist, m_artists, m_value);
+    return artist->tags;
+}
+
+QString ArtistId::name(const Library &library) const
+{
+    FETCH(artist, m_artists, m_value);
+    return artist->name;
+}
+
+TagId TagId::parent(const Library &library) const
+{
+    FETCH(tag, m_tags, m_value);
+    return tag->parent;
+}
+
+TagIdList TagId::children(const Library &library) const
+{
+    FETCH(tag, m_tags, m_value);
+    return tag->children;
+}
+
+QString TagId::name(const Library &library) const
+{
+    FETCH(tag, m_tags, m_value);
+    return tag->name;
+}
+
 
 } // namespace Moosick

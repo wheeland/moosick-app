@@ -60,6 +60,12 @@ private:
     ItemCollection<Album> m_albums;
     ItemCollection<Artist> m_artists;
     ItemCollection<Tag> m_tags;
+    ItemCollection<QString> m_fileEndings;
+
+    friend SongId;
+    friend AlbumId;
+    friend ArtistId;
+    friend TagId;
 };
 
 } // namespace Moosick

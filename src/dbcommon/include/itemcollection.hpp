@@ -28,6 +28,12 @@ public:
         return (it != m_data.end()) ? (&it.value()) : nullptr;
     }
 
+    const T *find(IntType id) const
+    {
+        const auto it = m_data.find(id);
+        return (it != m_data.end()) ? (&it.value()) : nullptr;
+    }
+
     QPair<IntType, T*> create()
     {
         const auto it = m_data.insert(m_nextId, T());
