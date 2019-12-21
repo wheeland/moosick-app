@@ -5,7 +5,7 @@
 namespace Moosick {
 
 template <class T, class IntType = quint32>
-class ItemCollection
+class ItemCollection : public QHash<IntType, T>
 {
 public:
     ItemCollection() {}
@@ -13,36 +13,30 @@ public:
 
     void add(IntType id, const T &value)
     {
-        m_data.insert(id, value);
+        insert(id, value);
         m_nextId = qMax(m_nextId, id + 1);
     }
 
-    void remove(IntType id)
+    T *findItem(IntType id)
     {
-        m_data.remove(id);
+        const auto it = this->find(id);
+        return (it != this->end()) ? (&it.value()) : nullptr;
     }
 
-    T *find(IntType id)
+    const T *findItem(IntType id) const
     {
-        const auto it = m_data.find(id);
-        return (it != m_data.end()) ? (&it.value()) : nullptr;
-    }
-
-    const T *find(IntType id) const
-    {
-        const auto it = m_data.find(id);
-        return (it != m_data.end()) ? (&it.value()) : nullptr;
+        const auto it = this->find(id);
+        return (it != this->end()) ? (&it.value()) : nullptr;
     }
 
     QPair<IntType, T*> create()
     {
-        const auto it = m_data.insert(m_nextId, T());
+        const auto it = this->insert(m_nextId, T());
         m_nextId += 1;
         return qMakePair(m_nextId - 1, &it.value());
     }
 
 private:
-    QHash<IntType, T> m_data;
     IntType m_nextId = 1;
 };
 

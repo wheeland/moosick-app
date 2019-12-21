@@ -50,7 +50,7 @@ bool Library::commit(const LibraryChange &change)
     do { if (!(condition)) { qWarning() << (message); return false; } } while (0)
 
 #define fetchItem(Collection, Name, id) \
-    auto *Name = Collection.find(id); requireThat(Name, #Name " not found");
+    auto *Name = Collection.findItem(id); requireThat(Name, #Name " not found");
 
     switch (change.changeType) {
     case Moosick::LibraryChange::SongAdd: {
@@ -199,7 +199,7 @@ bool Library::commit(const LibraryChange &change)
         break;
     }
     case Moosick::LibraryChange::TagAdd: {
-        auto parentTag = m_tags.find(change.subject);
+        auto parentTag = m_tags.findItem(change.subject);
         requireThat(parentTag || (change.subject == 0), "Parent tag not found");
 
         auto tag = m_tags.create();
@@ -216,7 +216,7 @@ bool Library::commit(const LibraryChange &change)
         requireThat(tag->albums.isEmpty(), "Tag still used for albums");
         requireThat(tag->artists.isEmpty(), "Tag still used for artists");
 
-        auto parentTag = m_tags.find(tag->parent);
+        auto parentTag = m_tags.findItem(tag->parent);
         if (parentTag) {
             Q_ASSERT(parentTag->children.contains(change.subject));
             parentTag->children.removeAll(change.subject);
@@ -235,7 +235,7 @@ bool Library::commit(const LibraryChange &change)
         fetchItem(m_tags, newParent, change.detail);
         requireThat(change.detail != tag->parent, "Parent is the same");
 
-        auto oldParent = m_tags.find(tag->parent);
+        auto oldParent = m_tags.findItem(tag->parent);
         Q_ASSERT(oldParent || (tag->parent == 0));
         if (oldParent) {
             Q_ASSERT(oldParent->children.contains(change.subject));
@@ -255,7 +255,7 @@ bool Library::commit(const LibraryChange &change)
 }
 
 #define FETCH(name, Collection, id) \
-    auto name = library.Collection.find(id); \
+    auto name = library.Collection.findItem(id); \
     if (!name) return {};
 
 AlbumId SongId::album(const Library &library) const
