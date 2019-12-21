@@ -14,3 +14,5 @@ HEADERS += \
 
 INCLUDEPATH += \
     include/
+
+DESTDIR = ../bin/
