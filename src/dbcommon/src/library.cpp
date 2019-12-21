@@ -352,5 +352,152 @@ QString TagId::name(const Library &library) const
     return tag->name;
 }
 
+#undef FETCH
+
+QDataStream &operator<<(QDataStream &stream, const LibraryChange &lch)
+{
+    stream << static_cast<quint32>(lch.changeType);
+    stream << lch.subject;
+    stream << lch.detail;
+    stream << lch.name;
+    return stream;
+}
+
+QDataStream &operator>>(QDataStream &stream, LibraryChange &lch)
+{
+    quint32 tp;
+    stream >> tp;
+    lch.changeType = static_cast<LibraryChange::Type>(tp);
+    stream >> lch.subject;
+    stream >> lch.detail;
+    stream >> lch.name;
+    return stream;
+}
+
+template <class T, class IntType>
+void dumpCollection(QDataStream &stream, const ItemCollection<T, IntType> &col, const std::function<void(const T&)> &dumper)
+{
+    stream << col.size();
+    for (auto it = col.begin(), end = col.end(); it != end; ++it) {
+        stream << it.key();
+        dumper(it.value());
+    }
+}
+
+QDataStream &operator<<(QDataStream &stream, const Library &lib)
+{
+    stream << lib.m_revision;
+
+    dumpCollection<Library::Tag>(stream, lib.m_tags, [&](const Library::Tag &tag) {
+        stream << tag.name;
+        stream << tag.parent;
+    });
+
+    dumpCollection<Library::Artist>(stream, lib.m_artists, [&](const Library::Artist &artist) {
+        stream << artist.name;
+        stream << artist.tags;
+    });
+
+    dumpCollection<Library::Album>(stream, lib.m_albums, [&](const Library::Album &album) {
+        stream << album.name;
+        stream << album.artist;
+        stream << album.tags;
+    });
+
+    dumpCollection<Library::Song>(stream, lib.m_songs, [&](const Library::Song &song) {
+        stream << song.name;
+        stream << song.album;
+        stream << song.fileEnding;
+        stream << song.tags;
+    });
+
+    return stream;
+}
+
+template <class T, class IntType>
+void readCollection(QDataStream &stream, ItemCollection<T, IntType> &col, const std::function<T(IntType)> &reader)
+{
+    quint32 sz;
+    stream >> sz;
+
+    for (quint32 i = 0; i < sz; ++i) {
+        IntType id;
+        stream >> id;
+
+        const T newItem = reader(id);
+        col.add(id, newItem);
+    }
+}
+
+template <class IntType>
+QDataStream &operator>>(QDataStream &stream, detail::FromInt<IntType> &dst) {
+    quint32 into;
+    stream >> into;
+    dst = into;
+    return stream;
+}
+
+QDataStream &operator>>(QDataStream &stream, Library &lib)
+{
+    stream >> lib.m_revision;
+
+    readCollection<Library::Tag, quint32>(stream, lib.m_tags, [&](quint32) {
+        Library::Tag newTag;
+        stream >> newTag.name;
+        stream >> newTag.parent;
+        return newTag;
+    });
+
+#define TAG_PUSH_ID(tagId, member, id) \
+    do { \
+        Library::Tag *tag = lib.m_tags.findItem(tagId); \
+        if (tag) tag->member << (id); \
+    } while (0)
+
+    // fix up tag child lists
+    for (auto it = lib.m_tags.begin(); it != lib.m_tags.end(); ++it)
+        TAG_PUSH_ID(it.value().parent, children, it.key());
+
+    // read artists
+    readCollection<Library::Artist, quint32>(stream, lib.m_artists, [&](quint32 id) {
+        Library::Artist newArtist;
+        stream >> newArtist.name;
+        stream >> newArtist.tags;
+        for (quint32 tagId : newArtist.tags)
+            TAG_PUSH_ID(tagId, artists, id);
+        return newArtist;
+    });
+
+    // read albums
+    readCollection<Library::Album, quint32>(stream, lib.m_albums, [&](quint32 id) {
+        Library::Album newAlbum;
+        stream >> newAlbum.name;
+        stream >> newAlbum.artist;
+        stream >> newAlbum.tags;
+        for (quint32 tagId : newAlbum.tags)
+            TAG_PUSH_ID(tagId, albums, id);
+        if (Library::Artist *artist = lib.m_artists.findItem(newAlbum.artist))
+            artist->albums << id;
+        return newAlbum;
+    });
+
+    // read songs
+    readCollection<Library::Song, quint32>(stream, lib.m_songs, [&](quint32 id) {
+        Library::Song newSong;
+        stream >> newSong.name;
+        stream >> newSong.album;
+        stream >> newSong.fileEnding;
+        stream >> newSong.tags;
+        for (quint32 tagId : newSong.tags)
+            TAG_PUSH_ID(tagId, songs, id);
+        if (Library::Album *album = lib.m_albums.findItem(newSong.album))
+            album->songs << id;
+        return newSong;
+    });
+
+#undef TAG_PUSH_ID
+
+    return stream;
+}
 
 } // namespace Moosick
