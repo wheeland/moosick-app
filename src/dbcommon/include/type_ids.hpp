@@ -37,6 +37,7 @@ struct TagId;
 using SongIdList = QVector<SongId>;
 using AlbumIdList = QVector<AlbumId>;
 using TagIdList = QVector<TagId>;
+using ArtistIdList = QVector<ArtistId>;
 
 struct SongId : public detail::FromU32
 {
