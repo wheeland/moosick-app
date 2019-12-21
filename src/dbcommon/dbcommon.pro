@@ -1,5 +1,5 @@
 TARGET = dbcommon
-
+CONFIG += c++11
 TEMPLATE = lib
 
 QT += core
