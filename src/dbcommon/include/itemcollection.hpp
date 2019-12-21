@@ -36,6 +36,16 @@ public:
         return qMakePair(m_nextId - 1, &it.value());
     }
 
+    template <class IntLike>
+    QVector<IntLike> ids() const
+    {
+        QVector<IntLike> ret;
+        for (auto it = this->begin(); it != this->end(); ++it) {
+            ret << it.key();
+        }
+        return ret;
+    }
+
 private:
     IntType m_nextId = 1;
 };

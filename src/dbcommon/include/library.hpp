@@ -48,6 +48,9 @@ public:
     Library();
     ~Library();
 
+    QVector<TagId> rootTags() const;
+    QVector<ArtistId> artistsByName() const;
+
     bool commit(const LibraryChange &change);
 
 private:

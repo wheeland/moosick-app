@@ -44,6 +44,20 @@ Library::~Library()
 {
 }
 
+QVector<TagId> Library::rootTags() const
+{
+    return m_rootTags;
+}
+
+QVector<ArtistId> Library::artistsByName() const
+{
+    QVector<ArtistId> ret = m_artists.ids<ArtistId>();
+    std::sort(ret.begin(), ret.end(), [&](ArtistId a, ArtistId b) {
+        return a.name(*this).localeAwareCompare(b.name(*this));
+    });
+    return ret;
+}
+
 bool Library::commit(const LibraryChange &change)
 {
 #define requireThat(condition, message) \
