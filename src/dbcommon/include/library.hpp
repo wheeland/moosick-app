@@ -57,11 +57,14 @@ private:
     struct Tag;
 
     quint32 m_revision = 0;
+
     ItemCollection<Song> m_songs;
     ItemCollection<Album> m_albums;
     ItemCollection<Artist> m_artists;
     ItemCollection<Tag> m_tags;
     ItemCollection<QString> m_fileEndings;
+
+    QVector<TagId> m_rootTags;
 
     friend SongId;
     friend AlbumId;

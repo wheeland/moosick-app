@@ -207,6 +207,8 @@ bool Library::commit(const LibraryChange &change)
         tag.second->parent = change.subject;
         if (parentTag)
             parentTag->children << tag.first;
+        else
+            m_rootTags << tag.first;
         break;
     }
     case Moosick::LibraryChange::TagRemove: {
@@ -220,6 +222,9 @@ bool Library::commit(const LibraryChange &change)
         if (parentTag) {
             Q_ASSERT(parentTag->children.contains(change.subject));
             parentTag->children.removeAll(change.subject);
+        } else {
+            Q_ASSERT(m_rootTags.contains(change.subject));
+            m_rootTags.removeAll(change.subject);
         }
 
         m_tags.remove(change.subject);
@@ -232,18 +237,35 @@ bool Library::commit(const LibraryChange &change)
     }
     case Moosick::LibraryChange::TagSetParent: {
         fetchItem(m_tags, tag, change.subject);
-        fetchItem(m_tags, newParent, change.detail);
         requireThat(change.detail != tag->parent, "Parent is the same");
 
         auto oldParent = m_tags.findItem(tag->parent);
+        auto newParent = m_tags.findItem(change.detail);
+
         Q_ASSERT(oldParent || (tag->parent == 0));
-        if (oldParent) {
+        Q_ASSERT(newParent || (change.detail == 0));
+
+        if (tag->parent == 0) {
+            Q_ASSERT(!oldParent);
+            Q_ASSERT(m_rootTags.contains(change.subject));
+            m_rootTags.removeAll(change.subject);
+        }
+        else {
+            Q_ASSERT(oldParent);
             Q_ASSERT(oldParent->children.contains(change.subject));
             oldParent->children.removeAll(change.subject);
         }
 
+        if (change.detail == 0) {
+            Q_ASSERT(!newParent);
+            m_rootTags << change.subject;
+        } else {
+            Q_ASSERT(newParent);
+            newParent->children << change.subject;
+        }
+
         tag->parent = change.detail;
-        newParent->children << change.subject;
+
         break;
     }
     }
@@ -454,9 +476,12 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
         if (tag) tag->member << (id); \
     } while (0)
 
-    // fix up tag child lists
-    for (auto it = lib.m_tags.begin(); it != lib.m_tags.end(); ++it)
+    // fix up tag child lists and fill root parent list
+    for (auto it = lib.m_tags.begin(); it != lib.m_tags.end(); ++it) {
         TAG_PUSH_ID(it.value().parent, children, it.key());
+        if (it.value().parent == 0)
+            lib.m_rootTags << it.key();
+    }
 
     // read artists
     readCollection<Library::Artist, quint32>(stream, lib.m_artists, [&](quint32 id) {
