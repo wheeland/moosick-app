@@ -41,6 +41,8 @@ struct LibraryChange
     quint32 subject = 0;
     quint32 detail = 0;
     QString name;
+
+    bool isCreatingNewId() const;
 };
 
 class Library
@@ -52,7 +54,7 @@ public:
     QVector<TagId> rootTags() const;
     QVector<ArtistId> artistsByName() const;
 
-    bool commit(const LibraryChange &change);
+    bool commit(const LibraryChange &change, quint32 *createdId = nullptr);
 
     QStringList dumpToStringList() const;
 

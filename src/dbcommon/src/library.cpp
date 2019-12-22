@@ -100,7 +100,7 @@ QStringList Library::dumpToStringList() const
     return ret;
 }
 
-bool Library::commit(const LibraryChange &change)
+bool Library::commit(const LibraryChange &change, quint32 *createdId)
 {
 #define requireThat(condition, message) \
     do { if (!(condition)) { qWarning() << (message); return false; } } while (0)
@@ -114,8 +114,10 @@ bool Library::commit(const LibraryChange &change)
 
         auto song = m_songs.create();
         song.second->name = change.name;
-        song.second->album = change.detail;
+        song.second->album = change.subject;
         album->songs << song.first;
+        if (createdId)
+            *createdId = song.first;
         break;
     }
     case Moosick::LibraryChange::SongRemove: {
@@ -170,6 +172,8 @@ bool Library::commit(const LibraryChange &change)
         album.second->artist = change.subject;
         album.second->name = change.name;
         artist->albums << album.first;
+        if (createdId)
+            *createdId = album.first;
         break;
     }
     case Moosick::LibraryChange::AlbumRemove: {
@@ -221,6 +225,8 @@ bool Library::commit(const LibraryChange &change)
     case Moosick::LibraryChange::ArtistAdd: {
         auto artist = m_artists.create();
         artist.second->name = change.name;
+        if (createdId)
+            *createdId = artist.first;
         break;
     }
     case Moosick::LibraryChange::ArtistRemove: {
@@ -265,6 +271,9 @@ bool Library::commit(const LibraryChange &change)
             parentTag->children << tag.first;
         else
             m_rootTags << tag.first;
+
+        if (createdId)
+            *createdId = tag.first;
         break;
     }
     case Moosick::LibraryChange::TagRemove: {
@@ -583,6 +592,14 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
 #undef TAG_PUSH_ID
 
     return stream;
+}
+
+bool LibraryChange::isCreatingNewId() const
+{
+    return (changeType == TagAdd)
+            || (changeType == ArtistAdd)
+            || (changeType == AlbumAdd)
+            || (changeType == SongAdd);
 }
 
 } // namespace Moosick
