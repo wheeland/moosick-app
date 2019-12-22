@@ -34,7 +34,7 @@ static const QVector<QPair<QString, int>> changeTypesAndParamCount {
     {"AlbumAddTag", 2},
     {"AlbumRemoveTag", 2},
 
-    {"ArtistAdd", 1},
+    {"ArtistAdd", 0},
     {"ArtistRemove", 1},
     {"ArtistSetName", 2},
     {"ArtistAddTag", 2},
