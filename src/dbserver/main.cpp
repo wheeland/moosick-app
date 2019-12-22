@@ -18,11 +18,15 @@ int main(int argc, char **argv)
     QCommandLineParser parser;
     parser.addHelpOption();
     parser.addVersionOption();
+    parser.addPositionalArgument("file", "Specify library file.");
     parser.addOption({{"p", "port"}, "Specify port to listen on.", "port"});
     parser.addOption({{"d", "data"}, "Specify path to library data.", "data", "."});
     parser.addOption({{"l", "log"}, "Specify path to library log.", "log", "."});
-    parser.addOption({{"f", "file"}, "Specify library file.", "file", ""});
     parser.process(app);
+
+    const QStringList posArgs = parser.positionalArguments();
+    if (posArgs.size() < 1)
+        parser.showHelp();
 
     // get port
     bool portOk;
@@ -31,7 +35,7 @@ int main(int argc, char **argv)
         port = DEFAULT_PORT;
 
     // start TCP server
-    const QString libraryPath = parser.value("file");
+    const QString libraryPath = posArgs[0];
     const QString dataPath = parser.value("data");
     const QString logPath = parser.isSet("log") ? parser.value("log") : (libraryPath + ".log");
     Server server(libraryPath, logPath, dataPath);
