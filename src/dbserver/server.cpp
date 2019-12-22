@@ -78,9 +78,15 @@ void Server::handleConnection(QTcpSocket *socket)
 
         // apply changes
         for (auto it = changes.begin(); it != changes.end(); /* empty */) {
-            if (m_library.commit(*it))
+            quint32 newId;
+            if (m_library.commit(*it, &newId)) {
+                // if this was an Add change, we'll want to communicate the newly created
+                // ID back to the caller
+                if (it->isCreatingNewId())
+                    it->detail = newId;
+
                 ++it;
-            else {
+            } else {
                 it = changes.erase(it);
             }
         }
