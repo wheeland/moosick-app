@@ -14,6 +14,9 @@ struct LibraryChange
         SongAdd,
         SongRemove,
         SongSetName,
+        SongSetPosition,
+        SongSetLength,
+        SongSetFileEnding,
         SongSetAlbum,
         SongAddTag,
         SongRemoveTag,
@@ -67,6 +70,8 @@ private:
     struct Album;
     struct Artist;
     struct Tag;
+
+    quint32 getFileEnding(const QString &ending);
 
     quint32 m_revision = 0;
 

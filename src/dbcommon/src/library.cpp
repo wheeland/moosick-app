@@ -7,7 +7,9 @@ struct Library::Song
 {
     QString name;
     AlbumId album;
-    quint32 fileEnding;
+    quint32 fileEnding = 0;
+    quint32 position = 0;
+    quint32 secs = 0;
     TagIdList tags;
 };
 
@@ -91,13 +93,17 @@ QStringList Library::dumpToStringList() const
     // dump artists/albums/songs
     ret << "Artists:";
     for (ArtistId artist : artistsByName()) {
-        ret << QString("    ") + (artist.name(*this) + infoStr(artist, artist.tags(*this)));
+        ret << QString("    ") + artist.name(*this) + infoStr(artist, artist.tags(*this));
 
         for (AlbumId album : artist.albums(*this)) {
-            ret << QString("     |-- ") + (album.name(*this) + infoStr(album, album.tags(*this)));
+            ret << QString("     |-- ") + album.name(*this) + infoStr(album, album.tags(*this));
 
             for (SongId song : album.songs(*this)) {
-                ret << QString("     |    |-- ") + (song.name(*this) + infoStr(song, song.tags(*this)));
+                const QString pos = QString::asprintf("[%2d] ", song.position(*this));
+                const QString filePath = song.filePath(*this);
+                const quint32 secs = song.secs(*this);
+                const QString fileInfo = QString::asprintf(" (%s - %d:%02d)", qPrintable(filePath), secs/60, secs%60);
+                ret << QString("     |    |-- ") + pos + song.name(*this) + fileInfo + infoStr(song, song.tags(*this));
             }
         }
     }
@@ -117,6 +123,17 @@ void Library::deserialize(const QByteArray &bytes)
 {
     QDataStream in(bytes);
     in >> *this;
+}
+
+quint32 Library::getFileEnding(const QString &ending)
+{
+    for (auto it = m_fileEndings.begin(); it != m_fileEndings.end(); ++it) {
+        if (it.value() == ending)
+            return it.key();
+    }
+    auto newEntry = m_fileEndings.create();
+    *newEntry.second = ending;
+    return newEntry.first;
 }
 
 bool Library::commit(const LibraryChange &change, quint32 *createdId)
@@ -152,6 +169,24 @@ bool Library::commit(const LibraryChange &change, quint32 *createdId)
         fetchItem(m_songs, song, change.subject);
 
         song->name = change.name;
+        break;
+    }
+    case Moosick::LibraryChange::SongSetPosition: {
+        fetchItem(m_songs, song, change.subject);
+
+        song->position = change.detail;
+        break;
+    }
+    case Moosick::LibraryChange::SongSetLength: {
+        fetchItem(m_songs, song, change.subject);
+
+        song->secs = change.detail;
+        break;
+    }
+    case Moosick::LibraryChange::SongSetFileEnding: {
+        fetchItem(m_songs, song, change.subject);
+
+        song->fileEnding = getFileEnding(change.name);
         break;
     }
     case Moosick::LibraryChange::SongSetAlbum: {
@@ -395,11 +430,23 @@ QString SongId::name(const Library &library) const
     return song->name;
 }
 
+quint32 SongId::position(const Library &library) const
+{
+    FETCH(song, m_songs, m_value);
+    return song->position;
+}
+
+quint32 SongId::secs(const Library &library) const
+{
+    FETCH(song, m_songs, m_value);
+    return song->secs;
+}
+
 QString SongId::filePath(const Library &library) const
 {
     FETCH(song, m_songs, m_value);
     FETCH(ending, m_fileEndings, song->fileEnding);
-    return song->name + ending;
+    return QString::number(m_value) + ending;
 }
 
 ArtistId AlbumId::artist(const Library &library) const
@@ -503,6 +550,10 @@ QDataStream &operator<<(QDataStream &stream, const Library &lib)
         stream << tag.parent;
     });
 
+    dumpCollection<QString>(stream, lib.m_fileEndings, [&](const QString &fileEnding) {
+        stream << fileEnding;
+    });
+
     dumpCollection<Library::Artist>(stream, lib.m_artists, [&](const Library::Artist &artist) {
         stream << artist.name;
         stream << artist.tags;
@@ -518,6 +569,8 @@ QDataStream &operator<<(QDataStream &stream, const Library &lib)
         stream << song.name;
         stream << song.album;
         stream << song.fileEnding;
+        stream << song.position;
+        stream << song.secs;
         stream << song.tags;
     });
 
@@ -577,6 +630,12 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
             lib.m_rootTags << it.key();
     }
 
+    readCollection<QString, quint32>(stream, lib.m_fileEndings, [&](quint32) {
+        QString fileEnding;
+        stream >> fileEnding;
+        return fileEnding;
+    });
+
     // read artists
     readCollection<Library::Artist, quint32>(stream, lib.m_artists, [&](quint32 id) {
         Library::Artist newArtist;
@@ -606,6 +665,8 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
         stream >> newSong.name;
         stream >> newSong.album;
         stream >> newSong.fileEnding;
+        stream >> newSong.position;
+        stream >> newSong.secs;
         stream >> newSong.tags;
         for (quint32 tagId : newSong.tags)
             TAG_PUSH_ID(tagId, songs, id);
@@ -639,6 +700,7 @@ bool LibraryChange::hasStringArg(Type changeType)
     case ArtistAdd:
     case AlbumAdd:
     case SongAdd:
+    case SongSetFileEnding:
     case TagSetName:
     case ArtistSetName:
     case AlbumSetName:

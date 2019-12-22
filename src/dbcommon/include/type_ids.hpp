@@ -48,6 +48,8 @@ struct SongId : public detail::FromU32
     TagIdList tags(const Library &library) const;
 
     QString name(const Library &library) const;
+    quint32 position(const Library &library) const;
+    quint32 secs(const Library &library) const;
     QString filePath(const Library &library) const;
 };
 
