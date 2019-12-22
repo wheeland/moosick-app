@@ -58,6 +58,9 @@ public:
 
     QStringList dumpToStringList() const;
 
+    QByteArray serialize() const;
+    void deserialize(const QByteArray &bytes);
+
 private:
     struct Song;
     struct Album;

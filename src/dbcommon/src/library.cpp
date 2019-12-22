@@ -100,6 +100,20 @@ QStringList Library::dumpToStringList() const
     return ret;
 }
 
+QByteArray Library::serialize() const
+{
+    QByteArray ret;
+    QDataStream out(&ret, QIODevice::WriteOnly);
+    out << *this;
+    return ret;
+}
+
+void Library::deserialize(const QByteArray &bytes)
+{
+    QDataStream in(bytes);
+    in >> *this;
+}
+
 bool Library::commit(const LibraryChange &change, quint32 *createdId)
 {
 #define requireThat(condition, message) \
@@ -530,6 +544,12 @@ QDataStream &operator>>(QDataStream &stream, detail::FromInt<IntType> &dst) {
 
 QDataStream &operator>>(QDataStream &stream, Library &lib)
 {
+    lib.m_tags.clear();
+    lib.m_songs.clear();
+    lib.m_albums.clear();
+    lib.m_artists.clear();
+    lib.m_fileEndings.clear();
+
     stream >> lib.m_revision;
 
     readCollection<Library::Tag, quint32>(stream, lib.m_tags, [&](quint32) {
