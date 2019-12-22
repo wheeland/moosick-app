@@ -42,7 +42,8 @@ struct LibraryChange
     quint32 detail = 0;
     QString name;
 
-    bool isCreatingNewId() const;
+    static bool isCreatingNewId(Type changeType);
+    static bool hasStringArg(Type changeType);
 };
 
 class Library

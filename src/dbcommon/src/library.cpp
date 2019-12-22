@@ -619,12 +619,34 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
     return stream;
 }
 
-bool LibraryChange::isCreatingNewId() const
+bool LibraryChange::isCreatingNewId(Type changeType)
 {
-    return (changeType == TagAdd)
-            || (changeType == ArtistAdd)
-            || (changeType == AlbumAdd)
-            || (changeType == SongAdd);
+    switch (changeType) {
+    case TagAdd:
+    case ArtistAdd:
+    case AlbumAdd:
+    case SongAdd:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool LibraryChange::hasStringArg(Type changeType)
+{
+    switch (changeType) {
+    case TagAdd:
+    case ArtistAdd:
+    case AlbumAdd:
+    case SongAdd:
+    case TagSetName:
+    case ArtistSetName:
+    case AlbumSetName:
+    case SongSetName:
+        return true;
+    default:
+        return false;
+    }
 }
 
 } // namespace Moosick
