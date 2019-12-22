@@ -324,6 +324,10 @@ bool Library::commit(const LibraryChange &change)
 
         break;
     }
+    case Moosick::LibraryChange::Invalid:
+    default: {
+        return false;
+    }
     }
 
 #undef requireThat

@@ -10,6 +10,7 @@ namespace Moosick {
 struct LibraryChange
 {
     enum Type : quint32 {
+        Invalid,
         SongAdd,
         SongRemove,
         SongSetName,
@@ -36,9 +37,9 @@ struct LibraryChange
         TagSetParent,
     };
 
-    Type changeType;
-    quint32 subject;
-    quint32 detail;
+    Type changeType = Invalid;
+    quint32 subject = 0;
+    quint32 detail = 0;
     QString name;
 };
 
