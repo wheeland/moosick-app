@@ -54,4 +54,43 @@ bool receive(QTcpSocket *socket, Message &msg, int timeout)
     return true;
 }
 
+bool receiveHeader(QTcpSocket *socket, MessageHeader &msg)
+{
+    if (!socket->isValid() || !socket->isReadable())
+        return false;
+
+    if (socket->bytesAvailable() < 8)
+        return false;
+
+    quint32 tp, sz;
+    QDataStream in(socket);
+    in >> tp;
+    in >> sz;
+
+    msg.tp = static_cast<MessageType>(tp);
+    msg.dataSize = sz;
+
+    return true;
+}
+
+QString Message::format()
+{
+    static const QStringList msgNames = {
+        "Error",
+        "Ping",
+        "Pong",
+        "LibraryRequest",
+        "LibraryReponse",
+        "ChangesRequest",
+        "ChangesResponse",
+    };
+
+    const quint32 idx = (quint32) tp;
+    if (idx >= msgNames.size()) {
+        return QString::asprintf("Invalid(%d)", idx);
+    }
+
+    return QString::asprintf("%s(%d)", qPrintable(msgNames[idx]), data.size());
+}
+
 } //namespace NetCommon

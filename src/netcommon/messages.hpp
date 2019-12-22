@@ -21,9 +21,18 @@ struct Message
 {
     MessageType tp;
     QByteArray data;
+
+    QString format();
+};
+
+struct MessageHeader {
+    MessageType tp;
+    quint32 dataSize;
 };
 
 bool send(QTcpSocket *socket, const Message &msg);
 bool receive(QTcpSocket *socket, Message &msg, int timeout);
+
+bool receiveHeader(QTcpSocket *socket, MessageHeader &msg);
 
 } //namespace NetCommon
