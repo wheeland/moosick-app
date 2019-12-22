@@ -84,15 +84,20 @@ QStringList Library::dumpToStringList() const
             dumpTag(child, childIndent);
     };
 
+    for (TagId tagId : m_rootTags) {
+        dumpTag(tagId, "    ");
+    }
+
     // dump artists/albums/songs
+    ret << "Artists:";
     for (ArtistId artist : artistsByName()) {
-        ret << (artist.name(*this) + infoStr(artist, artist.tags(*this)));
+        ret << QString("    ") + (artist.name(*this) + infoStr(artist, artist.tags(*this)));
 
         for (AlbumId album : artist.albums(*this)) {
-            ret << " |-- " << (album.name(*this) + infoStr(album, album.tags(*this)));
+            ret << QString("     |-- ") + (album.name(*this) + infoStr(album, album.tags(*this)));
 
             for (SongId song : album.songs(*this)) {
-                ret << " |    |-- " << (song.name(*this) + infoStr(song, song.tags(*this)));
+                ret << QString("     |    |-- ") + (song.name(*this) + infoStr(song, song.tags(*this)));
             }
         }
     }
