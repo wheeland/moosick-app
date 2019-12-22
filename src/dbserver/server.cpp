@@ -56,17 +56,45 @@ void Server::onNewConnection()
 
 void Server::handleConnection(QTcpSocket *socket)
 {
-    // parse message
-    NetCommon::Message message;
-    if (!NetCommon::receive(socket, message, 1000)) {
-        qWarning() << "Didn't receive message after 1000 msecs of waiting";
-        socket->close();
-        socket->deleteLater();
-        return;
+    connect(socket, &QTcpSocket::readyRead, this, [=]() {
+        Server::onNewDataReady(socket);
+    });
+
+    if (socket->bytesAvailable())
+        onNewDataReady(socket);
+}
+
+void Server::onNewDataReady(QTcpSocket *socket)
+{
+    auto headerIt = m_connections.find(socket);
+    const bool hasHeader = (headerIt != m_connections.end());
+
+    // first receive message header
+    if (!hasHeader) {
+        NetCommon::MessageHeader header;
+
+        // wait until we can receive the header
+        if (!NetCommon::receiveHeader(socket, header))
+            return;
+
+        headerIt = m_connections.insert(socket, header);
     }
+
+    // see if we can download the data already
+    if (socket->bytesAvailable() < headerIt->dataSize)
+        return;
+
+    // download data
+    const QByteArray data = socket->read(headerIt->dataSize);
+
+    // parse message
+    NetCommon::Message message{ headerIt->tp, data };
+
+    qDebug() << "Received" << message.format() << "from" << socket->peerAddress();
 
     switch (message.tp) {
     case NetCommon::Ping: {
+        qDebug() << "Sending Pong to" << socket->peerAddress();
         NetCommon::send(socket, {NetCommon::Pong, {}});
         break;
     }
@@ -82,7 +110,7 @@ void Server::handleConnection(QTcpSocket *socket)
             if (m_library.commit(*it, &newId)) {
                 // if this was an Add change, we'll want to communicate the newly created
                 // ID back to the caller
-                if (it->isCreatingNewId())
+                if (Moosick::LibraryChange::isCreatingNewId(it->changeType))
                     it->detail = newId;
 
                 ++it;
@@ -91,6 +119,8 @@ void Server::handleConnection(QTcpSocket *socket)
             }
         }
 
+        qDebug() << "Applied" << changes.size() << "changes to Library. Sending ChangesResponse to" << socket->peerAddress();
+
         // send back all successful changes
         NetCommon::Message response;
         response.tp = NetCommon::ChangesResponse;
@@ -98,7 +128,6 @@ void Server::handleConnection(QTcpSocket *socket)
         out << changes;
 
         NetCommon::send(socket, response);
-        socket->deleteLater();
 
         // append library log
         QFile logFile(m_logPath);
@@ -114,11 +143,29 @@ void Server::handleConnection(QTcpSocket *socket)
             QDataStream out(&libFile);
             out << m_library;
         }
+
+        break;
+    }
+    case NetCommon::LibraryRequest: {
+        // send back whole library
+        NetCommon::Message response;
+        response.tp = NetCommon::LibraryReponse;
+        QDataStream out(&response.data, QIODevice::WriteOnly);
+        out << m_library;
+
+        qDebug() << "Sending LibraryResponse to" << socket->peerAddress();
+
+        NetCommon::send(socket, response);
+        break;
     }
     default: {
+        qDebug() << "Sending Error to" << socket->peerAddress();
         NetCommon::send(socket, {NetCommon::Error, {}});
         break;
     }
     }
 
+    // clean up
+    m_connections.erase(headerIt);
+    socket->deleteLater();
 }

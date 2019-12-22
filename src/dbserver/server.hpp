@@ -3,6 +3,7 @@
 #include <QTcpServer>
 
 #include "library.hpp"
+#include "messages.hpp"
 
 class Server : public QObject
 {
@@ -17,6 +18,7 @@ private slots:
 
 private:
     void handleConnection(QTcpSocket *socket);
+    void onNewDataReady(QTcpSocket *socket);
 
     QTcpServer m_tcpServer;
     const QString m_libraryPath;
@@ -24,4 +26,6 @@ private:
     const QString m_dataPath;
 
     Moosick::Library m_library;
+
+    QHash<QTcpSocket *, NetCommon::MessageHeader> m_connections;
 };
