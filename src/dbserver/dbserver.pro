@@ -12,9 +12,10 @@ HEADERS += \
     server.hpp \
 
 INCLUDEPATH += \
-    ../dbcommon/include/
+    ../dbcommon/include/ \
+    ../netcommon/ \
 
 LIBS += \
-    -L../bin/ -ldbcommon
+    -L../bin/ -ldbcommon -lnetcommon
 
 DESTDIR = ../bin/

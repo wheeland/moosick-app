@@ -1,4 +1,5 @@
 #include "server.hpp"
+#include "messages.hpp"
 
 #include <QFile>
 #include <QTcpSocket>
@@ -55,37 +56,63 @@ void Server::onNewConnection()
 
 void Server::handleConnection(QTcpSocket *socket)
 {
-    // read changes from TCP stream
-    QDataStream stream(socket);
-    QVector<Moosick::LibraryChange> changes;
-    stream >> changes;
+    // parse message
+    NetCommon::Message message;
+    if (!NetCommon::receive(socket, message, 1000)) {
+        qWarning() << "Didn't receive message after 1000 msecs of waiting";
+        socket->close();
+        socket->deleteLater();
+        return;
+    }
 
-    // apply changes
-    for (auto it = changes.begin(); it != changes.end(); /* empty */) {
-        if (m_library.commit(*it))
-            ++it;
-        else {
-            it = changes.erase(it);
+    switch (message.tp) {
+    case NetCommon::Ping: {
+        NetCommon::send(socket, {NetCommon::Pong, {}});
+        break;
+    }
+    case NetCommon::ChangesRequest: {
+        // read changes from TCP stream
+        QDataStream in(message.data);
+        QVector<Moosick::LibraryChange> changes;
+        in >> changes;
+
+        // apply changes
+        for (auto it = changes.begin(); it != changes.end(); /* empty */) {
+            if (m_library.commit(*it))
+                ++it;
+            else {
+                it = changes.erase(it);
+            }
+        }
+
+        // send back all successful changes
+        NetCommon::Message response;
+        response.tp = NetCommon::ChangesResponse;
+        QDataStream out(&response.data, QIODevice::WriteOnly);
+        out << changes;
+
+        NetCommon::send(socket, response);
+        socket->deleteLater();
+
+        // append library log
+        QFile logFile(m_logPath);
+        if (logFile.open(QIODevice::Append)) {
+            QDataStream out(&logFile);
+            for (const auto &ch : qAsConst(changes))
+                out << ch;
+        }
+
+        // save log file
+        QFile libFile(m_libraryPath);
+        if (libFile.open(QIODevice::WriteOnly)) {
+            QDataStream out(&libFile);
+            out << m_library;
         }
     }
-
-    // send back all successful changes
-    stream << changes;
-    socket->close();
-    socket->deleteLater();
-
-    // append library log
-    QFile logFile(m_logPath);
-    if (logFile.open(QIODevice::Append)) {
-        QDataStream out(&logFile);
-        for (const auto &ch : qAsConst(changes))
-            out << ch;
+    default: {
+        NetCommon::send(socket, {NetCommon::Error, {}});
+        break;
+    }
     }
 
-    // save log file
-    QFile libFile(m_libraryPath);
-    if (libFile.open(QIODevice::WriteOnly)) {
-        QDataStream out(&libFile);
-        out << m_library;
-    }
 }
