@@ -53,6 +53,8 @@ public:
 
     bool commit(const LibraryChange &change);
 
+    QStringList dumpToStringList() const;
+
 private:
     struct Song;
     struct Album;

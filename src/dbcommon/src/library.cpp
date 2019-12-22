@@ -58,6 +58,48 @@ QVector<ArtistId> Library::artistsByName() const
     return ret;
 }
 
+QStringList Library::dumpToStringList() const
+{
+    QStringList ret;
+
+    const auto infoStr = [&](quint32 id, const TagIdList &tags) {
+        QString ret(" (id=");
+        ret += QString::number(id);
+        ret += ", tags=[";
+        for (int i = 0; i < tags.size(); ++i) {
+            if (i > 0)
+                ret += ", ";
+            ret += tags[i].name(*this);
+        }
+        ret += "])";
+        return ret;
+    };
+
+    // dump tags
+    ret << "Tags:";
+    const std::function<void(TagId, const QString&)> dumpTag = [&](TagId tag, const QString &indent) {
+        ret << (indent + tag.name(*this) + "(id=" + QString::number(tag) + ")");
+        QString childIndent = indent + " |-- ";
+        for (TagId child : tag.children(*this))
+            dumpTag(child, childIndent);
+    };
+
+    // dump artists/albums/songs
+    for (ArtistId artist : artistsByName()) {
+        ret << (artist.name(*this) + infoStr(artist, artist.tags(*this)));
+
+        for (AlbumId album : artist.albums(*this)) {
+            ret << " |-- " << (album.name(*this) + infoStr(album, album.tags(*this)));
+
+            for (SongId song : album.songs(*this)) {
+                ret << " |    |-- " << (song.name(*this) + infoStr(song, song.tags(*this)));
+            }
+        }
+    }
+
+    return ret;
+}
+
 bool Library::commit(const LibraryChange &change)
 {
 #define requireThat(condition, message) \
