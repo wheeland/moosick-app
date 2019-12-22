@@ -4,4 +4,5 @@ SUBDIRS = \
     dbcommon \
     netcommon \
     dbserver \
+    testclient \
 
