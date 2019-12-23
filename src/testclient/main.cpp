@@ -61,7 +61,7 @@ QString answerToString(const Moosick::LibraryChange change)
     ret += QString::number(change.subject);
     if (changeTypesAndParamCount[idx].second > 1) {
         if (hasStr)
-            ret += QString(", name='") + change.name;
+            ret += QString(", name='") + change.name + "'";
         else {
             ret += QString(", op=") + QString::number(change.detail);
         }
@@ -85,7 +85,7 @@ bool parseChange(const QString &str, Moosick::LibraryChange &change, QString &er
 
     for (int i = 0; i < changeTypesAndParamCount.size(); ++i) {
         const auto tpParam = changeTypesAndParamCount[i];
-        if (parts[0].toLower() != tpParam.first.toLower())
+        if (!tpParam.first.toLower().startsWith(parts[0].toLower()))
             continue;
 
         const bool correctNumberOfArgs = (parts.size() - 1 >= tpParam.second);
@@ -246,7 +246,7 @@ int main(int argc, char **argv)
                 // have an \\ at the end
                 const bool continues = changeLine.endsWith('\\');
                 if (continues)
-                    changeLine = changeLine.mid(0, changeLine.size() - 1);
+                    changeLine = changeLine.mid(0, changeLine.size() - 1).trimmed();
 
                 // try to parse line
                 Moosick::LibraryChange change;
