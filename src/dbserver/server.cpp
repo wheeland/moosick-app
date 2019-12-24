@@ -30,7 +30,7 @@ Server::Server(const QString &libraryPath, const QString &logPath, const QString
 
 Server::~Server()
 {
-
+    saveLibrary();
 }
 
 bool Server::listen(quint16 port)
@@ -137,12 +137,7 @@ void Server::onNewDataReady(QTcpSocket *socket)
                 out << ch;
         }
 
-        // save log file
-        QFile libFile(m_libraryPath);
-        if (libFile.open(QIODevice::WriteOnly)) {
-            QDataStream out(&libFile);
-            out << m_library;
-        }
+        saveLibrary();
 
         break;
     }
@@ -168,4 +163,13 @@ void Server::onNewDataReady(QTcpSocket *socket)
     // clean up
     m_connections.erase(headerIt);
     socket->deleteLater();
+}
+
+void Server::saveLibrary() const
+{
+    QFile libFile(m_libraryPath);
+    if (libFile.open(QIODevice::WriteOnly)) {
+        QDataStream out(&libFile);
+        out << m_library;
+    }
 }

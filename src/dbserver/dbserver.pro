@@ -7,9 +7,11 @@ QT += core network
 SOURCES += \
     main.cpp \
     server.cpp \
+    signalhandler.cpp \
 
 HEADERS += \
     server.hpp \
+    signalhandler.hpp \
 
 INCLUDEPATH += \
     ../dbcommon/include/ \

@@ -19,6 +19,7 @@ private slots:
 private:
     void handleConnection(QTcpSocket *socket);
     void onNewDataReady(QTcpSocket *socket);
+    void saveLibrary() const;
 
     QTcpServer m_tcpServer;
     const QString m_libraryPath;

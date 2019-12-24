@@ -8,6 +8,7 @@
 
 #include "library.hpp"
 #include "server.hpp"
+#include "signalhandler.hpp"
 
 static constexpr quint16 DEFAULT_PORT = 12345;
 
@@ -41,6 +42,9 @@ int main(int argc, char **argv)
     Server server(libraryPath, logPath, dataPath);
     if (!server.listen(port))
         return 1;
+
+    SignalHandler signalHandler;
+    QObject::connect(&signalHandler, &SignalHandler::signalled, &app, &QCoreApplication::quit);
 
     return app.exec();
 }
