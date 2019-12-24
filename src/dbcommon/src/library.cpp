@@ -546,27 +546,27 @@ QDataStream &operator<<(QDataStream &stream, const Library &lib)
     stream << lib.m_revision;
 
     dumpCollection<Library::Tag>(stream, lib.m_tags, [&](const Library::Tag &tag) {
-        stream << tag.name;
+        stream << tag.name.toUtf8();
         stream << tag.parent;
     });
 
     dumpCollection<QString>(stream, lib.m_fileEndings, [&](const QString &fileEnding) {
-        stream << fileEnding;
+        stream << fileEnding.toUtf8();
     });
 
     dumpCollection<Library::Artist>(stream, lib.m_artists, [&](const Library::Artist &artist) {
-        stream << artist.name;
+        stream << artist.name.toUtf8();
         stream << artist.tags;
     });
 
     dumpCollection<Library::Album>(stream, lib.m_albums, [&](const Library::Album &album) {
-        stream << album.name;
+        stream << album.name.toUtf8();
         stream << album.artist;
         stream << album.tags;
     });
 
     dumpCollection<Library::Song>(stream, lib.m_songs, [&](const Library::Song &song) {
-        stream << song.name;
+        stream << song.name.toUtf8();
         stream << song.album;
         stream << song.fileEnding;
         stream << song.position;
@@ -610,9 +610,15 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
 
     stream >> lib.m_revision;
 
+    const auto readUtf8 = [&]() {
+        QByteArray bytes;
+        stream >> bytes;
+        return QString::fromUtf8(bytes);
+    };
+
     readCollection<Library::Tag, quint32>(stream, lib.m_tags, [&](quint32) {
         Library::Tag newTag;
-        stream >> newTag.name;
+        newTag.name = readUtf8();
         stream >> newTag.parent;
         return newTag;
     });
@@ -631,15 +637,13 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
     }
 
     readCollection<QString, quint32>(stream, lib.m_fileEndings, [&](quint32) {
-        QString fileEnding;
-        stream >> fileEnding;
-        return fileEnding;
+        return readUtf8();
     });
 
     // read artists
     readCollection<Library::Artist, quint32>(stream, lib.m_artists, [&](quint32 id) {
         Library::Artist newArtist;
-        stream >> newArtist.name;
+        newArtist.name = readUtf8();
         stream >> newArtist.tags;
         for (quint32 tagId : newArtist.tags)
             TAG_PUSH_ID(tagId, artists, id);
@@ -649,7 +653,7 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
     // read albums
     readCollection<Library::Album, quint32>(stream, lib.m_albums, [&](quint32 id) {
         Library::Album newAlbum;
-        stream >> newAlbum.name;
+        newAlbum.name = readUtf8();
         stream >> newAlbum.artist;
         stream >> newAlbum.tags;
         for (quint32 tagId : newAlbum.tags)
@@ -662,7 +666,7 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
     // read songs
     readCollection<Library::Song, quint32>(stream, lib.m_songs, [&](quint32 id) {
         Library::Song newSong;
-        stream >> newSong.name;
+        newSong.name = readUtf8();
         stream >> newSong.album;
         stream >> newSong.fileEnding;
         stream >> newSong.position;
