@@ -44,7 +44,8 @@ function youtubeResults(results) {
                 type: "playlist",
                 url: result.link,
                 name: result.title,
-                icon: result.thumbnail
+                icon: result.thumbnail,
+                count: result.video_count
             });
         }
     });
