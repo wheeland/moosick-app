@@ -11,11 +11,11 @@ function handler(error, info) {
     if (error)
         return;
 
-    console.log({
+    console.log(JSON.stringify({
         name: info.title,
         icon: info.imageUrl,
         tracks: info.tracks
-    });
+    }, null, 2));
 }
 
 bandcamp.getAlbumInfo(albumUrl, handler);

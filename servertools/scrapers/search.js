@@ -11,20 +11,20 @@ var pattern = process.argv[2];
 function bandcampSearchResult(error, searchResults) {
     searchResults.forEach(function(result) {
         if (result.type === "album") {
-            console.log({
+            console.log(JSON.stringify({
                 type: "album",
                 url: result.url,
                 name: result.name,
                 icon: result.imageUrl
-            });
+            }, null, 2));
         }
         else if (result.type === "artist") {
-            console.log({
+            console.log(JSON.stringify({
                 type: "artist",
                 url: result.url,
                 name: result.name,
                 icon: result.imageUrl
-            });
+            }, null, 2));
         }
     });
 };
@@ -32,21 +32,21 @@ function bandcampSearchResult(error, searchResults) {
 function youtubeResults(results) {
     results.forEach(function(result) {
         if (result.type == "video") {
-            console.log({
+            console.log(JSON.stringify({
                 type: "video",
                 url: result.link,
                 name: result.title,
                 icon: result.thumbnail
-            });
+            }, null, 2));
         }
         else if (result.type == "playlist") {
-            console.log({
+            console.log(JSON.stringify({
                 type: "playlist",
                 url: result.link,
                 name: result.title,
                 icon: result.thumbnail,
                 count: result.video_count
-            });
+            }, null, 2));
         }
     });
 }
