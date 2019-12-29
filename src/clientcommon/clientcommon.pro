@@ -5,17 +5,21 @@ TEMPLATE = lib
 QT += core network
 
 SOURCES += \
-    messages.cpp \
-    download.cpp \
+    src/messages.cpp \
+    src/download.cpp \
+    src/util.cpp \
 
 HEADERS += \
-    messages.hpp \
-    download.hpp \
+    include/messages.hpp \
+    include/download.hpp \
+    src/util.hpp \
 
 INCLUDEPATH += \
-    ../dbcommon/include/
+    include/ \
+    ../dbcommon/include/ \
+    ../netcommon/ \
 
 LIBS += \
-    -L../bin/ -ldbcommon
+    -L../bin/ -ldbcommon -lnetcommon
 
 DESTDIR = ../bin/

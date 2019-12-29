@@ -685,6 +685,14 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
     return stream;
 }
 
+LibraryChange::LibraryChange(LibraryChange::Type tp, quint32 subj, quint32 det, const QString &nm)
+    : changeType(tp)
+    , subject(subj)
+    , detail(det)
+    , name(nm)
+{
+}
+
 bool LibraryChange::isCreatingNewId(Type changeType)
 {
     switch (changeType) {

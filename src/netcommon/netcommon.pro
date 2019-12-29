@@ -5,10 +5,12 @@ TEMPLATE = lib
 QT += core network
 
 SOURCES += \
-    messages.cpp \
+    requests.cpp \
+    json.cpp \
 
 HEADERS += \
-    messages.hpp \
+    requests.hpp \
+    json.hpp \
 
 INCLUDEPATH += \
     ../dbcommon/include/

@@ -19,6 +19,8 @@ public:
 
     operator IntType() const { return m_value; }
 
+    bool isValid() const { return m_value > 0; }
+
 protected:
     IntType m_value;
 };

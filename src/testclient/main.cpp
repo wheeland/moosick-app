@@ -5,6 +5,11 @@
 
 #include "library.hpp"
 #include "messages.hpp"
+#include "download.hpp"
+
+/*
+band	https://kinematicrecords.bandcamp.com/album/technological-determinism	Hypnogog	Tech. Hurensohn
+*/
 
 static ClientCommon::ServerConfig s_serverConfig;
 
@@ -156,6 +161,9 @@ int main(int argc, char **argv)
     parser.addPositionalArgument("hostname", "Thy host");
     parser.addPositionalArgument("port", "Thy port");
     parser.addOption({{"timeout", "t"}, "How long to wait for a connection to host", "timeout", "1000"});
+    parser.addOption({{"media", "m"}, "Media directory", "media", "."});
+    parser.addOption({{"node", "n"}, "Node.js directory", "node", "."});
+    parser.addOption({{"temp", "T"}, "Temp directory", "temp", "/tmp"});
     parser.process(app);
 
     const QStringList posArgs = parser.positionalArguments();
@@ -165,6 +173,10 @@ int main(int argc, char **argv)
     s_serverConfig.hostName = posArgs[0];
     s_serverConfig.port = posArgs[1].toUShort();
     s_serverConfig.timeout = parser.value("timeout").toInt();
+
+    const QString mediaDir = parser.value("media");
+    const QString nodeJsDir = parser.value("node");
+    const QString tempDir = parser.value("temp");
 
     while (true) {
         QString line;
@@ -184,6 +196,22 @@ int main(int argc, char **argv)
             const QStringList libDump = lib.dumpToStringList();
             for (const QString &line : libDump)
                 qWarning().noquote() << line;
+        }
+        else if (QString("bandcamp").startsWith(line.split("\t").first().toLower())) {
+            const QStringList parts = line.split("\t").mid(1);
+            if (parts.size() < 3) {
+                qWarning() << "Usage: bandcamp    [url]    [artist name OR id]    [album name]";
+                continue;
+            }
+
+            const NetCommon::DownloadRequest download{
+                NetCommon::DownloadRequest::BandcampAlbum,
+                parts[0], parts[1].toInt(), parts[1], parts[2]
+            };
+
+            const QVector<Moosick::LibraryChange> ret = ClientCommon::bandcampDownload(s_serverConfig, download, mediaDir, nodeJsDir, tempDir);
+            for (const Moosick::LibraryChange &ch : ret)
+                qWarning().noquote() << answerToString(ch);
         }
         else if (QString("changes").startsWith(line.toLower())) {
             QVector<Moosick::LibraryChange> changes;

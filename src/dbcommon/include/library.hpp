@@ -40,6 +40,10 @@ struct LibraryChange
         TagSetParent,
     };
 
+    LibraryChange() = default;
+    LibraryChange(const LibraryChange &other) = default;
+    LibraryChange(Type tp, quint32 subj, quint32 det, const QString &nm);
+
     Type changeType = Invalid;
     quint32 subject = 0;
     quint32 detail = 0;

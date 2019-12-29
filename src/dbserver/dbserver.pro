@@ -15,7 +15,7 @@ HEADERS += \
 
 INCLUDEPATH += \
     ../dbcommon/include/ \
-    ../clientcommon/ \
+    ../clientcommon/include/ \
 
 LIBS += \
     -L../bin/ -ldbcommon -lclientcommon
