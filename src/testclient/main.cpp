@@ -7,10 +7,6 @@
 #include "messages.hpp"
 #include "download.hpp"
 
-/*
-band	https://kinematicrecords.bandcamp.com/album/technological-determinism	Hypnogog	Tech. Hurensohn
-*/
-
 static ClientCommon::ServerConfig s_serverConfig;
 
 static const QVector<QPair<QString, int>> changeTypesAndParamCount {
