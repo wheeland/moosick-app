@@ -3,17 +3,10 @@
 #include <QDataStream>
 #include <QTextStream>
 
-#include <QTcpServer>
-#include <QTcpSocket>
-
 #include "library.hpp"
 #include "messages.hpp"
 
-static constexpr quint16 DEFAULT_PORT = 12345;
-
-static QString s_hostname;
-static QString s_port;
-static int s_timeout;
+static ClientCommon::ServerConfig s_serverConfig;
 
 static const QVector<QPair<QString, int>> changeTypesAndParamCount {
     {"Invalid", 0},
@@ -137,45 +130,6 @@ bool parseChange(const QString &str, Moosick::LibraryChange &change, QString &er
     return false;
 }
 
-bool send(const NetCommon::Message &message, NetCommon::Message &answer)
-{
-    // try to connect to TCP server
-    QTcpSocket sock;
-    sock.connectToHost(s_hostname, s_port.toUShort());
-    if (!sock.waitForConnected(s_timeout)) {
-        qWarning() << "Unable to connect to" << s_hostname << ", port =" << s_port;
-        return false;
-    }
-
-    NetCommon::send(&sock, message);
-    NetCommon::receive(&sock, answer, s_timeout);
-
-    return true;
-}
-
-bool sendChanges(QVector<Moosick::LibraryChange> &changes)
-{
-    // build message
-    QByteArray data;
-    QDataStream writer(&data, QIODevice::WriteOnly);
-    writer << changes;
-    NetCommon::Message msg{ NetCommon::ChangesRequest, data };
-
-    // send
-    NetCommon::Message answer;
-    if (!send(msg, answer))
-        return false;
-
-    if (answer.tp == NetCommon::ChangesResponse) {
-        QDataStream reader(answer.data);
-        changes.clear();
-        reader >> changes;
-        return true;
-    }
-
-    return false;
-}
-
 bool readLine(const QString &prompt, QString &line)
 {
     QTextStream qtin(stdin);
@@ -208,23 +162,23 @@ int main(int argc, char **argv)
     if (posArgs.size() < 2)
         parser.showHelp();
 
-    s_hostname = posArgs[0];
-    s_port = posArgs[1];
-    s_timeout = parser.value("timeout").toInt();
+    s_serverConfig.hostName = posArgs[0];
+    s_serverConfig.port = posArgs[1].toUShort();
+    s_serverConfig.timeout = parser.value("timeout").toInt();
 
     while (true) {
         QString line;
         if (!readLine(">>> ", line))
             return 0;
 
-        NetCommon::Message answer;
+        ClientCommon::Message answer;
 
         if (line.toLower() == "ping") {
-            send(NetCommon::Message{ NetCommon::Ping }, answer);
+            sendRecv(s_serverConfig, ClientCommon::Message{ ClientCommon::Ping }, answer);
             qWarning().noquote() << answer.format();
         }
         else if (QString("library").startsWith(line.toLower())) {
-            send(NetCommon::Message{ NetCommon::LibraryRequest }, answer);
+            sendRecv(s_serverConfig, ClientCommon::Message{ ClientCommon::LibraryRequest }, answer);
             Moosick::Library lib;
             lib.deserialize(answer.data);
             const QStringList libDump = lib.dumpToStringList();
@@ -261,11 +215,11 @@ int main(int argc, char **argv)
                     break;
             }
 
-            NetCommon::Message message{NetCommon::ChangesRequest};
+            ClientCommon::Message message{ClientCommon::ChangesRequest};
             QDataStream out(&message.data, QIODevice::WriteOnly);
             out << changes;
 
-            send(message, answer);
+            sendRecv(s_serverConfig, message, answer);
             QDataStream in(answer.data);
             changes.clear();
             in >> changes;

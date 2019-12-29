@@ -11,9 +11,9 @@ HEADERS += \
 
 INCLUDEPATH += \
     ../dbcommon/include/ \
-    ../netcommon/ \
+    ../clientcommon/ \
 
 LIBS += \
-    -L../bin/ -ldbcommon -lnetcommon
+    -L../bin/ -ldbcommon -lclientcommon
 
 DESTDIR = ../bin/

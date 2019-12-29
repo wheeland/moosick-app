@@ -2,7 +2,7 @@
 
 #include <QElapsedTimer>
 
-namespace NetCommon {
+namespace ClientCommon {
 
 bool send(QTcpSocket *socket, const Message &msg)
 {
@@ -93,4 +93,20 @@ QString Message::format()
     return QString::asprintf("%s(%d)", qPrintable(msgNames[idx]), data.size());
 }
 
-} //namespace NetCommon
+bool sendRecv(const ServerConfig &server, const Message &message, Message &answer)
+{
+    // try to connect to TCP server
+    QTcpSocket sock;
+    sock.connectToHost(server.hostName, server.port);
+    if (!sock.waitForConnected(server.timeout)) {
+        qWarning() << "Unable to connect to" << server.hostName << ", port =" << server.port;
+        return false;
+    }
+
+    ClientCommon::send(&sock, message);
+    ClientCommon::receive(&sock, answer, server.timeout);
+
+    return true;
+}
+
+} //namespace ClientCommon

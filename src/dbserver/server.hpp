@@ -28,5 +28,5 @@ private:
 
     Moosick::Library m_library;
 
-    QHash<QTcpSocket *, NetCommon::MessageHeader> m_connections;
+    QHash<QTcpSocket *, ClientCommon::MessageHeader> m_connections;
 };

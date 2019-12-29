@@ -4,7 +4,7 @@
 
 #include <QTcpSocket>
 
-namespace NetCommon {
+namespace ClientCommon {
 
 enum MessageType : quint32
 {
@@ -35,4 +35,13 @@ bool receive(QTcpSocket *socket, Message &msg, int timeout);
 
 bool receiveHeader(QTcpSocket *socket, MessageHeader &msg);
 
-} //namespace NetCommon
+struct ServerConfig
+{
+    QString hostName;
+    quint16 port;
+    quint32 timeout;
+};
+
+bool sendRecv(const ServerConfig &server, const ClientCommon::Message &message, ClientCommon::Message &answer);
+
+} //namespace ClientCommon

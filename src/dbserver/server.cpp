@@ -71,10 +71,10 @@ void Server::onNewDataReady(QTcpSocket *socket)
 
     // first receive message header
     if (!hasHeader) {
-        NetCommon::MessageHeader header;
+        ClientCommon::MessageHeader header;
 
         // wait until we can receive the header
-        if (!NetCommon::receiveHeader(socket, header))
+        if (!ClientCommon::receiveHeader(socket, header))
             return;
 
         headerIt = m_connections.insert(socket, header);
@@ -88,17 +88,17 @@ void Server::onNewDataReady(QTcpSocket *socket)
     const QByteArray data = socket->read(headerIt->dataSize);
 
     // parse message
-    NetCommon::Message message{ headerIt->tp, data };
+    ClientCommon::Message message{ headerIt->tp, data };
 
     qDebug() << "Received" << message.format() << "from" << socket->peerAddress();
 
     switch (message.tp) {
-    case NetCommon::Ping: {
+    case ClientCommon::Ping: {
         qDebug() << "Sending Pong to" << socket->peerAddress();
-        NetCommon::send(socket, {NetCommon::Pong, {}});
+        ClientCommon::send(socket, {ClientCommon::Pong, {}});
         break;
     }
-    case NetCommon::ChangesRequest: {
+    case ClientCommon::ChangesRequest: {
         // read changes from TCP stream
         QDataStream in(message.data);
         QVector<Moosick::LibraryChange> changes;
@@ -122,12 +122,12 @@ void Server::onNewDataReady(QTcpSocket *socket)
         qDebug() << "Applied" << changes.size() << "changes to Library. Sending ChangesResponse to" << socket->peerAddress();
 
         // send back all successful changes
-        NetCommon::Message response;
-        response.tp = NetCommon::ChangesResponse;
+        ClientCommon::Message response;
+        response.tp = ClientCommon::ChangesResponse;
         QDataStream out(&response.data, QIODevice::WriteOnly);
         out << changes;
 
-        NetCommon::send(socket, response);
+        ClientCommon::send(socket, response);
 
         // append library log
         QFile logFile(m_logPath);
@@ -141,21 +141,21 @@ void Server::onNewDataReady(QTcpSocket *socket)
 
         break;
     }
-    case NetCommon::LibraryRequest: {
+    case ClientCommon::LibraryRequest: {
         // send back whole library
-        NetCommon::Message response;
-        response.tp = NetCommon::LibraryReponse;
+        ClientCommon::Message response;
+        response.tp = ClientCommon::LibraryReponse;
         QDataStream out(&response.data, QIODevice::WriteOnly);
         out << m_library;
 
         qDebug() << "Sending LibraryResponse to" << socket->peerAddress();
 
-        NetCommon::send(socket, response);
+        ClientCommon::send(socket, response);
         break;
     }
     default: {
         qDebug() << "Sending Error to" << socket->peerAddress();
-        NetCommon::send(socket, {NetCommon::Error, {}});
+        ClientCommon::send(socket, {ClientCommon::Error, {}});
         break;
     }
     }
