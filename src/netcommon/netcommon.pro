@@ -1,5 +1,5 @@
 TARGET = netcommon
-CONFIG += c++11
+CONFIG += c++11 staticlib
 TEMPLATE = lib
 
 QT += core network

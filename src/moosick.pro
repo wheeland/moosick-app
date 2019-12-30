@@ -1,9 +1,11 @@
 TEMPLATE = subdirs
 
+CONFIG += ordered
+
 SUBDIRS = \
     dbcommon \
     netcommon \
-    dbserver \
     clientcommon \
+    dbserver \
     testclient \
 
