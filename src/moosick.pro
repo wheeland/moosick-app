@@ -8,4 +8,4 @@ SUBDIRS = \
     clientcommon \
     dbserver \
     testclient \
-
+    cgi \
