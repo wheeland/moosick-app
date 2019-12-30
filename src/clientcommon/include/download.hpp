@@ -13,7 +13,7 @@ QVector<Moosick::LibraryChange> bandcampDownload(
         const ServerConfig &server,
         const NetCommon::DownloadRequest &request,
         const QString &mediaDir,
-        const QString &nodeJsDir,
+        const QString &toolDir,
         const QString &tempDir);
 
 } //namespace ClientCommon

@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     parser.addPositionalArgument("port", "Thy port");
     parser.addOption({{"timeout", "t"}, "How long to wait for a connection to host", "timeout", "1000"});
     parser.addOption({{"media", "m"}, "Media directory", "media", "."});
-    parser.addOption({{"node", "n"}, "Node.js directory", "node", "."});
+    parser.addOption({{"node", "n"}, "Node.js and Tools directory", "node", "."});
     parser.addOption({{"temp", "T"}, "Temp directory", "temp", "/tmp"});
     parser.process(app);
 
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
     s_serverConfig.timeout = parser.value("timeout").toInt();
 
     const QString mediaDir = parser.value("media");
-    const QString nodeJsDir = parser.value("node");
+    const QString toolsDir = parser.value("node");
     const QString tempDir = parser.value("temp");
 
     while (true) {
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
                 parts[0], parts[1].toInt(), parts[1], parts[2]
             };
 
-            const QVector<Moosick::LibraryChange> ret = ClientCommon::bandcampDownload(s_serverConfig, download, mediaDir, nodeJsDir, tempDir);
+            const QVector<Moosick::LibraryChange> ret = ClientCommon::bandcampDownload(s_serverConfig, download, mediaDir, toolsDir, tempDir);
             for (const Moosick::LibraryChange &ch : ret)
                 qWarning().noquote() << answerToString(ch);
         }

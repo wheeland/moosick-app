@@ -2,9 +2,17 @@
 #include "util.hpp"
 
 #include <QFile>
+#include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+
+static QString createTempDir(const QString &dir)
+{
+    QByteArray out;
+    ClientCommon::runProcess("mktemp", {"-d", "-p", dir}, &out, nullptr, 1000);
+    return QString(out).trimmed();
+}
 
 namespace ClientCommon {
 
@@ -12,7 +20,7 @@ QVector<Moosick::LibraryChange> bandcampDownload(
         const ServerConfig &server,
         const NetCommon::DownloadRequest &request,
         const QString &mediaDir,
-        const QString &nodeJsDir,
+        const QString &toolDir,
         const QString &tempDir)
 {
     QVector<Moosick::LibraryChange> ret;
@@ -23,7 +31,7 @@ QVector<Moosick::LibraryChange> bandcampDownload(
 
     // get info about downloads
     QByteArray out, err;
-    int status = runProcess("node", {nodeJsDir + "/bandcamp-album-info.js", request.url}, &out, &err, 20000);
+    int status = runProcess(toolDir + "/node", {toolDir + "/bandcamp-album-info.js", request.url}, &out, &err, 20000);
     if (status != 0) {
         qWarning() << "Node.js failed:";
         qWarning() << "stdout:";
@@ -49,14 +57,15 @@ QVector<Moosick::LibraryChange> bandcampDownload(
     const int numSongs = albumInfo.tracks.size();
 
     // download album into temp. directory
-    status = runProcess("bandcamp-dl", {
-                   QString("--base-dir=") + tempDir,
+    const QString dstDir = createTempDir(tempDir);
+    status = runProcess(toolDir + "/bandcamp-dl", {
+                   QString("--base-dir=") + dstDir,
                    "--template=%{track}",
                    request.url
                }, &out, &err, 120000);
 
     if (status != 0) {
-        qWarning() << "bandcamp-dl failed:";
+        qWarning() << "bandcamp-dl failed, status =" << status;
         qWarning() << "stdout:";
         qWarning().noquote() << out;
         qWarning() << "stderr:";
@@ -67,7 +76,7 @@ QVector<Moosick::LibraryChange> bandcampDownload(
     // check if the files are there
     QStringList tempFilePaths;
     for (int i = 1; i <= numSongs; ++i) {
-        const QString tempFilePath = tempDir + QString::asprintf("/%02d.mp3", i);
+        const QString tempFilePath = dstDir + QString::asprintf("/%02d.mp3", i);
         tempFilePaths << tempFilePath;
         REQUIRE(QFile::exists(tempFilePath));
     }
@@ -111,6 +120,9 @@ QVector<Moosick::LibraryChange> bandcampDownload(
         const QString newFilePath = mediaDir + QString::asprintf("/%d.mp3", resultChanges[i].detail);
         QFile(tempFilePaths[i]).rename(newFilePath);
     }
+
+    // remove temp. directory
+    QProcess::execute(toolDir + "/rm", {"-rf", dstDir});
 
     // set library information for all new files
     QVector<Moosick::LibraryChange> songDetails;
