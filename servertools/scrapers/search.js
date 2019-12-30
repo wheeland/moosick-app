@@ -16,7 +16,7 @@ function bandcampSearchResult(error, searchResults) {
                 url: result.url,
                 name: result.name,
                 icon: result.imageUrl
-            }, null, 2));
+            }, null, 2) + ",");
         }
         else if (result.type === "artist") {
             console.log(JSON.stringify({
@@ -24,7 +24,7 @@ function bandcampSearchResult(error, searchResults) {
                 url: result.url,
                 name: result.name,
                 icon: result.imageUrl
-            }, null, 2));
+            }, null, 2) + ",");
         }
     });
 };
@@ -37,7 +37,7 @@ function youtubeResults(results) {
                 url: result.link,
                 name: result.title,
                 icon: result.thumbnail
-            }, null, 2));
+            }, null, 2) + ",");
         }
         else if (result.type == "playlist") {
             console.log(JSON.stringify({
@@ -46,7 +46,7 @@ function youtubeResults(results) {
                 name: result.title,
                 icon: result.thumbnail,
                 count: result.video_count
-            }, null, 2));
+            }, null, 2) + ",");
         }
     });
 }
