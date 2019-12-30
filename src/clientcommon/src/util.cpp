@@ -52,15 +52,25 @@ int runProcess(
     process.setArguments(args);
     process.start();
 
+    int retCode = 0;
+
     if (!process.waitForFinished(timeout)) {
-        return -1;
+        qWarning() << "Process" << program << "didn't finish:" << process.error() << process.state() << process.exitStatus();
+        retCode = -1;
+    } else {
+        retCode = process.exitCode();
     }
 
-    if (out)
+    if (out) {
+        out->clear();
         *out = process.readAllStandardOutput();
-    if (err)
+    }
+    if (err) {
+        err->clear();
         *err= process.readAllStandardError();
-    return process.exitCode();
+    }
+
+    return retCode;
 }
 
 } //namespace ClientCommon
