@@ -1,0 +1,14 @@
+Need to create the following symlinks in tools/
+    bandcamp-album-info.js@
+    bandcamp-artist-info.js@
+    bandcamp-dl@
+    node@
+    rm@
+    search.js@
+    youtube-dl@
+
+and in root/
+    bandcamp-download.do@
+    lib.do@
+    search.do@
+all linking to the cgi executable
