@@ -79,6 +79,22 @@ int main(int argc, char **argv)
         std::cout << toBase64(changes).data() << std::endl;
         return 0;
     }
+    else if (command == "bandcamp-artist-info.do") {
+        if (values.contains("v")) {
+            const QString url = values["v"];
+            QProcess::execute(toolDir + "node", {jsDir + "bandcamp-artist-info.js", url});
+        } else
+            std::cout << "[]" << std::endl;
+        return 0;
+    }
+    else if (command == "bandcamp-album-info.do") {
+        if (values.contains("v")) {
+            const QString url = values["v"];
+            QProcess::execute(toolDir + "node", {jsDir + "bandcamp-album-info.js", url});
+        } else
+            std::cout << "[]" << std::endl;
+        return 0;
+    }
 
 //    std::cout << qPrintable(command) << std::endl;
 //    for (auto it = values.begin(); it != values.end(); ++it)

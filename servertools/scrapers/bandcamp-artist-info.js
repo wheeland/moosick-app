@@ -8,25 +8,44 @@ if (process.argv.length < 3) {
 var artistUrl = process.argv[2].replace("https://", "http://");
 
 var albums = [];
+var left = 0;
 
-function albumHandler(error, info) {
-    if (error)
-        return;
-
-    console.log(JSON.stringify({
-        name: info.title,
-        icon: info.imageUrl,
-        tracks: info.tracks
-    }, null, 2));
+function done() {
+    left -= 1;
+    if (left == 0) {
+        console.log("[");
+        for (var i = 0; i < albums.length; ++i) {
+            var str = JSON.stringify(albums[i], null, 2);
+            if (i < albums.length - 1)
+                str = str + ",";
+            console.log(str);
+        }
+        console.log("]");
+    }
 }
 
 function handler(error, info) {
     if (error)
         return;
 
-    info.forEach(function(url) {
-        if (url.includes("/album/"))
-            bandcamp.getAlbumInfo(url, albumHandler);
+    info.forEach(function(albumUrl) {
+        if (albumUrl.includes("/album/")) {
+            left += 1;
+            
+            var albumHandler = function(error, info) {
+                if (!error)
+                    albums.push({
+                        name: info.title,
+                        url: albumUrl,
+                        icon: info.imageUrl,
+                        tracks: info.tracks
+                    });
+                
+                done();
+            };
+            
+            bandcamp.getAlbumInfo(albumUrl, albumHandler);
+        }
     });
 }
 

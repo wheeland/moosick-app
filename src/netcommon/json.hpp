@@ -17,6 +17,7 @@ struct BandcampSongInfo
 struct BandcampAlbumInfo
 {
     QString name;
+    QString url;
     QString icon;
     QVector<BandcampSongInfo> tracks;
 

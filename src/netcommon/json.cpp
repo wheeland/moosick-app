@@ -34,10 +34,11 @@ bool BandcampSongInfo::fromJson(const QJsonObject &json)
 bool BandcampAlbumInfo::fromJson(const QJsonObject &json)
 {
     const auto nameIt = json.find("name");
+    const auto urlIt = json.find("url");
     const auto iconIt = json.find("icon");
     const auto tracksIt = json.find("tracks");
 
-    if ((nameIt == json.end()) || (iconIt == json.end()) || (tracksIt == json.end()))
+    if ((nameIt == json.end()) || (iconIt == json.end()) || (tracksIt == json.end()) || (urlIt == json.end()))
         return false;
 
     const QJsonArray trackArray = tracksIt->toArray();
@@ -53,6 +54,7 @@ bool BandcampAlbumInfo::fromJson(const QJsonObject &json)
     }
 
     name = nameIt->toString();
+    url = urlIt->toString();
     icon = iconIt->toString();
     tracks = songInfo;
 

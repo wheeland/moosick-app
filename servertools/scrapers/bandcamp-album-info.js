@@ -13,6 +13,7 @@ function handler(error, info) {
 
     console.log(JSON.stringify({
         name: info.title,
+        url: albumUrl,
         icon: info.imageUrl,
         tracks: info.tracks
     }, null, 2));
