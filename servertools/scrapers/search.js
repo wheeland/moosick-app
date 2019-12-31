@@ -8,47 +8,71 @@ if (process.argv.length < 3) {
 }
 var pattern = process.argv[2];
 
+var results = [];
+var left = 2;
+
+function done() {
+    left -= 1;
+    
+    if (left === 0) {
+        for (var i = 0; i < results.length; ++i) {
+            var str = JSON.stringify(results[i], null, 2);
+            if (i < results.length - 1)
+                str = str + ","
+            console.log(str);
+        };
+        console.log("]");
+        process.exit();
+    }
+}
+
+console.log("[");
+
 function bandcampSearchResult(error, searchResults) {
     searchResults.forEach(function(result) {
         if (result.type === "album") {
-            console.log(JSON.stringify({
+            results.push({
                 type: "album",
                 url: result.url,
                 name: result.name,
                 icon: result.imageUrl
-            }, null, 2) + ",");
+            });
         }
         else if (result.type === "artist") {
-            console.log(JSON.stringify({
+            results.push({
                 type: "artist",
                 url: result.url,
                 name: result.name,
                 icon: result.imageUrl
-            }, null, 2) + ",");
+            });
         }
     });
+    
+    done();
 };
 
 function youtubeResults(results) {
     results.forEach(function(result) {
         if (result.type == "video") {
-            console.log(JSON.stringify({
+            results.push({
                 type: "video",
                 url: result.link,
                 name: result.title,
                 icon: result.thumbnail
-            }, null, 2) + ",");
+            });
         }
         else if (result.type == "playlist") {
-            console.log(JSON.stringify({
+            results.push({
                 type: "playlist",
                 url: result.link,
                 name: result.title,
                 icon: result.thumbnail,
                 count: result.video_count
-            }, null, 2) + ",");
+            });
         }
     });
+    
+    done();
 }
 
 bandcamp.search({ query: pattern, page: 1 }, bandcampSearchResult);
