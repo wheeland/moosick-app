@@ -255,7 +255,7 @@ bool Query::populateRootResults(const QByteArray &json)
     }
 
     // add to model
-    beginInsertRows(QModelIndex(), m_rootResults.size(), newResults.size());
+    beginInsertRows(QModelIndex(), m_rootResults.size(), m_rootResults.size() + newResults.size() - 1);
     m_rootResults << newResults;
     endInsertRows();
 
