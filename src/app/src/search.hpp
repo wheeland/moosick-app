@@ -2,6 +2,9 @@
 
 #include <QAbstractListModel>
 #include <QSortFilterProxyModel>
+#include <QNetworkReply>
+
+class QNetworkAccessManager;
 
 namespace Search {
 
@@ -19,6 +22,7 @@ class Result : public QObject
     Q_PROPERTY(Type type READ resultType CONSTANT)
     Q_PROPERTY(QString url READ url CONSTANT)
     Q_PROPERTY(QString iconUrl READ iconUrl CONSTANT)
+    Q_PROPERTY(bool querying READ isQuerying NOTIFY queryingChanged)
 
 public:
     enum Type {
@@ -37,12 +41,19 @@ public:
     Type resultType() const { return m_type; }
     QString url() const { return m_url; }
     QString iconUrl() const { return m_iconUrl; }
+    bool isQuerying() const { return m_querying; }
+
+    void setQuerying(bool querying);
+
+signals:
+    void queryingChanged(bool querying);
 
 private:
     QString m_title;
     Type m_type;
     QString m_url;
     QString m_iconUrl;
+    bool m_querying;
 };
 
 class BandcampArtistResult : public Result
@@ -110,25 +121,60 @@ class Query : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(bool finished READ hasFinished NOTIFY finishedChanged)
+    Q_PROPERTY(bool hasErrors READ hasErrors NOTIFY hasErrorsChanged)
 
 public:
-    Query(QObject *parent = nullptr);
+    Query(const QString &host, quint16 port, const QString &searchString, QObject *parent = nullptr);
     ~Query();
 
-    void start(const QString &searchString);
     void seachMore();
-    void abort();
 
     bool hasFinished() const;
+    bool hasErrors() const;
+
+    void retry();
 
 signals:
     void finishedChanged(bool finished);
+    void networkError(QNetworkReply::NetworkError error);
+    void hasErrorsChanged(bool hasErrors);
+
+private slots:
+    void onNetworkReplyFinished(QNetworkReply *reply);
+    void onNetworkError(QNetworkReply::NetworkError error);
 
 private:
+    QNetworkReply *request(const QString &path);
+    QNetworkReply *requestRootSearch(int page);
+    QNetworkReply *requestArtistSearch(const QString &url);
+    QNetworkReply *requestAlbumSearch(const QString &url);
+    bool populateRootResults(const QByteArray &json);
+
+    // These search parameters won't change
+    const QString m_searchString;
+    const QString m_host;
+    const quint16 m_port;
+    QNetworkAccessManager *m_manager = nullptr;
+
+    // keep track of all curently running queries
+    QVector<QNetworkReply*> m_runningQueries;
+
+    // associate each query with what they were querying
+    int m_queriedPages = 0;
+    QHash<QNetworkReply*, int> m_rootPageQueries;
+    QHash<QNetworkReply*, BandcampArtistResult*> m_artistQueries;
+    QHash<QNetworkReply*, BandcampAlbumResult*> m_albumQueries;
+
+    // these queries have failed for some reason, and can be repeated later on
+    QVector<QNetworkReply*> m_failedQueries;
+
     friend class QueryFilterModel;
-    QVector<Result*> m_results;
+    QVector<Result*> m_rootResults;
 };
 
+/**
+ * Filters out one specific Result::Type from all results in one Query
+ */
 class QueryFilterModel : public QSortFilterProxyModel
 {
     Q_OBJECT
