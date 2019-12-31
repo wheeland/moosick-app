@@ -123,16 +123,24 @@ class Query : public QAbstractListModel
     Q_PROPERTY(bool finished READ hasFinished NOTIFY finishedChanged)
     Q_PROPERTY(bool hasErrors READ hasErrors NOTIFY hasErrorsChanged)
 
+    enum Role {
+        ResultRole = Qt::UserRole + 1
+    };
+
 public:
     Query(const QString &host, quint16 port, const QString &searchString, QObject *parent = nullptr);
-    ~Query();
+    ~Query() override;
 
     void seachMore();
 
     bool hasFinished() const;
     bool hasErrors() const;
 
-    void retry();
+    Q_INVOKABLE void retry();
+
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override;
 
 signals:
     void finishedChanged(bool finished);
@@ -144,7 +152,7 @@ private slots:
     void onNetworkError(QNetworkReply::NetworkError error);
 
 private:
-    QNetworkReply *request(const QString &path);
+    QNetworkReply *request(const QString &path, const QString &query);
     QNetworkReply *requestRootSearch(int page);
     QNetworkReply *requestArtistSearch(const QString &url);
     QNetworkReply *requestAlbumSearch(const QString &url);
@@ -157,16 +165,16 @@ private:
     QNetworkAccessManager *m_manager = nullptr;
 
     // keep track of all curently running queries
+    // some queries have failed for some reason, and can be repeated later on.
+    // a query is in either of these two lists
     QVector<QNetworkReply*> m_runningQueries;
+    QVector<QNetworkReply*> m_failedQueries;
 
     // associate each query with what they were querying
     int m_queriedPages = 0;
     QHash<QNetworkReply*, int> m_rootPageQueries;
     QHash<QNetworkReply*, BandcampArtistResult*> m_artistQueries;
     QHash<QNetworkReply*, BandcampAlbumResult*> m_albumQueries;
-
-    // these queries have failed for some reason, and can be repeated later on
-    QVector<QNetworkReply*> m_failedQueries;
 
     friend class QueryFilterModel;
     QVector<Result*> m_rootResults;

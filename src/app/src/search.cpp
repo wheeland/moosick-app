@@ -134,6 +134,8 @@ Query::~Query()
 {
     for (QNetworkReply *reply : m_runningQueries)
         reply->deleteLater();
+    for (QNetworkReply *reply : m_failedQueries)
+        reply->deleteLater();
     for (Result *result : m_rootResults)
         result->deleteLater();
     m_manager->deleteLater();
@@ -183,6 +185,26 @@ void Query::retry()
 
     m_failedQueries.clear();
     emit hasErrorsChanged(false);
+}
+
+int Query::rowCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent)
+    return m_rootResults.size();
+}
+
+QVariant Query::data(const QModelIndex &index, int role) const
+{
+    const int idx = index.row();
+    switch (role) {
+    case ResultRole: return QVariant::fromValue(m_rootResults[idx]);
+    default: return QVariant();
+    }
+}
+
+QHash<int, QByteArray> Query::roleNames() const
+{
+    return {{ResultRole, "result"}};
 }
 
 bool Query::populateRootResults(const QByteArray &json)
@@ -242,6 +264,9 @@ bool Query::populateRootResults(const QByteArray &json)
 
 void Query::onNetworkReplyFinished(QNetworkReply *reply)
 {
+    if (!m_runningQueries.contains(reply))
+        return;
+
     const QByteArray data = reply->readAll();
 
     if (m_rootPageQueries.contains(reply)) {
@@ -266,22 +291,27 @@ void Query::onNetworkReplyFinished(QNetworkReply *reply)
 
 void Query::onNetworkError(QNetworkReply::NetworkError error)
 {
-    const bool hadErrors = m_failedQueries.isEmpty();
+    const bool hadErrors = !m_failedQueries.isEmpty();
 
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     m_failedQueries << reply;
+    m_runningQueries.removeAll(reply);
+
+    qWarning() << "QNetworkReply has error:" << reply->errorString();
 
     emit networkError(error);
     if (!hadErrors)
         emit hasErrorsChanged(true);
 }
 
-QNetworkReply *Query::request(const QString &path)
+QNetworkReply *Query::request(const QString &path, const QString &query)
 {
     QUrl url;
+    url.setScheme("http");
     url.setHost(m_host);
     url.setPort(m_port);
     url.setPath(path);
+    url.setQuery(query, QUrl::StrictMode);
 
     const QNetworkRequest request(url);
     QNetworkReply *reply = m_manager->get(request);
@@ -296,8 +326,8 @@ QNetworkReply *Query::request(const QString &path)
 
 QNetworkReply *Query::requestRootSearch(int page)
 {
-    const QByteArray searchStringBase64 = m_searchString.toUtf8().toBase64();
-    return request(QString("/search.do?v=") + searchStringBase64);
+    const QByteArray searchStringBase64 = m_searchString.toUtf8().toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
+    return request("/search.do", QString("v=") + searchStringBase64);
 }
 
 QNetworkReply *Query::requestArtistSearch(const QString &url)
