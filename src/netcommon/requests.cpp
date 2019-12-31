@@ -12,12 +12,12 @@ QByteArray DownloadRequest::toBase64() const
     out << artistId;
     out << artistName;
     out << albumName;
-    return ret.toBase64();
+    return ret.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
 }
 
 bool DownloadRequest::fromBase64(const QByteArray &base64)
 {
-    QByteArray data = QByteArray::fromBase64(base64);
+    QByteArray data = QByteArray::fromBase64(base64, QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
     QDataStream in(&data, QIODevice::ReadOnly);
 
     quint32 tp32, id32;
