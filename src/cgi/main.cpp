@@ -54,7 +54,7 @@ int main(int argc, char **argv)
         return 0;
     }
     else if (command == "search.do") {
-        if (values.contains("v")) {
+        if (values.contains("v") && !values["v"].isEmpty()) {
             const QString searchPattern = QByteArray::fromBase64(values["v"], QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
             QProcess::execute(toolDir + "node", {jsDir + "search.js", searchPattern});
         } else
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
         return 0;
     }
     else if (command == "bandcamp-download.do") {
-        if (!values.contains("v"))
+        if (!values.contains("v") || values["v"].isEmpty())
             return 0;
 
         NetCommon::DownloadRequest request;
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
         return 0;
     }
     else if (command == "bandcamp-artist-info.do") {
-        if (values.contains("v")) {
+        if (values.contains("v") && !values["v"].isEmpty()) {
             const QString url = values["v"];
             QProcess::execute(toolDir + "node", {jsDir + "bandcamp-artist-info.js", url});
         } else
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         return 0;
     }
     else if (command == "bandcamp-album-info.do") {
-        if (values.contains("v")) {
+        if (values.contains("v") && !values["v"].isEmpty()) {
             const QString url = values["v"];
             QProcess::execute(toolDir + "node", {jsDir + "bandcamp-album-info.js", url});
         } else
