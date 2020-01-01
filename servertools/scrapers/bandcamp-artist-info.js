@@ -28,25 +28,35 @@ function handler(error, info) {
     if (error)
         return;
 
-    info.forEach(function(albumUrl) {
-        if (albumUrl.includes("/album/")) {
-            left += 1;
-            
-            var albumHandler = function(error, info) {
-                if (!error)
-                    albums.push({
-                        name: info.title,
-                        url: albumUrl,
-                        icon: info.imageUrl,
-                        tracks: info.tracks
-                    });
-                
-                done();
-            };
-            
-            bandcamp.getAlbumInfo(albumUrl, albumHandler);
-        }
-    });
+    console.log(JSON.stringify(info.map(albumInfo => {
+        return {
+            type: "album",
+            name: albumInfo.title,
+            icon: albumInfo.imageUrl,
+            url: albumInfo.url,
+        };
+    }
+    ), null, 2));
+
+//    info.forEach(function(albumUrl) {
+//        if (albumUrl.includes("/album/")) {
+//            left += 1;
+//            
+//            var albumHandler = function(error, info) {
+//                if (!error)
+//                    albums.push({
+//                        name: info.title,
+//                        url: albumUrl,
+//                        icon: info.imageUrl,
+//                        tracks: info.tracks
+//                    });
+//                
+//                done();
+//            };
+//            
+//            bandcamp.getAlbumInfo(albumUrl, albumHandler);
+//        }
+//    });
 }
 
 bandcamp.getAlbumUrls(artistUrl, handler);

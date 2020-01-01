@@ -282,20 +282,17 @@ bool Query::populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampA
 
 bool Query::populateArtist(BandcampArtistResult *artist, const QByteArray &artistInfo)
 {
-    const QJsonArray root = parseJsonArray(artistInfo, "search.do");
+    const QJsonArray root = parseJsonArray(artistInfo, "bandcamp-artist-info");
     if (root.isEmpty())
         return false;
 
     for (const QJsonValue &entry : root) {
-        NetCommon::BandcampAlbumInfo albumInfo;
-        if (!albumInfo.fromJson(entry.toObject())) {
-            qWarning() << "Failed to parse album info:" << entry;
-            continue;
-        }
+        const QString type = entry["type"].toString();
+        const QString name = entry["name"].toString();
+        const QString url = entry["url"].toString();
+        const QString icon = entry["icon"].toString();
 
-        BandcampAlbumResult *newAlbum = new BandcampAlbumResult(albumInfo.name, albumInfo.url, albumInfo.icon, this);
-        populateAlbum(newAlbum, albumInfo);
-
+        BandcampAlbumResult *newAlbum = createAlbumResult(name, url, icon);
         artist->addAlbum(newAlbum);
     }
 
