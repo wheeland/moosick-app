@@ -6,6 +6,10 @@
 
 class QNetworkAccessManager;
 
+namespace NetCommon {
+class BandcampAlbumInfo;
+}
+
 namespace Search {
 
 class BandcampArtistResult;
@@ -22,7 +26,7 @@ class Result : public QObject
     Q_PROPERTY(Type type READ resultType CONSTANT)
     Q_PROPERTY(QString url READ url CONSTANT)
     Q_PROPERTY(QString iconUrl READ iconUrl CONSTANT)
-    Q_PROPERTY(bool querying READ isQuerying NOTIFY queryingChanged)
+    Q_PROPERTY(Status status READ status NOTIFY statusChanged)
 
 public:
     enum Type {
@@ -34,6 +38,14 @@ public:
     };
     Q_ENUM(Type)
 
+    enum Status {
+        InfoOnly,
+        Querying,
+        Error,
+        Done,
+    };
+    Q_ENUM(Status)
+
     Result(Type tp, const QString &title, const QString &url, const QString &icon, QObject *parent = nullptr);
     ~Result() override = default;
 
@@ -41,19 +53,19 @@ public:
     Type resultType() const { return m_type; }
     QString url() const { return m_url; }
     QString iconUrl() const { return m_iconUrl; }
-    bool isQuerying() const { return m_querying; }
+    Status status() const { return m_status; }
 
-    void setQuerying(bool querying);
+    void setStatus(Status status);
 
 signals:
-    void queryingChanged(bool querying);
+    void statusChanged(Status status);
 
 private:
     QString m_title;
     Type m_type;
     QString m_url;
     QString m_iconUrl;
-    bool m_querying;
+    Status m_status = InfoOnly;
 };
 
 class BandcampArtistResult : public Result
@@ -100,7 +112,7 @@ class BandcampTrackResult : public Result
     Q_PROPERTY(int secs READ secs CONSTANT)
 
 public:
-    BandcampTrackResult(const QString &title, const QString &url, const QString &icon, QObject *parent = nullptr);
+    BandcampTrackResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent = nullptr);
     ~BandcampTrackResult() = default;
     int secs() const { return m_secs; }
 
@@ -156,7 +168,10 @@ private:
     QNetworkReply *requestRootSearch(int page);
     QNetworkReply *requestArtistSearch(const QString &url);
     QNetworkReply *requestAlbumSearch(const QString &url);
+
     bool populateRootResults(const QByteArray &json);
+    bool populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);
+    bool populateArtist(BandcampArtistResult *artist, const QByteArray &artistInfo);
 
     // These search parameters won't change
     const QString m_searchString;

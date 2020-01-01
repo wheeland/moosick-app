@@ -1,4 +1,5 @@
 #include "search.hpp"
+#include "json.hpp"
 
 #include <QtGlobal>
 #include <QNetworkAccessManager>
@@ -8,6 +9,47 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
+static QJsonDocument parseJson(const QByteArray &json, const QByteArray &name)
+{
+    QJsonParseError error;
+    const QJsonDocument doc = QJsonDocument::fromJson(json, &error);
+    if (doc.isNull()) {
+        qWarning().noquote() << "Failed to parse" << name;
+        qWarning().noquote() << json;
+        qWarning() << "Error:";
+        qWarning().noquote() << error.errorString();
+    }
+    return doc;
+}
+
+static QJsonArray parseJsonArray(const QByteArray &json, const QByteArray &name)
+{
+    const QJsonDocument doc = parseJson(json, name);
+    if (doc.isNull())
+        return QJsonArray();
+
+    if (!doc.isArray()) {
+        qWarning().noquote() << name << "is not a JSON array";
+        return QJsonArray();
+    }
+
+    return doc.array();
+}
+
+static QJsonObject parseJsonObject(const QByteArray &json, const QByteArray &name)
+{
+    const QJsonDocument doc = parseJson(json, name);
+    if (doc.isNull())
+        return QJsonObject();
+
+    if (!doc.isObject()) {
+        qWarning().noquote() << name << "is not a JSON object";
+        return QJsonObject();
+    }
+
+    return doc.object();
+}
+
 namespace Search {
 
 Result::Result(Type tp, const QString &title, const QString &url, const QString &icon, QObject *parent)
@@ -16,15 +58,14 @@ Result::Result(Type tp, const QString &title, const QString &url, const QString 
     , m_type(tp)
     , m_url(url)
     , m_iconUrl(icon)
-    , m_querying(false)
 {
 }
 
-void Result::setQuerying(bool querying)
+void Result::setStatus(Result::Status status)
 {
-    if (m_querying != querying) {
-        m_querying = querying;
-        queryingChanged(querying);
+    if (m_status != status) {
+        m_status = status;
+        emit statusChanged(status);
     }
 }
 
@@ -76,8 +117,9 @@ void BandcampAlbumResult::addTrack(BandcampTrackResult *track)
     }
 }
 
-BandcampTrackResult::BandcampTrackResult(const QString &title, const QString &url, const QString &icon, QObject *parent)
+BandcampTrackResult::BandcampTrackResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent)
     : Result(BandcampTrack, title, url, icon, parent)
+    , m_secs(secs)
 {
 }
 
@@ -209,25 +251,12 @@ QHash<int, QByteArray> Query::roleNames() const
 
 bool Query::populateRootResults(const QByteArray &json)
 {
-    // try to parse JSON document
-    QJsonParseError error;
-    const QJsonDocument doc = QJsonDocument::fromJson(json, &error);
-    if (doc.isNull()) {
-        qWarning() << "Failed to parse search.do results:";
-        qWarning().noquote() << json;
-        qWarning() << "Error:";
-        qWarning().noquote() << error.errorString();
+    const QJsonArray root = parseJsonArray(json, "search.do");
+    if (root.isEmpty())
         return false;
-    }
-
-    if (!doc.isArray()) {
-        qWarning() << "search.do result is not an array";
-        return false;
-    }
 
     QVector<Result*> newResults;
 
-    const QJsonArray root = doc.array();
     for (const QJsonValue &entry : root) {
         const QString type = entry["type"].toString();
         const QString name = entry["name"].toString();
@@ -262,6 +291,36 @@ bool Query::populateRootResults(const QByteArray &json)
     return true;
 }
 
+bool Query::populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo)
+{
+    for (const NetCommon::BandcampSongInfo &song : albumInfo.tracks) {
+        BandcampTrackResult *track = new BandcampTrackResult(song.name, song.url, albumInfo.icon, song.secs, this);
+        album->addTrack(track);
+    }
+}
+
+bool Query::populateArtist(BandcampArtistResult *artist, const QByteArray &artistInfo)
+{
+    const QJsonArray root = parseJsonArray(artistInfo, "search.do");
+    if (root.isEmpty())
+        return false;
+
+    for (const QJsonValue &entry : root) {
+        NetCommon::BandcampAlbumInfo albumInfo;
+        if (!albumInfo.fromJson(entry.toObject())) {
+            qWarning() << "Failed to parse album info:" << entry;
+            continue;
+        }
+
+        BandcampAlbumResult *newAlbum = new BandcampAlbumResult(albumInfo.name, albumInfo.url, albumInfo.icon, this);
+        populateAlbum(newAlbum, albumInfo);
+
+        artist->addAlbum(newAlbum);
+    }
+
+    return true;
+}
+
 void Query::onNetworkReplyFinished(QNetworkReply *reply)
 {
     if (!m_runningQueries.contains(reply))
@@ -276,10 +335,17 @@ void Query::onNetworkReplyFinished(QNetworkReply *reply)
 
     else if (m_artistQueries.contains(reply)) {
         BandcampArtistResult *artist = m_artistQueries.take(reply);
+        populateArtist(artist, data);
     }
 
     else if (m_albumQueries.contains(reply)) {
         BandcampAlbumResult *album = m_albumQueries.take(reply);
+        const QJsonObject json = parseJsonObject(data, "bandcamp-album-info");
+        NetCommon::BandcampAlbumInfo albumInfo;
+        if (!albumInfo.fromJson(json))
+            qWarning() << "Failed to parse album info:" << json;
+        else
+            populateAlbum(album, albumInfo);
     }
 
     m_runningQueries.removeAll(reply);
@@ -332,12 +398,12 @@ QNetworkReply *Query::requestRootSearch(int page)
 
 QNetworkReply *Query::requestArtistSearch(const QString &url)
 {
-
+    return request("/bandcamp-artist-info.do", QString("v=") + url);
 }
 
 QNetworkReply *Query::requestAlbumSearch(const QString &url)
 {
-
+    return request("/bandcamp-album-info.do", QString("v=") + url);
 }
 
 } // namespace Search
