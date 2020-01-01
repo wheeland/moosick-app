@@ -18,7 +18,8 @@ HEADERS += \
     src/util/modeladapter.hpp \
 
 RESOURCES += \
-    qml.qrc
+    qml.qrc \
+    data.qrc \
 
 INCLUDEPATH += \
     ../dbcommon/include/ \
