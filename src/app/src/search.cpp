@@ -201,9 +201,8 @@ void QueryFilterModel::setSource(Query *source)
     emit sourceChanged(m_source);
 }
 
-Query::Query(const QString &host, quint16 port, const QString &searchString, QObject *parent)
+Query::Query(const QString &host, quint16 port, QObject *parent)
     : QAbstractListModel(parent)
-    , m_searchString(searchString)
     , m_host(host)
     , m_port(port)
 {
@@ -211,9 +210,6 @@ Query::Query(const QString &host, quint16 port, const QString &searchString, QOb
     connect(m_manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
         onNetworkReplyFinished(reply, QNetworkReply::NoError);
     });
-
-    // send inital search request
-    m_activeRootPageQuery = requestRootSearch();
 }
 
 Query::~Query()
@@ -233,6 +229,43 @@ bool Query::hasFinished() const
 bool Query::hasErrors() const
 {
     return (m_activeRootPageQuery == nullptr) && (m_rootResults.isEmpty());
+}
+
+void Query::abort()
+{
+    for (QNetworkReply *reply : qAsConst(m_runningQueries)) {
+        reply->abort();
+        reply->deleteLater();
+    }
+
+    m_runningQueries.clear();
+    m_activeRootPageQuery = nullptr;
+    m_artistQueries.clear();
+    m_albumQueries.clear();
+    m_iconQueries.clear();
+
+    emit hasErrorsChanged(hasErrors());
+}
+
+void Query::clear()
+{
+    abort();
+
+    if (!m_rootResults.isEmpty()) {
+        beginRemoveRows(QModelIndex(), 0, m_rootResults.size() - 1);
+        for (Result *result : qAsConst(m_rootResults))
+            result->deleteLater();
+        m_rootResults.clear();
+        endRemoveRows();
+    }
+}
+
+void Query::search(const QString &searchString)
+{
+    abort();
+    clear();
+    m_searchString = searchString.trimmed();
+    m_activeRootPageQuery = requestRootSearch();
 }
 
 void Query::retry()

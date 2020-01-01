@@ -41,6 +41,7 @@ Item {
             switch (root.result.type) {
             case Moosick.Result.BandcampArtist: return "artist";
             case Moosick.Result.BandcampAlbum: return "album";
+            case Moosick.Result.BandcampTrack: return "track";
             case Moosick.Result.YoutubeVideo: return "video";
             case Moosick.Result.YoutubePlaylist: return "playlist";
             default: return "null";

@@ -152,11 +152,15 @@ class Query : public QAbstractListModel
     };
 
 public:
-    Query(const QString &host, quint16 port, const QString &searchString, QObject *parent = nullptr);
+    Query(const QString &host, quint16 port, QObject *parent = nullptr);
     ~Query() override;
 
     bool hasFinished() const;
     bool hasErrors() const;
+
+    Q_INVOKABLE void abort();
+    Q_INVOKABLE void clear();
+    Q_INVOKABLE void search(const QString &searchString);
 
     Q_INVOKABLE void retry();
 
@@ -185,11 +189,12 @@ private:
     void populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);
     bool populateArtist(BandcampArtistResult *artist, const QByteArray &artistInfo);
 
-    // These search parameters won't change
-    const QString m_searchString;
+    // These parameters won't change
     const QString m_host;
     const quint16 m_port;
     QNetworkAccessManager *m_manager = nullptr;
+
+    QString m_searchString;
 
     // keep track of all curently running queries
     // some queries have failed for some reason, and can be repeated later on.

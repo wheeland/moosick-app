@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     const QSize screenSize = QSize(540, 920);
 #endif
 
-    Search::Query query("localhost", 8080, "hallo");
+    Search::Query query("localhost", 8080);
 
     qRegisterMetaType<Search::BandcampArtistResult*>();
     qRegisterMetaType<Search::BandcampAlbumResult*>();
