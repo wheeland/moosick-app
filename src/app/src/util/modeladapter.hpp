@@ -64,7 +64,7 @@ class Adapter : public AdapterBase
 {
 public:
     Adapter() {}
-    ~Adapter() {}
+    ~Adapter() { clear(); }
 
     typedef std::function<QVariant(const T &)> AccessorFunction;
 
@@ -96,6 +96,17 @@ public:
         endAdd();
     }
 
+    void insert(int index, const T& val)
+    {
+        if (index < 0)
+            index = 0;
+        if (index >= m_data.size())
+            add(val);
+        beginAdd(index, index);
+        m_data.insert(index, val);
+        endAdd();
+    }
+
     void remove(const T &val)
     {
         const int idx = m_data.indexOf(val);
@@ -121,6 +132,8 @@ public:
 
     virtual int size() const { return m_data.size(); }
     const QVector<T>& data() const { return m_data; }
+    const T& operator[](int idx) const { return m_data[idx]; }
+    T& operator[](int idx) { return m_data[idx]; }
 
 protected:
     virtual QVariant getData(int index, int role) const
