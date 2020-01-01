@@ -45,8 +45,6 @@ int main(int argc, char **argv)
     s_server.port = 12345;
     s_server.timeout = 1000;
 
-//    QProcess::execute("/usr/bin/env");
-
     if (command == "lib.do") {
         ClientCommon::Message answer;
         sendRecv(s_server, ClientCommon::Message{ ClientCommon::LibraryRequest }, answer);
@@ -95,10 +93,6 @@ int main(int argc, char **argv)
             std::cout << "[]" << std::endl;
         return 0;
     }
-
-//    std::cout << qPrintable(command) << std::endl;
-//    for (auto it = values.begin(); it != values.end(); ++it)
-//        std::cout << qPrintable(it.key()) << qPrintable(it.value()) << std::endl;
 
     return 0;
 }
