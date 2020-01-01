@@ -5,6 +5,7 @@
 #include <QScreen>
 
 #include "search.hpp"
+#include "playlist.hpp"
 
 int main(int argc, char **argv)
 {
@@ -20,10 +21,12 @@ int main(int argc, char **argv)
 
     Search::Query query("localhost", 8080);
 
+    qRegisterMetaType<Playlist::Entry*>();
     qRegisterMetaType<Search::BandcampArtistResult*>();
     qRegisterMetaType<Search::BandcampAlbumResult*>();
     qRegisterMetaType<Search::BandcampTrackResult*>();
     qmlRegisterUncreatableType<Search::Result>("Moosick", 1, 0, "SearchResult", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<Playlist::Entry>("Moosick", 1, 0, "PlaylistEntry", "ain't gonna do that from QML!");
 
     QQuickView view;
     view.resize(screenSize);
