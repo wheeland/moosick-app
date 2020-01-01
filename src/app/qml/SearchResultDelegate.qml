@@ -48,6 +48,14 @@ Item {
         font.italic: true
     }
 
+    Image {
+        anchors.verticalCenter: parent.verticalCenter
+        x: 100
+        height: 30
+        source: root.result.iconData
+        fillMode: Image.PreserveAspectFit
+    }
+
     Text {
         anchors { right: parent.right; top: parent.top; margins: 10 }
         color: root.textColor

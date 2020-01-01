@@ -8,6 +8,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QBuffer>
+#include <QImage>
 
 static QJsonDocument parseJson(const QByteArray &json, const QByteArray &name)
 {
@@ -59,6 +61,32 @@ Result::Result(Type tp, const QString &title, const QString &url, const QString 
     , m_url(url)
     , m_iconUrl(icon)
 {
+}
+
+void Result::setIconData(const QString &url, const QByteArray &data)
+{
+    QString format;
+    QByteArray imgData = data;
+
+    if (url.contains(".jpg"))
+        format = "jpg";
+    else if (url.contains(".png"))
+        format = "png";
+    else {
+        // if nothing matches, parse the image and save it as PNG
+        const QImage image = QImage::fromData(data);
+        QBuffer buffer;
+        image.save(&buffer, "PNG");
+        imgData = buffer.data();
+        format = "png";
+    }
+
+    QString iconDataUri = "data:image/";
+    iconDataUri += format += ";base64,";
+    iconDataUri += imgData.toBase64();
+
+    m_iconData = iconDataUri;
+    emit iconDataChanged();
 }
 
 void Result::setStatus(Result::Status status)
@@ -272,7 +300,7 @@ bool Query::populateRootResults(const QByteArray &json)
     return true;
 }
 
-bool Query::populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo)
+void Query::populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo)
 {
     for (const NetCommon::BandcampSongInfo &song : albumInfo.tracks) {
         BandcampTrackResult *track = new BandcampTrackResult(song.name, song.url, albumInfo.icon, song.secs, this);
@@ -343,6 +371,15 @@ void Query::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkE
         album->setStatus(hasError ? Result::Error : Result::Done);
     }
 
+    else if (m_iconQueries.contains(reply)) {
+        Result *result = m_iconQueries.take(reply);
+
+        if (!hasError) {
+            const QString url = reply->url().toString();
+            result->setIconData(url, data);
+        }
+    }
+
     m_runningQueries.removeAll(reply);
     reply->deleteLater();
 }
@@ -386,6 +423,22 @@ QNetworkReply *Query::requestAlbumSearch(const QString &url)
     return request("/bandcamp-album-info.do", QString("v=") + url);
 }
 
+void Query::requestIcon(Result *result)
+{
+    if (!result->iconData().isEmpty() || result->iconUrl().isEmpty())
+        return;
+
+    const QNetworkRequest request(QUrl(result->iconUrl()));
+    QNetworkReply *reply = m_manager->get(request);
+    connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
+            this, [=](QNetworkReply::NetworkError error) {
+        onNetworkReplyFinished(reply, error);
+    });
+
+    m_iconQueries[reply] = result;
+    m_runningQueries << reply;
+}
+
 BandcampAlbumResult *Query::createAlbumResult(const QString &name, const QString &url, const QString &icon)
 {
     BandcampAlbumResult *album = new BandcampAlbumResult(name, url, icon, this);
@@ -397,6 +450,8 @@ BandcampAlbumResult *Query::createAlbumResult(const QString &name, const QString
             album->setStatus(Result::Querying);
         }
     });
+
+    requestIcon(album);
 
     return album;
 }
@@ -412,6 +467,8 @@ BandcampArtistResult *Query::createArtistResult(const QString &name, const QStri
             artist->setStatus(Result::Querying);
         }
     });
+
+    requestIcon(artist);
 
     return artist;
 }

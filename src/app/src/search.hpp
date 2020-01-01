@@ -26,6 +26,7 @@ class Result : public QObject
     Q_PROPERTY(Type type READ resultType CONSTANT)
     Q_PROPERTY(QString url READ url CONSTANT)
     Q_PROPERTY(QString iconUrl READ iconUrl CONSTANT)
+    Q_PROPERTY(QString iconData READ iconData NOTIFY iconDataChanged)
     Q_PROPERTY(Status status READ status NOTIFY statusChanged)
 
 public:
@@ -54,7 +55,9 @@ public:
     QString url() const { return m_url; }
     QString iconUrl() const { return m_iconUrl; }
     Status status() const { return m_status; }
+    QString iconData() const { return m_iconData; }
 
+    void setIconData(const QString &url, const QByteArray &data);
     void setStatus(Status status);
 
     Q_INVOKABLE void queryInfo();
@@ -62,12 +65,14 @@ public:
 signals:
     void statusChanged(Status status);
     void queryInfoRequested();
+    void iconDataChanged();
 
 private:
     QString m_title;
     Type m_type;
     QString m_url;
     QString m_iconUrl;
+    QString m_iconData;
     Status m_status = InfoOnly;
 };
 
@@ -169,6 +174,7 @@ private:
     QNetworkReply *requestRootSearch();
     QNetworkReply *requestArtistSearch(const QString &url);
     QNetworkReply *requestAlbumSearch(const QString &url);
+    void requestIcon(Result *result);
 
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
 
@@ -176,7 +182,7 @@ private:
     BandcampArtistResult *createArtistResult(const QString &name, const QString &url, const QString &icon);
 
     bool populateRootResults(const QByteArray &json);
-    bool populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);
+    void populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);
     bool populateArtist(BandcampArtistResult *artist, const QByteArray &artistInfo);
 
     // These search parameters won't change
@@ -194,6 +200,7 @@ private:
     QNetworkReply *m_activeRootPageQuery = nullptr;
     QHash<QNetworkReply*, BandcampArtistResult*> m_artistQueries;
     QHash<QNetworkReply*, BandcampAlbumResult*> m_albumQueries;
+    QHash<QNetworkReply*, Result*> m_iconQueries;
 
     friend class QueryFilterModel;
     QVector<Result*> m_rootResults;
