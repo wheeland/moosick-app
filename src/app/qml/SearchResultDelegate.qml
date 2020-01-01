@@ -1,11 +1,11 @@
 import QtQuick 2.11
 
-import Moosick 1.0 as Moosick
+import Moosick 1.0
 
 Item {
     id: root
 
-    property Moosick.Result result
+    property SearchResult result
 
     height: 50 + childColumn.childrenRect.height
 
@@ -24,11 +24,11 @@ Item {
         color: root.textColor
         text: {
             switch (root.result.type) {
-            case Moosick.Result.BandcampArtist: return "artist";
-            case Moosick.Result.BandcampAlbum: return "album";
-            case Moosick.Result.BandcampTrack: return "track";
-            case Moosick.Result.YoutubeVideo: return "video";
-            case Moosick.Result.YoutubePlaylist: return "playlist";
+            case SearchResult.BandcampArtist: return "artist";
+            case SearchResult.BandcampAlbum: return "album";
+            case SearchResult.BandcampTrack: return "track";
+            case SearchResult.YoutubeVideo: return "video";
+            case SearchResult.YoutubePlaylist: return "playlist";
             default: return "null";
             }
         }
@@ -48,10 +48,10 @@ Item {
         color: root.textColor
         text: {
             switch (root.result.status) {
-            case Moosick.Result.InfoOnly: return "InfoOnly";
-            case Moosick.Result.Querying: return "Querying";
-            case Moosick.Result.Error: return "Error";
-            case Moosick.Result.Done: return "Done";
+            case SearchResult.InfoOnly: return "InfoOnly";
+            case SearchResult.Querying: return "Querying";
+            case SearchResult.Error: return "Error";
+            case SearchResult.Done: return "Done";
             default: return "null";
             }
         }
@@ -92,8 +92,8 @@ Item {
 
                 model: {
                     switch (root.result.type) {
-                    case Moosick.Result.BandcampArtist: return root.result.albums;
-                    case Moosick.Result.BandcampAlbum: return root.result.tracks;
+                    case SearchResult.BandcampArtist: return root.result.albums;
+                    case SearchResult.BandcampAlbum: return root.result.tracks;
                     default: return undefined;
                     }
                 }
