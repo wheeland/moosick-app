@@ -33,25 +33,10 @@ Rectangle {
 
             Repeater {
                 model: _query
-                delegate: Rectangle {
-                    width: parent.width - 50
-                    height: 80
 
-                    color: "#333333"
-                    border.width: 3
-                    border.color: {
-                        if (model.result.type === Moosick.Result.BandcampArtist)
-                            return "#002288";
-                        if (model.result.type === Moosick.Result.BandcampAlbum)
-                            return "#0066ff";
-                        return "black";
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: model.result.title + " - " + model.result.url
-                    }
-
+                delegate: SearchResultDelegate {
+                    width: flickable.width
+                    result: model.result
                 }
             }
         }

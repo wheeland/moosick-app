@@ -57,8 +57,11 @@ public:
 
     void setStatus(Status status);
 
+    Q_INVOKABLE void queryInfo();
+
 signals:
     void statusChanged(Status status);
+    void queryInfoRequested();
 
 private:
     QString m_title;
@@ -80,6 +83,8 @@ public:
     int albumCount() const;
     void addAlbum(BandcampAlbumResult *album);
 
+    Q_INVOKABLE Search::BandcampAlbumResult *getAlbum(int index) const;
+
 signals:
     void albumCountChanged(int albumCount);
 
@@ -98,6 +103,8 @@ public:
 
     int trackCount() const;
     void addTrack(BandcampTrackResult *track);
+
+    Q_INVOKABLE Search::BandcampTrackResult *getTrack(int index) const;
 
 signals:
     void trackCountChanged(int trackCount);
@@ -143,8 +150,6 @@ public:
     Query(const QString &host, quint16 port, const QString &searchString, QObject *parent = nullptr);
     ~Query() override;
 
-    void seachMore();
-
     bool hasFinished() const;
     bool hasErrors() const;
 
@@ -159,15 +164,16 @@ signals:
     void networkError(QNetworkReply::NetworkError error);
     void hasErrorsChanged(bool hasErrors);
 
-private slots:
-    void onNetworkReplyFinished(QNetworkReply *reply);
-    void onNetworkError(QNetworkReply::NetworkError error);
-
 private:
     QNetworkReply *request(const QString &path, const QString &query);
-    QNetworkReply *requestRootSearch(int page);
+    QNetworkReply *requestRootSearch();
     QNetworkReply *requestArtistSearch(const QString &url);
     QNetworkReply *requestAlbumSearch(const QString &url);
+
+    void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
+
+    BandcampAlbumResult *createAlbumResult(const QString &name, const QString &url, const QString &icon);
+    BandcampArtistResult *createArtistResult(const QString &name, const QString &url, const QString &icon);
 
     bool populateRootResults(const QByteArray &json);
     bool populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);
@@ -183,11 +189,9 @@ private:
     // some queries have failed for some reason, and can be repeated later on.
     // a query is in either of these two lists
     QVector<QNetworkReply*> m_runningQueries;
-    QVector<QNetworkReply*> m_failedQueries;
 
     // associate each query with what they were querying
-    int m_queriedPages = 0;
-    QHash<QNetworkReply*, int> m_rootPageQueries;
+    QNetworkReply *m_activeRootPageQuery = nullptr;
     QHash<QNetworkReply*, BandcampArtistResult*> m_artistQueries;
     QHash<QNetworkReply*, BandcampAlbumResult*> m_albumQueries;
 
@@ -228,3 +232,7 @@ private:
 
 
 } // namespace Search
+
+Q_DECLARE_METATYPE(Search::BandcampArtistResult*)
+Q_DECLARE_METATYPE(Search::BandcampAlbumResult*)
+Q_DECLARE_METATYPE(Search::BandcampTrackResult*)

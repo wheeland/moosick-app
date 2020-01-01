@@ -69,6 +69,12 @@ void Result::setStatus(Result::Status status)
     }
 }
 
+void Result::queryInfo()
+{
+    if (m_status == InfoOnly || m_status == Error)
+        emit queryInfoRequested();
+}
+
 BandcampArtistResult::BandcampArtistResult(const QString &title, const QString &url, const QString &icon, QObject *parent)
     : Result(BandcampArtist, title, url, icon, parent)
 {
@@ -93,6 +99,11 @@ void BandcampArtistResult::addAlbum(BandcampAlbumResult *album)
     }
 }
 
+BandcampAlbumResult *BandcampArtistResult::getAlbum(int index) const
+{
+    return m_albums.value(index);
+}
+
 BandcampAlbumResult::BandcampAlbumResult(const QString &title, const QString &url, const QString &icon, QObject *parent)
     : Result(BandcampAlbum, title, url, icon, parent)
 {
@@ -115,6 +126,11 @@ void BandcampAlbumResult::addTrack(BandcampTrackResult *track)
         m_tracks << track;
         emit trackCountChanged(m_tracks.size());
     }
+}
+
+BandcampTrackResult *BandcampAlbumResult::getTrack(int index) const
+{
+    return m_tracks.value(index);
 }
 
 BandcampTrackResult::BandcampTrackResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent)
@@ -164,68 +180,39 @@ Query::Query(const QString &host, quint16 port, const QString &searchString, QOb
     , m_port(port)
 {
     m_manager = new QNetworkAccessManager(this);
-    connect(m_manager, &QNetworkAccessManager::finished, this, &Query::onNetworkReplyFinished);
+    connect(m_manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
+        onNetworkReplyFinished(reply, QNetworkReply::NoError);
+    });
 
     // send inital search request
-    QNetworkReply *reply = requestRootSearch(0);
-    m_rootPageQueries[reply] = 0;
-    m_queriedPages = 1;
+    m_activeRootPageQuery = requestRootSearch();
 }
 
 Query::~Query()
 {
     for (QNetworkReply *reply : m_runningQueries)
         reply->deleteLater();
-    for (QNetworkReply *reply : m_failedQueries)
-        reply->deleteLater();
     for (Result *result : m_rootResults)
         result->deleteLater();
     m_manager->deleteLater();
 }
 
-void Query::seachMore()
-{
-    // TODO
-}
-
 bool Query::hasFinished() const
 {
-    return m_runningQueries.isEmpty();
+    return !m_rootResults.isEmpty();
 }
 
 bool Query::hasErrors() const
 {
-    return !m_failedQueries.isEmpty();
+    return (m_activeRootPageQuery == nullptr) && (m_rootResults.isEmpty());
 }
 
 void Query::retry()
 {
-    if (m_failedQueries.isEmpty())
+    if (!hasErrors())
         return;
 
-    for (QNetworkReply *failed : m_failedQueries) {
-        if (m_rootPageQueries.contains(failed)) {
-            const int page = m_rootPageQueries.take(failed);
-            QNetworkReply *newReply = requestRootSearch(page);
-            m_rootPageQueries[newReply] = page;
-        }
-
-        else if (m_artistQueries.contains(failed)) {
-            BandcampArtistResult *artist = m_artistQueries.take(failed);
-            QNetworkReply *newReply = requestArtistSearch(artist->url());
-            m_artistQueries[newReply] = artist;
-        }
-
-        else if (m_albumQueries.contains(failed)) {
-            BandcampAlbumResult *album = m_albumQueries.take(failed);
-            QNetworkReply *newReply = requestAlbumSearch(album->url());
-            m_albumQueries[newReply] = album;
-        }
-
-        failed->deleteLater();
-    }
-
-    m_failedQueries.clear();
+    m_activeRootPageQuery = requestRootSearch();
     emit hasErrorsChanged(false);
 }
 
@@ -264,16 +251,10 @@ bool Query::populateRootResults(const QByteArray &json)
         const QString icon = entry["icon"].toString();
 
         if (type == "artist") {
-            BandcampArtistResult *result = new BandcampArtistResult(name, url, icon, this);
-            QNetworkReply *reply = requestArtistSearch(url);
-            m_artistQueries[reply] = result;
-            newResults << result;
+            newResults << createArtistResult(name, url, icon);
         }
         else if (type == "album") {
-            BandcampAlbumResult *result = new BandcampAlbumResult(name, url, icon, this);
-            QNetworkReply *reply = requestAlbumSearch(url);
-            m_albumQueries[reply] = result;
-            newResults << result;
+            newResults << createAlbumResult(name, url, icon);
         }
         else if (type == "video") {
             qWarning() << "video not implemented";
@@ -321,53 +302,52 @@ bool Query::populateArtist(BandcampArtistResult *artist, const QByteArray &artis
     return true;
 }
 
-void Query::onNetworkReplyFinished(QNetworkReply *reply)
+void Query::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error)
 {
     if (!m_runningQueries.contains(reply))
         return;
 
     const QByteArray data = reply->readAll();
+    const bool hasError = (error != QNetworkReply::NoError);
 
-    if (m_rootPageQueries.contains(reply)) {
-        m_rootPageQueries.take(reply);
-        populateRootResults(data);
+    // is this the first root query?
+    if (m_activeRootPageQuery == reply) {
+        m_activeRootPageQuery = nullptr;
+
+        if (!hasError) {
+            populateRootResults(data);
+            emit finishedChanged(true);
+        }
+
+        emit hasErrorsChanged(hasErrors());
     }
 
     else if (m_artistQueries.contains(reply)) {
         BandcampArtistResult *artist = m_artistQueries.take(reply);
-        populateArtist(artist, data);
+
+        if (!hasError)
+            populateArtist(artist, data);
+
+        artist->setStatus(hasError ? Result::Error : Result::Done);
     }
 
     else if (m_albumQueries.contains(reply)) {
         BandcampAlbumResult *album = m_albumQueries.take(reply);
-        const QJsonObject json = parseJsonObject(data, "bandcamp-album-info");
-        NetCommon::BandcampAlbumInfo albumInfo;
-        if (!albumInfo.fromJson(json))
-            qWarning() << "Failed to parse album info:" << json;
-        else
-            populateAlbum(album, albumInfo);
+
+        if (!hasError) {
+            const QJsonObject json = parseJsonObject(data, "bandcamp-album-info");
+            NetCommon::BandcampAlbumInfo albumInfo;
+            if (!albumInfo.fromJson(json))
+                qWarning() << "Failed to parse album info:" << json;
+            else
+                populateAlbum(album, albumInfo);
+        }
+
+        album->setStatus(hasError ? Result::Error : Result::Done);
     }
 
     m_runningQueries.removeAll(reply);
     reply->deleteLater();
-
-    if (m_runningQueries.isEmpty())
-        emit finishedChanged(true);
-}
-
-void Query::onNetworkError(QNetworkReply::NetworkError error)
-{
-    const bool hadErrors = !m_failedQueries.isEmpty();
-
-    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
-    m_failedQueries << reply;
-    m_runningQueries.removeAll(reply);
-
-    qWarning() << "QNetworkReply has error:" << reply->errorString();
-
-    emit networkError(error);
-    if (!hadErrors)
-        emit hasErrorsChanged(true);
 }
 
 QNetworkReply *Query::request(const QString &path, const QString &query)
@@ -381,7 +361,10 @@ QNetworkReply *Query::request(const QString &path, const QString &query)
 
     const QNetworkRequest request(url);
     QNetworkReply *reply = m_manager->get(request);
-    connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, &Query::onNetworkError);
+    connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
+            this, [=](QNetworkReply::NetworkError error) {
+        onNetworkReplyFinished(reply, error);
+    });
 
     m_runningQueries << reply;
     if (m_runningQueries.size() == 1)
@@ -390,7 +373,7 @@ QNetworkReply *Query::request(const QString &path, const QString &query)
     return reply;
 }
 
-QNetworkReply *Query::requestRootSearch(int page)
+QNetworkReply *Query::requestRootSearch()
 {
     const QByteArray searchStringBase64 = m_searchString.toUtf8().toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
     return request("/search.do", QString("v=") + searchStringBase64);
@@ -404,6 +387,36 @@ QNetworkReply *Query::requestArtistSearch(const QString &url)
 QNetworkReply *Query::requestAlbumSearch(const QString &url)
 {
     return request("/bandcamp-album-info.do", QString("v=") + url);
+}
+
+BandcampAlbumResult *Query::createAlbumResult(const QString &name, const QString &url, const QString &icon)
+{
+    BandcampAlbumResult *album = new BandcampAlbumResult(name, url, icon, this);
+
+    connect(album, &Result::queryInfoRequested, this, [=]() {
+        if (album->status() != Result::Querying && album->status() != Result::Done) {
+            QNetworkReply *reply = requestAlbumSearch(url);
+            m_albumQueries[reply] = album;
+            album->setStatus(Result::Querying);
+        }
+    });
+
+    return album;
+}
+
+BandcampArtistResult *Query::createArtistResult(const QString &name, const QString &url, const QString &icon)
+{
+    BandcampArtistResult *artist = new BandcampArtistResult(name, url, icon, this);
+
+    connect(artist, &Result::queryInfoRequested, this, [=]() {
+        if (artist->status() != Result::Querying && artist->status() != Result::Done) {
+            QNetworkReply *reply = requestArtistSearch(url);
+            m_artistQueries[reply] = artist;
+            artist->setStatus(Result::Querying);
+        }
+    });
+
+    return artist;
 }
 
 } // namespace Search

@@ -2,6 +2,7 @@
     <qresource prefix="/">
         <file>qml/main.qml</file>
         <file>qml/SimpleButton.qml</file>
+        <file>qml/SearchResultDelegate.qml</file>
     </qresource>
 </RCC>
 

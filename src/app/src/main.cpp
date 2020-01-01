@@ -20,6 +20,9 @@ int main(int argc, char **argv)
 
     Search::Query query("localhost", 8080, "hallo");
 
+    qRegisterMetaType<Search::BandcampArtistResult*>();
+    qRegisterMetaType<Search::BandcampAlbumResult*>();
+    qRegisterMetaType<Search::BandcampTrackResult*>();
     qmlRegisterUncreatableType<Search::Result>("Moosick", 1, 0, "Result", "ain't gonna do that from QML!");
 
     QQuickView view;
