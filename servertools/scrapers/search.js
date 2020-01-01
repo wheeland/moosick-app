@@ -51,8 +51,8 @@ function bandcampSearchResult(error, searchResults) {
     done();
 };
 
-function youtubeResults(results) {
-    results.forEach(function(result) {
+function youtubeResults(searchResults) {
+    searchResults.forEach(function(result) {
         if (result.type == "video") {
             results.push({
                 type: "video",
