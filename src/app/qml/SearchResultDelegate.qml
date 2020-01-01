@@ -43,6 +43,7 @@ Item {
             case Moosick.Result.BandcampAlbum: return "album";
             case Moosick.Result.YoutubeVideo: return "video";
             case Moosick.Result.YoutubePlaylist: return "playlist";
+            default: return "null";
             }
         }
         font.italic: true
@@ -65,6 +66,7 @@ Item {
             case Moosick.Result.Querying: return "Querying";
             case Moosick.Result.Error: return "Error";
             case Moosick.Result.Done: return "Done";
+            default: return "null";
             }
         }
         font.italic: true
@@ -107,7 +109,6 @@ Item {
                     onItemChanged: {
                         item.width = childColumn.width;
                         item.result = root.childResult(index)
-                        console.log(item.result);
                     }
                 }
             }
