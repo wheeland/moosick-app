@@ -18,21 +18,6 @@ Item {
     }
 
     property color textColor: "#cccccc"
-    property int childResults: {
-        switch (root.result.type) {
-        case Moosick.Result.BandcampArtist: return root.result.albumCount;
-        case Moosick.Result.BandcampAlbum: return root.result.trackCount;
-        default: return 0;
-        }
-    }
-
-    function childResult(index) {
-        switch (root.result.type) {
-        case Moosick.Result.BandcampArtist: return root.result.getAlbum(index);
-        case Moosick.Result.BandcampAlbum: return root.result.getTrack(index);
-        default: return null;
-        }
-    }
 
     Text {
         anchors { left: parent.left; top: parent.top; margins: 10 }
@@ -51,7 +36,7 @@ Item {
     }
 
     Image {
-        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenter: titleText.verticalCenter
         x: 100
         height: 30
         source: root.result.iconData
@@ -74,6 +59,7 @@ Item {
     }
 
     Text {
+        id: titleText
         anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; margins: 10 }
         color: root.textColor
         text: root.result.title
@@ -87,7 +73,7 @@ Item {
 
     Rectangle {
         id: childRect
-        visible: (root.childResults > 0)
+        visible: (repeater.count > 0)
         anchors.fill: parent
         anchors.margins: 5
         anchors.leftMargin: 20
@@ -102,14 +88,22 @@ Item {
             anchors.margins: 2
 
             Repeater {
-                model: root.childResults
+                id: repeater
+
+                model: {
+                    switch (root.result.type) {
+                    case Moosick.Result.BandcampArtist: return root.result.albums;
+                    case Moosick.Result.BandcampAlbum: return root.result.tracks;
+                    default: return undefined;
+                    }
+                }
 
                 Loader {
                     active: true
                     source: "SearchResultDelegate.qml"
                     onItemChanged: {
                         item.width = childColumn.width;
-                        item.result = root.childResult(index)
+                        item.result = model.result;
                     }
                 }
             }

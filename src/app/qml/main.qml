@@ -63,7 +63,7 @@ Rectangle {
             }
 
             Repeater {
-                model: _query
+                model: _query.model
 
                 delegate: SearchResultDelegate {
                     width: flickable.width

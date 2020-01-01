@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QSortFilterProxyModel>
 #include <QNetworkReply>
+#include "util/modeladapter.hpp"
 
 class QNetworkAccessManager;
 
@@ -79,43 +80,33 @@ private:
 class BandcampArtistResult : public Result
 {
     Q_OBJECT
-    Q_PROPERTY(int albumCount READ albumCount NOTIFY albumCountChanged)
+    Q_PROPERTY(ModelAdapter::Model *albums READ albums CONSTANT)
 
 public:
     BandcampArtistResult(const QString &title, const QString &url, const QString &icon, QObject *parent = nullptr);
     ~BandcampArtistResult();
 
-    int albumCount() const;
     void addAlbum(BandcampAlbumResult *album);
-
-    Q_INVOKABLE Search::BandcampAlbumResult *getAlbum(int index) const;
-
-signals:
-    void albumCountChanged(int albumCount);
+    ModelAdapter::Model *albums() const { return m_albums.model(); }
 
 private:
-    QVector<BandcampAlbumResult*> m_albums;
+    ModelAdapter::Adapter<BandcampAlbumResult*> m_albums;
 };
 
 class BandcampAlbumResult : public Result
 {
     Q_OBJECT
-    Q_PROPERTY(int trackCount READ trackCount NOTIFY trackCountChanged)
+    Q_PROPERTY(ModelAdapter::Model *tracks READ tracks CONSTANT)
 
 public:
     BandcampAlbumResult(const QString &title, const QString &url, const QString &icon, QObject *parent = nullptr);
     ~BandcampAlbumResult();
 
-    int trackCount() const;
     void addTrack(BandcampTrackResult *track);
-
-    Q_INVOKABLE Search::BandcampTrackResult *getTrack(int index) const;
-
-signals:
-    void trackCountChanged(int trackCount);
+    ModelAdapter::Model *tracks() const { return m_tracks.model(); }
 
 private:
-    QVector<BandcampTrackResult*> m_tracks;
+    ModelAdapter::Adapter<BandcampTrackResult*> m_tracks;
 };
 
 class BandcampTrackResult : public Result
@@ -141,19 +132,18 @@ private:
  * - playlists that have videos
  * - data will be filled as it comes in
  */
-class Query : public QAbstractListModel
+class Query : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool finished READ hasFinished NOTIFY finishedChanged)
     Q_PROPERTY(bool hasErrors READ hasErrors NOTIFY hasErrorsChanged)
-
-    enum Role {
-        ResultRole = Qt::UserRole + 1
-    };
+    Q_PROPERTY(QAbstractItemModel *model READ model CONSTANT)
 
 public:
     Query(const QString &host, quint16 port, QObject *parent = nullptr);
     ~Query() override;
+
+    QAbstractItemModel *model() const;
 
     bool hasFinished() const;
     bool hasErrors() const;
@@ -163,10 +153,6 @@ public:
     Q_INVOKABLE void search(const QString &searchString);
 
     Q_INVOKABLE void retry();
-
-    int rowCount(const QModelIndex &parent) const override;
-    QVariant data(const QModelIndex &index, int role) const override;
-    QHash<int, QByteArray> roleNames() const override;
 
 signals:
     void finishedChanged(bool finished);
@@ -207,8 +193,7 @@ private:
     QHash<QNetworkReply*, BandcampAlbumResult*> m_albumQueries;
     QHash<QNetworkReply*, Result*> m_iconQueries;
 
-    friend class QueryFilterModel;
-    QVector<Result*> m_rootResults;
+    ModelAdapter::Adapter<Result*> m_rootResults;
 };
 
 /**
@@ -218,7 +203,7 @@ class QueryFilterModel : public QSortFilterProxyModel
 {
     Q_OBJECT
     Q_PROPERTY(Result::Type filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
-    Q_PROPERTY(Query* source READ source WRITE setSource NOTIFY sourceChanged)
+    Q_PROPERTY(ModelAdapter::Model* source READ source WRITE setSource NOTIFY sourceChanged)
 
 public:
     QueryFilterModel(QObject *parent = nullptr);
@@ -226,25 +211,26 @@ public:
 
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 
-    Query* source() const { return m_source; }
+    ModelAdapter::Model* source() const { return m_source; }
     Result::Type filterType() const { return m_filterType; }
     void setFilterType(Result::Type type);
 
 public slots:
-    void setSource(Query* source);
+    void setSource(ModelAdapter::Model* source);
 
 signals:
     void filterTypeChanged(Result::Type type);
-    void sourceChanged(Query* source);
+    void sourceChanged(ModelAdapter::Model* source);
 
 private:
-    Query *m_source;
+    ModelAdapter::Model *m_source;
     Result::Type m_filterType;
 };
 
 
 } // namespace Search
 
+Q_DECLARE_METATYPE(Search::Result*)
 Q_DECLARE_METATYPE(Search::BandcampArtistResult*)
 Q_DECLARE_METATYPE(Search::BandcampAlbumResult*)
 Q_DECLARE_METATYPE(Search::BandcampTrackResult*)

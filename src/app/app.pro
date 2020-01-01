@@ -8,10 +8,14 @@ SOURCES += \
     src/main.cpp \
     src/search.cpp \
     src/util/androidutil.cpp \
+    src/util/qmlutil.cpp \
+    src/util/modeladapter.cpp \
 
 HEADERS += \
     src/search.hpp \
     src/util/androidutil.hpp \
+    src/util/qmlutil.hpp \
+    src/util/modeladapter.hpp \
 
 RESOURCES += \
     qml.qrc

@@ -1,5 +1,6 @@
 #include "search.hpp"
 #include "json.hpp"
+#include "util/qmlutil.hpp"
 
 #include <QtGlobal>
 #include <QNetworkAccessManager>
@@ -65,27 +66,7 @@ Result::Result(Type tp, const QString &title, const QString &url, const QString 
 
 void Result::setIconData(const QString &url, const QByteArray &data)
 {
-    QString format;
-    QByteArray imgData = data;
-
-    if (url.contains(".jpg"))
-        format = "jpg";
-    else if (url.contains(".png"))
-        format = "png";
-    else {
-        // if nothing matches, parse the image and save it as PNG
-        const QImage image = QImage::fromData(data);
-        QBuffer buffer;
-        image.save(&buffer, "PNG");
-        imgData = buffer.data();
-        format = "png";
-    }
-
-    QString iconDataUri = "data:image/";
-    iconDataUri += format += ";base64,";
-    iconDataUri += imgData.toBase64();
-
-    m_iconData = iconDataUri;
+    m_iconData = QmlUtil::imageDataToDataUri(data, url);
     emit iconDataChanged();
 }
 
@@ -106,59 +87,37 @@ void Result::queryInfo()
 BandcampArtistResult::BandcampArtistResult(const QString &title, const QString &url, const QString &icon, QObject *parent)
     : Result(BandcampArtist, title, url, icon, parent)
 {
+    m_albums.addValueAccessor("result");
 }
 
 BandcampArtistResult::~BandcampArtistResult()
 {
-    for (BandcampAlbumResult *album : qAsConst(m_albums))
+    for (BandcampAlbumResult *album : qAsConst(m_albums.data()))
         album->deleteLater();
-}
-
-int BandcampArtistResult::albumCount() const
-{
-    return m_albums.size();
 }
 
 void BandcampArtistResult::addAlbum(BandcampAlbumResult *album)
 {
-    if (album) {
-        m_albums << album;
-        emit albumCountChanged(m_albums.size());
-    }
-}
-
-BandcampAlbumResult *BandcampArtistResult::getAlbum(int index) const
-{
-    return m_albums.value(index);
+    if (album)
+        m_albums.add(album);
 }
 
 BandcampAlbumResult::BandcampAlbumResult(const QString &title, const QString &url, const QString &icon, QObject *parent)
     : Result(BandcampAlbum, title, url, icon, parent)
 {
+    m_tracks.addValueAccessor("result");
 }
 
 BandcampAlbumResult::~BandcampAlbumResult()
 {
-    for (BandcampTrackResult *track : qAsConst(m_tracks))
+    for (BandcampTrackResult *track : qAsConst(m_tracks.data()))
         track->deleteLater();
-}
-
-int BandcampAlbumResult::trackCount() const
-{
-    return m_tracks.size();
 }
 
 void BandcampAlbumResult::addTrack(BandcampTrackResult *track)
 {
-    if (track) {
-        m_tracks << track;
-        emit trackCountChanged(m_tracks.size());
-    }
-}
-
-BandcampTrackResult *BandcampAlbumResult::getTrack(int index) const
-{
-    return m_tracks.value(index);
+    if (track)
+        m_tracks.add(track);
 }
 
 BandcampTrackResult::BandcampTrackResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent)
@@ -179,7 +138,8 @@ bool QueryFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex &source
     if (!m_source)
         return true;
 
-    const Result *result = m_source->m_rootResults.value(sourceRow);
+    const QVariant data = m_source->data(m_source->index(sourceRow, 0), m_source->roleIndex("result"));
+    const Result *result = data.value<Result*>();
     return result && (result->resultType() == m_filterType);
 }
 
@@ -192,7 +152,7 @@ void QueryFilterModel::setFilterType(Result::Type type)
     emit filterTypeChanged(m_filterType);
 }
 
-void QueryFilterModel::setSource(Query *source)
+void QueryFilterModel::setSource(ModelAdapter::Model *source)
 {
     if (m_source == source)
         return;
@@ -202,7 +162,7 @@ void QueryFilterModel::setSource(Query *source)
 }
 
 Query::Query(const QString &host, quint16 port, QObject *parent)
-    : QAbstractListModel(parent)
+    : QObject(parent)
     , m_host(host)
     , m_port(port)
 {
@@ -210,25 +170,30 @@ Query::Query(const QString &host, quint16 port, QObject *parent)
     connect(m_manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
         onNetworkReplyFinished(reply, QNetworkReply::NoError);
     });
+
+    m_rootResults.addValueAccessor("result");
 }
 
 Query::~Query()
 {
-    for (QNetworkReply *reply : m_runningQueries)
-        reply->deleteLater();
-    for (Result *result : m_rootResults)
-        result->deleteLater();
+    abort();
+    clear();
     m_manager->deleteLater();
+}
+
+QAbstractItemModel *Query::model() const
+{
+    return m_rootResults.model();
 }
 
 bool Query::hasFinished() const
 {
-    return !m_rootResults.isEmpty();
+    return m_rootResults.size() > 0;
 }
 
 bool Query::hasErrors() const
 {
-    return (m_activeRootPageQuery == nullptr) && (m_rootResults.isEmpty());
+    return (m_activeRootPageQuery == nullptr) && hasFinished();
 }
 
 void Query::abort()
@@ -251,13 +216,10 @@ void Query::clear()
 {
     abort();
 
-    if (!m_rootResults.isEmpty()) {
-        beginRemoveRows(QModelIndex(), 0, m_rootResults.size() - 1);
-        for (Result *result : qAsConst(m_rootResults))
-            result->deleteLater();
-        m_rootResults.clear();
-        endRemoveRows();
-    }
+    for (Result *result : m_rootResults.data())
+        result->deleteLater();
+
+    m_rootResults.clear();
 }
 
 void Query::search(const QString &searchString)
@@ -275,26 +237,6 @@ void Query::retry()
 
     m_activeRootPageQuery = requestRootSearch();
     emit hasErrorsChanged(false);
-}
-
-int Query::rowCount(const QModelIndex &parent) const
-{
-    Q_UNUSED(parent)
-    return m_rootResults.size();
-}
-
-QVariant Query::data(const QModelIndex &index, int role) const
-{
-    const int idx = index.row();
-    switch (role) {
-    case ResultRole: return QVariant::fromValue(m_rootResults[idx]);
-    default: return QVariant();
-    }
-}
-
-QHash<int, QByteArray> Query::roleNames() const
-{
-    return {{ResultRole, "result"}};
 }
 
 bool Query::populateRootResults(const QByteArray &json)
@@ -326,9 +268,8 @@ bool Query::populateRootResults(const QByteArray &json)
     }
 
     // add to model
-    beginInsertRows(QModelIndex(), m_rootResults.size(), m_rootResults.size() + newResults.size() - 1);
-    m_rootResults << newResults;
-    endInsertRows();
+    for (Result *newResult : qAsConst(newResults))
+        m_rootResults.add(newResult);
 
     return true;
 }
