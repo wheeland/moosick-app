@@ -28,15 +28,30 @@ function handler(error, info) {
     if (error)
         return;
 
-    console.log(JSON.stringify(info.map(albumInfo => {
-        return {
-            type: "album",
-            name: albumInfo.title,
-            icon: albumInfo.imageUrl,
-            url: albumInfo.url,
-        };
-    }
-    ), null, 2));
+    var albums = [];
+    info.forEach(function(albumInfo) {
+        if (albumInfo.url.includes("/album/")) {
+            // badly fix album name for single-album artists
+            if (albumInfo.title == "") {
+                var parts = albumInfo.url.split("/");
+                albumInfo.title = parts[parts.length - 1];
+            }
+            
+            // ignore double albums
+            var hasSameUrl = function(album) { return album.url == albumInfo.url; };
+            if (albums.some(hasSameUrl))
+                return;
+            
+            albums.push({
+                type: "album",
+                name: albumInfo.title,
+                icon: albumInfo.imageUrl,
+                url: albumInfo.url,
+            });
+        }
+    });
+
+    console.log(JSON.stringify(albums, null, 2));
 
 //    info.forEach(function(albumUrl) {
 //        if (albumUrl.includes("/album/")) {
