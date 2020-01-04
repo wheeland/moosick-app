@@ -1,6 +1,7 @@
 #include "playlist.hpp"
-
 #include "util/qmlutil.hpp"
+
+#include <QNetworkReply>
 
 namespace Playlist {
 
@@ -25,11 +26,10 @@ QString Entry::durationString() const
     return QString::asprintf("%d:%02d", m_duration / 60, m_duration % 60);
 }
 
-void Entry::setIconData(const QString &url, const QByteArray &data)
+void Entry::setIconData(const QString &iconData)
 {
-    const QString icon = QmlUtil::imageDataToDataUri(data, url);
-    if (m_iconData != icon) {
-        m_iconData = icon;
+    if (m_iconData != iconData) {
+        m_iconData = iconData;
         emit iconDataChanged();
     }
 }
@@ -46,6 +46,9 @@ void Entry::setSelected(bool selected)
 Playlist::Playlist(QObject *parent)
     : QObject(parent)
 {
+    m_manager = new QNetworkAccessManager(this);
+    connect(m_manager, &QNetworkAccessManager::finished, this, &Playlist::onNetworkReplyFinished);
+
     m_entries.addValueAccessor("entry");
 }
 
@@ -53,6 +56,7 @@ Playlist::~Playlist()
 {
     for (Entry *entry : m_entries.data())
         entry->deleteLater();
+    m_manager->deleteLater();
 }
 
 ModelAdapter::Model *Playlist::entries() const
@@ -92,20 +96,54 @@ void Playlist::advance(int delta)
     emit currentSongChanged();
 }
 
-void Playlist::requestIcon(const QString &url)
+void Playlist::requestIcon(Entry *entry)
 {
-    const auto it = m_icons.find(url);
-    if (it != m_icons.end())
+    const auto it = m_iconUrlToDataString.find(entry->iconUrl());
+    if (it != m_iconUrlToDataString.end()) {
+        entry->setIconData(it.value());
+        return;
+    }
+
+    if (m_iconQueries.contains(entry->iconUrl()))
         return;
 
-    m_icons[url] = "";
+    const QUrl url(entry->iconUrl());
+    const QNetworkRequest request(url);
+    QNetworkReply *reply = m_manager->get(request);
 
-    // TODO: request
+    m_iconQueries[entry->iconUrl()] = reply;
+}
+
+void Playlist::onNetworkReplyFinished(QNetworkReply *reply)
+{
+    reply->deleteLater();
+
+    // get URL for this query
+    QString url;
+    for (auto it = m_iconQueries.cbegin(); it != m_iconQueries.cend(); ++it) {
+        if (it.value() == reply) {
+            url = it.key();
+            m_iconQueries.erase(it);
+            break;
+        }
+    }
+
+    if (url.isEmpty())
+        return;
+
+    const QByteArray data = reply->readAll();
+    const QString imgData = QmlUtil::imageDataToDataUri(data, url);
+
+    // set icon for all entries that match
+    for (Entry *entry : m_entries.data()) {
+        if (entry->iconUrl() == url)
+            entry->setIconData(imgData);
+    }
 }
 
 void Playlist::purgeUnusedIcons()
 {
-    for (auto it = m_icons.begin(); it != m_icons.end(); /*empty*/) {
+    for (auto it = m_iconUrlToDataString.begin(); it != m_iconUrlToDataString.end(); /*empty*/) {
         // find entries with this item
         const QVector<Entry*> &entries = m_entries.data();
         const bool isUsed = std::any_of(entries.cbegin(), entries.cend(), [&](Entry *entry) {
@@ -115,7 +153,7 @@ void Playlist::purgeUnusedIcons()
         if (isUsed)
             ++it;
         else
-            it = m_icons.erase(it);
+            it = m_iconUrlToDataString.erase(it);
     }
 }
 
@@ -164,7 +202,7 @@ Entry *Playlist::createEntry(Entry::Source source, const QString &title, const Q
 {
     Entry *entry = new Entry(source, title, artist, url, iconUrl, duration, this);
     connect(entry, &Entry::selectedChanged, this, &Playlist::onSelectedChanged);
-    requestIcon(iconUrl);
+    requestIcon(entry);
     return entry;
 
 }

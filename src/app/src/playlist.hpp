@@ -2,6 +2,8 @@
 
 #include "util/modeladapter.hpp"
 
+#include <QNetworkAccessManager>
+
 namespace Playlist {
 
 class Entry : public QObject
@@ -37,7 +39,7 @@ public:
     QString durationString() const;
 
     void setSelected(bool selected);
-    void setIconData(const QString &url, const QByteArray &data);
+    void setIconData(const QString &data);
 
 signals:
     void iconDataChanged();
@@ -85,6 +87,7 @@ signals:
 
 private slots:
     void onSelectedChanged();
+    void onNetworkReplyFinished(QNetworkReply *reply);
 
 private:
     Entry *createEntry(Entry::Source source, const QString &title, const QString &artist,
@@ -92,12 +95,15 @@ private:
     void advance(int delta);
 
     void purgeUnusedIcons();
-    void requestIcon(const QString &url);
+    void requestIcon(Entry *entry);
 
     ModelAdapter::Adapter<Entry*> m_entries;
-    QHash<QString, QString> m_icons;
+    QHash<QString, QString> m_iconUrlToDataString;
+    QHash<QString, QNetworkReply*> m_iconQueries;
     int m_currentEntry = 0;
     bool m_hasSelected = false;
+
+    QNetworkAccessManager *m_manager = nullptr;
 };
 
 } // namespace Playlist

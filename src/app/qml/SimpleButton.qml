@@ -4,12 +4,14 @@ Rectangle {
     id: root
 
     property alias label: text.text
-    property alias background: root.color
+    property color background: "#333333"
+    property color backgroundClicked: Qt.lighter(background, 2.0)
     property alias foreground: text.color
     property bool enabled: true
     signal clicked
 
-    color: "#333333"
+    color: mouse.pressed ? backgroundClicked : background
+
     border.width: 2
     border.color: text.color
 
@@ -23,6 +25,7 @@ Rectangle {
         anchors.centerIn: parent
 
         MouseArea {
+            id: mouse
             anchors.fill: parent
             onClicked: {
                 if (root.enabled)

@@ -4,6 +4,8 @@
         <file>qml/SimpleButton.qml</file>
         <file>qml/LineEdit.qml</file>
         <file>qml/SearchResultDelegate.qml</file>
+        <file>qml/SearchPane.qml</file>
+        <file>qml/PlaylistPane.qml</file>
     </qresource>
 </RCC>
 
