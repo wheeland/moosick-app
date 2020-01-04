@@ -6,6 +6,8 @@
         <file>qml/SearchResultDelegate.qml</file>
         <file>qml/SearchPane.qml</file>
         <file>qml/PlaylistPane.qml</file>
+        <file>qml/PlaylistEntry.qml</file>
+        <file>qml/SwipeHeader.qml</file>
     </qresource>
 </RCC>
 

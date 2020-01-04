@@ -11,11 +11,30 @@ Rectangle {
     border.color: "white"
     border.width: 3
 
+    SwipeHeader {
+        id: header
+        entries: ["Search", "Playlist" ]
+        index: swipeView.currentIndex
+        width: parent.width
+        height: 50
+        offset: 10
+        onChange: swipeView.currentIndex = toIndex
+    }
+
     SwipeView {
-        anchors.fill: parent
-        anchors.margins: 10
+        id: swipeView
+        anchors {
+            top: header.bottom
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+        }
 
         SearchPane {
+        }
+
+        PlaylistPane {
+
         }
     }
 }
