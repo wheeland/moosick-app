@@ -2,10 +2,13 @@
 
 Controller::Controller(QObject *parent)
     : QObject(parent)
-    , m_playlist(new Playlist::Playlist(this))
-    , m_search(new Search::Query("localhost", 8080, this))
+    , m_httpClient(new HttpClient(this))
+    , m_playlist(new Playlist::Playlist(m_httpClient, this))
+    , m_search(new Search::Query(m_httpClient, this))
     , m_audio(new Audio(m_playlist, this))
 {
+    m_httpClient->setHost("localhost");
+    m_httpClient->setPort(8080);
 }
 
 Controller::~Controller()

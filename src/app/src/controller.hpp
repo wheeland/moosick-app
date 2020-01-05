@@ -3,6 +3,7 @@
 #include "search.hpp"
 #include "playlist.hpp"
 #include "audio.hpp"
+#include "httpclient.hpp"
 
 class Controller : public QObject
 {
@@ -26,6 +27,7 @@ private:
     bool queueBandcampAlbum(Search::BandcampAlbumResult *album, bool append);
     void queueBandcampTrack(Search::BandcampTrackResult *track, bool append);
 
+    HttpClient *m_httpClient;
     Playlist::Playlist *m_playlist;
     Search::Query *m_search;
     Audio *m_audio;

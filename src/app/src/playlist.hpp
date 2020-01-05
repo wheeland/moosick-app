@@ -1,8 +1,7 @@
 #pragma once
 
 #include "util/modeladapter.hpp"
-
-#include <QNetworkAccessManager>
+#include "httpclient.hpp"
 
 namespace Playlist {
 
@@ -67,7 +66,7 @@ class Playlist : public QObject
     Q_PROPERTY(bool hasSelectedSongs READ hasSelectedSongs NOTIFY hasSelectedSongsChanged)
 
 public:
-    Playlist(QObject *parent = nullptr);
+    Playlist(HttpClient *httpClient, QObject *parent = nullptr);
     ~Playlist();
 
     ModelAdapter::Model *entries() const;
@@ -91,7 +90,7 @@ signals:
 
 private slots:
     void onSelectedChanged();
-    void onNetworkReplyFinished(QNetworkReply *reply);
+    void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
 
 private:
     Entry *createEntry(Entry::Source source,
@@ -108,7 +107,7 @@ private:
     int m_currentEntry = 0;
     bool m_hasSelected = false;
 
-    QNetworkAccessManager *m_manager = nullptr;
+    HttpRequester *m_http;
 };
 
 } // namespace Playlist

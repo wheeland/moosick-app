@@ -163,24 +163,18 @@ void QueryFilterModel::setSource(ModelAdapter::Model *source)
     emit sourceChanged(m_source);
 }
 
-Query::Query(const QString &host, quint16 port, QObject *parent)
+Query::Query(HttpClient *http, QObject *parent)
     : QObject(parent)
-    , m_host(host)
-    , m_port(port)
+    , m_http(new HttpRequester(http, this))
 {
-    m_manager = new QNetworkAccessManager(this);
-    connect(m_manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
-        onNetworkReplyFinished(reply, QNetworkReply::NoError);
-    });
-
     m_rootResults.addValueAccessor("result");
+    connect(m_http, &HttpRequester::receivedReply, this, &Query::onReply);
 }
 
 Query::~Query()
 {
     abort();
     clear();
-    m_manager->deleteLater();
 }
 
 QAbstractItemModel *Query::model() const
@@ -198,35 +192,15 @@ bool Query::hasErrors() const
     return (m_activeRootPageQuery == nullptr) && hasFinished();
 }
 
-void Query::abort()
-{
-    for (QNetworkReply *reply : qAsConst(m_runningQueries)) {
-        reply->abort();
-        reply->deleteLater();
-    }
-
-    m_runningQueries.clear();
-    m_activeRootPageQuery = nullptr;
-    m_artistQueries.clear();
-    m_albumQueries.clear();
-    m_iconQueries.clear();
-
-    emit hasErrorsChanged(hasErrors());
-}
-
 void Query::clear()
 {
-    abort();
-
     for (Result *result : m_rootResults.data())
         result->deleteLater();
-
     m_rootResults.clear();
 }
 
 void Query::search(const QString &searchString)
 {
-    abort();
     clear();
     m_searchString = searchString.trimmed();
     m_activeRootPageQuery = requestRootSearch();
@@ -274,6 +248,8 @@ bool Query::populateRootResults(const QByteArray &json)
     for (Result *newResult : qAsConst(newResults))
         m_rootResults.add(newResult);
 
+    emit finishedChanged(true);
+
     return true;
 }
 
@@ -304,11 +280,8 @@ bool Query::populateArtist(BandcampArtistResult *artist, const QByteArray &artis
     return true;
 }
 
-void Query::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error)
+void Query::onReply(QNetworkReply *reply, QNetworkReply::NetworkError error)
 {
-    if (!m_runningQueries.contains(reply))
-        return;
-
     const QByteArray data = reply->readAll();
     const bool hasError = (error != QNetworkReply::NoError);
 
@@ -356,48 +329,22 @@ void Query::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkE
             result->setIconData(url, data);
         }
     }
-
-    m_runningQueries.removeAll(reply);
-    reply->deleteLater();
-}
-
-QNetworkReply *Query::request(const QString &path, const QString &query)
-{
-    QUrl url;
-    url.setScheme("http");
-    url.setHost(m_host);
-    url.setPort(m_port);
-    url.setPath(path);
-    url.setQuery(query, QUrl::StrictMode);
-
-    const QNetworkRequest request(url);
-    QNetworkReply *reply = m_manager->get(request);
-    connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
-            this, [=](QNetworkReply::NetworkError error) {
-        onNetworkReplyFinished(reply, error);
-    });
-
-    m_runningQueries << reply;
-    if (m_runningQueries.size() == 1)
-        emit finishedChanged(false);
-
-    return reply;
 }
 
 QNetworkReply *Query::requestRootSearch()
 {
     const QByteArray searchStringBase64 = m_searchString.toUtf8().toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-    return request("/search.do", QString("v=") + searchStringBase64);
+    return m_http->requestFromServer("/search.do", QString("v=") + searchStringBase64);
 }
 
 QNetworkReply *Query::requestArtistSearch(const QString &url)
 {
-    return request("/bandcamp-artist-info.do", QString("v=") + url);
+    return m_http->requestFromServer("/bandcamp-artist-info.do", QString("v=") + url);
 }
 
 QNetworkReply *Query::requestAlbumSearch(const QString &url)
 {
-    return request("/bandcamp-album-info.do", QString("v=") + url);
+    return m_http->requestFromServer("/bandcamp-album-info.do", QString("v=") + url);
 }
 
 void Query::requestIcon(Result *result)
@@ -405,15 +352,8 @@ void Query::requestIcon(Result *result)
     if (!result->iconData().isEmpty() || result->iconUrl().isEmpty())
         return;
 
-    const QNetworkRequest request(QUrl(result->iconUrl()));
-    QNetworkReply *reply = m_manager->get(request);
-    connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
-            this, [=](QNetworkReply::NetworkError error) {
-        onNetworkReplyFinished(reply, error);
-    });
-
+    QNetworkReply *reply = m_http->request(QNetworkRequest(QUrl(result->iconUrl())));
     m_iconQueries[reply] = result;
-    m_runningQueries << reply;
 }
 
 BandcampAlbumResult *Query::createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon)

@@ -2,10 +2,8 @@
 
 #include <QAbstractListModel>
 #include <QSortFilterProxyModel>
-#include <QNetworkReply>
 #include "util/modeladapter.hpp"
-
-class QNetworkAccessManager;
+#include "httpclient.hpp"
 
 namespace NetCommon {
 class BandcampAlbumInfo;
@@ -150,7 +148,7 @@ class Query : public QObject
     Q_PROPERTY(QAbstractItemModel *model READ model CONSTANT)
 
 public:
-    Query(const QString &host, quint16 port, QObject *parent = nullptr);
+    Query(HttpClient *http, QObject *parent = nullptr);
     ~Query() override;
 
     QAbstractItemModel *model() const;
@@ -158,25 +156,22 @@ public:
     bool hasFinished() const;
     bool hasErrors() const;
 
-    Q_INVOKABLE void abort();
     Q_INVOKABLE void clear();
-    Q_INVOKABLE void search(const QString &searchString);
-
     Q_INVOKABLE void retry();
+    Q_INVOKABLE void search(const QString &searchString);
 
 signals:
     void finishedChanged(bool finished);
-    void networkError(QNetworkReply::NetworkError error);
     void hasErrorsChanged(bool hasErrors);
 
+private slots:
+    void onReply(QNetworkReply *reply, QNetworkReply::NetworkError error);
+
 private:
-    QNetworkReply *request(const QString &path, const QString &query);
     QNetworkReply *requestRootSearch();
     QNetworkReply *requestArtistSearch(const QString &url);
     QNetworkReply *requestAlbumSearch(const QString &url);
     void requestIcon(Result *result);
-
-    void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
 
     BandcampAlbumResult *createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon);
     BandcampArtistResult *createArtistResult(const QString &name, const QString &url, const QString &icon);
@@ -185,17 +180,8 @@ private:
     void populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);
     bool populateArtist(BandcampArtistResult *artist, const QByteArray &artistInfo);
 
-    // These parameters won't change
-    const QString m_host;
-    const quint16 m_port;
-    QNetworkAccessManager *m_manager = nullptr;
-
+    HttpRequester *m_http;
     QString m_searchString;
-
-    // keep track of all curently running queries
-    // some queries have failed for some reason, and can be repeated later on.
-    // a query is in either of these two lists
-    QVector<QNetworkReply*> m_runningQueries;
 
     // associate each query with what they were querying
     QNetworkReply *m_activeRootPageQuery = nullptr;

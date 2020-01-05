@@ -45,20 +45,18 @@ void Entry::setSelected(bool selected)
     emit selectedChanged(m_selected);
 }
 
-Playlist::Playlist(QObject *parent)
+Playlist::Playlist(HttpClient *httpClient, QObject *parent)
     : QObject(parent)
+    , m_http(new HttpRequester(httpClient))
 {
-    m_manager = new QNetworkAccessManager(this);
-    connect(m_manager, &QNetworkAccessManager::finished, this, &Playlist::onNetworkReplyFinished);
-
     m_entries.addValueAccessor("entry");
+    connect(m_http, &HttpRequester::receivedReply, this, &Playlist::onNetworkReplyFinished);
 }
 
 Playlist::~Playlist()
 {
     for (Entry *entry : m_entries.data())
         entry->deleteLater();
-    m_manager->deleteLater();
 }
 
 ModelAdapter::Model *Playlist::entries() const
@@ -109,17 +107,12 @@ void Playlist::requestIcon(Entry *entry)
     if (m_iconQueries.contains(entry->iconUrl()))
         return;
 
-    const QUrl url(entry->iconUrl());
-    const QNetworkRequest request(url);
-    QNetworkReply *reply = m_manager->get(request);
-
+    QNetworkReply *reply = m_http->request(QNetworkRequest(QUrl(entry->iconUrl())));
     m_iconQueries[entry->iconUrl()] = reply;
 }
 
-void Playlist::onNetworkReplyFinished(QNetworkReply *reply)
+void Playlist::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error)
 {
-    reply->deleteLater();
-
     // get URL for this query
     QString url;
     for (auto it = m_iconQueries.cbegin(); it != m_iconQueries.cend(); ++it) {

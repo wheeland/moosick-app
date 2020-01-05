@@ -6,6 +6,7 @@ QT += core quick qml network multimedia
 
 SOURCES += \
     src/main.cpp \
+    src/httpclient.cpp \
     src/search.cpp \
     src/playlist.cpp \
     src/controller.cpp \
@@ -16,6 +17,7 @@ SOURCES += \
 
 HEADERS += \
     src/search.hpp \
+    src/httpclient.hpp \
     src/playlist.hpp \
     src/controller.hpp \
     src/audio.hpp \
