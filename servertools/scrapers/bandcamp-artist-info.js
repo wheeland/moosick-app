@@ -10,6 +10,10 @@ var artistUrl = process.argv[2].replace("https://", "http://");
 var albums = [];
 var left = 0;
 
+function sanitizeStr(str) {
+    return str.split("\n")[0];
+}
+
 function done() {
     left -= 1;
     if (left == 0) {
@@ -44,7 +48,7 @@ function handler(error, info) {
             
             albums.push({
                 type: "album",
-                name: albumInfo.title,
+                name: sanitizeStr(albumInfo.title),
                 icon: albumInfo.imageUrl,
                 url: albumInfo.url,
             });

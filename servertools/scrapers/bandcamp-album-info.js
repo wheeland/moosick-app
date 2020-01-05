@@ -7,12 +7,16 @@ if (process.argv.length < 3) {
 }
 var albumUrl = process.argv[2].replace("https://", "http://");
 
+function sanitizeStr(str) {
+    return str.split("\n")[0];
+}
+
 function handler(error, info) {
     if (error)
         return;
 
     console.log(JSON.stringify({
-        name: info.title,
+        name: sanitizeStr(info.title),
         url: albumUrl,
         icon: info.imageUrl,
         tracks: info.tracks

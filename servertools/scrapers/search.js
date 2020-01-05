@@ -28,13 +28,17 @@ function done() {
 
 console.log("[");
 
+function sanitizeStr(str) {
+    return str.split("\n")[0];
+}
+
 function bandcampSearchResult(error, searchResults) {
     searchResults.forEach(function(result) {
         if (result.type === "album") {
             results.push({
                 type: "album",
                 url: result.url,
-                name: result.name,
+                name: sanitizeStr(result.name),
                 icon: result.imageUrl
             });
         }
@@ -42,7 +46,7 @@ function bandcampSearchResult(error, searchResults) {
             results.push({
                 type: "artist",
                 url: result.url,
-                name: result.name,
+                name: sanitizeStr(result.name),
                 icon: result.imageUrl
             });
         }
@@ -57,7 +61,7 @@ function youtubeResults(searchResults) {
             results.push({
                 type: "video",
                 url: result.link,
-                name: result.title,
+                name: sanitizeStr(result.title),
                 icon: result.thumbnail
             });
         }
@@ -65,7 +69,7 @@ function youtubeResults(searchResults) {
             results.push({
                 type: "playlist",
                 url: result.link,
-                name: result.title,
+                name: sanitizeStr(result.title),
                 icon: result.thumbnail,
                 count: result.video_count
             });
