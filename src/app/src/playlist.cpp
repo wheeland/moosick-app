@@ -5,12 +5,14 @@
 
 namespace Playlist {
 
-Entry::Entry(Entry::Source source, const QString &title, const QString &artist,
+Entry::Entry(Entry::Source source,
+             const QString &artist, const QString &album, const QString &title,
              const QString &url, const QString &iconUrl, int duration, QObject *parent)
     : QObject(parent)
     , m_source(source)
     , m_title(title)
     , m_artist(artist)
+    , m_album(album)
     , m_url(url)
     , m_iconUrl(iconUrl)
     , m_duration(duration)
@@ -186,21 +188,25 @@ void Playlist::remove(Entry *entry)
     }
 }
 
-void Playlist::append(Entry::Source source, const QString &title, const QString &artist,
+void Playlist::append(Entry::Source source,
+                      const QString &artist, const QString &album, const QString &title,
                       const QString &url, int duration, const QString &iconUrl)
 {
-    m_entries.add(createEntry(source, title, artist, url, duration, iconUrl));
+    m_entries.add(createEntry(source, artist, album, title, url, duration, iconUrl));
 }
 
-void Playlist::prepend(Entry::Source source, const QString &title, const QString &artist,
+void Playlist::prepend(Entry::Source source,
+                       const QString &artist, const QString &album, const QString &title,
                        const QString &url, int duration, const QString &iconUrl)
 {
-    m_entries.insert(0, createEntry(source, title, artist, url, duration, iconUrl));
+    m_entries.insert(0, createEntry(source, artist, album, title, url, duration, iconUrl));
 }
 
-Entry *Playlist::createEntry(Entry::Source source, const QString &title, const QString &artist, const QString &url, int duration, const QString &iconUrl)
+Entry *Playlist::createEntry(Entry::Source source,
+                             const QString &artist, const QString &album, const QString &title,
+                             const QString &url, int duration, const QString &iconUrl)
 {
-    Entry *entry = new Entry(source, title, artist, url, iconUrl, duration, this);
+    Entry *entry = new Entry(source, artist, album, title, url, iconUrl, duration, this);
     connect(entry, &Entry::selectedChanged, this, &Playlist::onSelectedChanged);
     requestIcon(entry);
     return entry;

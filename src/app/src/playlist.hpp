@@ -11,6 +11,7 @@ class Entry : public QObject
     Q_OBJECT
     Q_PROPERTY(Source source READ source CONSTANT)
     Q_PROPERTY(QString artist READ artist CONSTANT)
+    Q_PROPERTY(QString album READ album CONSTANT)
     Q_PROPERTY(QString title READ title CONSTANT)
     Q_PROPERTY(QString url READ url CONSTANT)
     Q_PROPERTY(QString durationString READ durationString CONSTANT)
@@ -24,13 +25,14 @@ public:
         Library,
     };
 
-    Entry(Source source, const QString &title, const QString &artist,
+    Entry(Source source, const QString &artist, const QString &album, const QString &title,
           const QString &url, const QString &iconUrl, int duration, QObject *parent = nullptr);
     ~Entry() override;
 
     Source source() const { return m_source; }
     QString title() const { return m_title; }
     QString artist() const { return m_artist; }
+    QString album() const { return m_album; }
     QString iconData() const { return m_iconData; }
     QString url() const { return m_url; }
     QString iconUrl() const { return m_iconUrl; }
@@ -49,6 +51,7 @@ private:
     Source m_source;
     QString m_title;
     QString m_artist;
+    QString m_album;
     QString m_iconData;
     QString m_url;
     QString m_iconUrl;
@@ -75,10 +78,10 @@ public:
     Q_INVOKABLE void previous();
     Q_INVOKABLE void remove(Entry *entry);
 
-    void append(Entry::Source source, const QString &title, const QString &artist,
+    void append(Entry::Source source, const QString &artist, const QString &album, const QString &title,
                 const QString &url, int duration, const QString &iconUrl);
 
-    void prepend(Entry::Source source, const QString &title, const QString &artist,
+    void prepend(Entry::Source source, const QString &artist, const QString &album, const QString &title,
                  const QString &url, int duration, const QString &iconUrl);
 
 signals:
@@ -90,7 +93,8 @@ private slots:
     void onNetworkReplyFinished(QNetworkReply *reply);
 
 private:
-    Entry *createEntry(Entry::Source source, const QString &title, const QString &artist,
+    Entry *createEntry(Entry::Source source,
+                       const QString &artist, const QString &album, const QString &title,
                        const QString &url, int duration, const QString &iconUrl);
     void advance(int delta);
 
