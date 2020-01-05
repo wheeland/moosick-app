@@ -8,6 +8,7 @@ Item {
     Flickable {
         id: flickable
 
+        anchors.fill: parent
         interactive: column.height > root.height
         contentWidth: column.width
         contentHeight: column.height

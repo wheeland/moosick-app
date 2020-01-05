@@ -169,9 +169,17 @@ void Playlist::previous()
     advance(-1);
 }
 
+void Playlist::play(Entry *entry)
+{
+    const int rootSongIndex = m_entries.data().indexOf(entry);
+    if (rootSongIndex >= 0) {
+        m_currentEntry = rootSongIndex;
+        emit currentSongChanged();
+    }
+}
+
 void Playlist::remove(Entry *entry)
 {
-    // is it a song without a collection?
     const int rootSongIndex = m_entries.data().indexOf(entry);
     if (rootSongIndex >= 0) {
         // current song?
@@ -193,6 +201,8 @@ void Playlist::append(Entry::Source source,
                       const QString &url, int duration, const QString &iconUrl)
 {
     m_entries.add(createEntry(source, artist, album, title, url, duration, iconUrl));
+    if (m_entries.size() == 1)
+        emit currentSongChanged();
 }
 
 void Playlist::prepend(Entry::Source source,
@@ -200,6 +210,8 @@ void Playlist::prepend(Entry::Source source,
                        const QString &url, int duration, const QString &iconUrl)
 {
     m_entries.insert(0, createEntry(source, artist, album, title, url, duration, iconUrl));
+    if (m_entries.size() == 1)
+        emit currentSongChanged();
 }
 
 Entry *Playlist::createEntry(Entry::Source source,

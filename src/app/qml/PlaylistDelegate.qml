@@ -69,4 +69,9 @@ Rectangle {
         anchors.right: parent.right
         anchors.margins: d.margin
     }
+
+    MouseArea {
+        anchors.fill: parent
+        onClicked: _app.playlist.play(root.entry)
+    }
 }

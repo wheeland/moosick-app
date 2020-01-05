@@ -76,6 +76,7 @@ public:
 
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();
+    Q_INVOKABLE void play(Entry *entry);
     Q_INVOKABLE void remove(Entry *entry);
 
     void append(Entry::Source source, const QString &artist, const QString &album, const QString &title,

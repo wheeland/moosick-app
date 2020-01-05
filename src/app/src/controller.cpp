@@ -4,6 +4,7 @@ Controller::Controller(QObject *parent)
     : QObject(parent)
     , m_playlist(new Playlist::Playlist(this))
     , m_search(new Search::Query("localhost", 8080, this))
+    , m_audio(new Audio(m_playlist, this))
 {
 }
 

@@ -35,7 +35,7 @@ Rectangle {
             top: header.bottom
             left: parent.left
             right: parent.right
-            bottom: parent.bottom
+            bottom: player.top
             margins: 10
         }
 
@@ -45,5 +45,12 @@ Rectangle {
         PlaylistPane {
 
         }
+    }
+
+    PlayerBar {
+        id: player
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
     }
 }
