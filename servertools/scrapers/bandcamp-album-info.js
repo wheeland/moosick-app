@@ -11,15 +11,37 @@ function sanitizeStr(str) {
     return str.split("\n")[0];
 }
 
+function getFileUrl(fileinfo) {
+    for (f in fileinfo) {
+        if (fileinfo[f].startsWith("http"))
+            return fileinfo[f];
+    }
+    return undefined;
+}
+
 function handler(error, info) {
     if (error)
         return;
+
+    var tracks = [];
+    for (var i = 0; i < info.tracks.length; ++i) {
+        if (info.raw.trackinfo[i].streaming === 1) {
+            var url = getFileUrl(info.raw.trackinfo[i].file);
+            if (url) {
+                tracks.push({
+                    name: info.tracks[i].name,
+                    url: url,
+                    duration: info.tracks[i].duration,
+                });
+            }
+        }
+    }
 
     console.log(JSON.stringify({
         name: sanitizeStr(info.title),
         url: albumUrl,
         icon: info.imageUrl,
-        tracks: info.tracks
+        tracks: tracks,
     }, null, 2));
 }
 
