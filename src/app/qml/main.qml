@@ -15,7 +15,13 @@ Rectangle {
         id: header
         entries: ["Search", "Playlist" ]
         index: swipeView.currentIndex
-        width: parent.width
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            margins: 5
+        }
+
         height: 50
         offset: 10
         onChange: swipeView.currentIndex = toIndex
@@ -23,11 +29,14 @@ Rectangle {
 
     SwipeView {
         id: swipeView
+        clip: true
+
         anchors {
             top: header.bottom
             left: parent.left
             right: parent.right
             bottom: parent.bottom
+            margins: 10
         }
 
         SearchPane {

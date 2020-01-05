@@ -4,6 +4,7 @@
 #include <QQmlEngine>
 #include <QScreen>
 
+#include "controller.hpp"
 #include "search.hpp"
 #include "playlist.hpp"
 
@@ -19,7 +20,7 @@ int main(int argc, char **argv)
     const QSize screenSize = QSize(540, 920);
 #endif
 
-    Search::Query query("localhost", 8080);
+    Controller controller;
 
     qRegisterMetaType<Playlist::Entry*>();
     qRegisterMetaType<Search::BandcampArtistResult*>();
@@ -34,7 +35,7 @@ int main(int argc, char **argv)
 #ifdef Q_OS_ANDROID
     view.rootContext()->setContextProperty("_logger", &logger);
 #endif
-    view.rootContext()->setContextProperty("_query", &query);
+    view.rootContext()->setContextProperty("_app", &controller);
     view.setSource(QUrl("qrc:/qml/main.qml"));
     view.show();
 

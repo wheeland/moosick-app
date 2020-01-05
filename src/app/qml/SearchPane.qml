@@ -16,17 +16,17 @@ Flickable {
 
         Item {
             width: parent.width
-            height: childrenRect.height
+            height: childrenRect.height + 10
 
             SimpleButton {
                 id: retryButton
                 anchors.left: parent.left
                 anchors.margins: 20
                 label: "Retry"
-                background: _query.hasErrors ? "black" : "darkgray"
-                foreground: _query.hasErrors ? "white" : "lightgray"
-                enabled: _query.hasErrors
-                onClicked: _query.retry()
+                background: _app.search.hasErrors ? "black" : "darkgray"
+                foreground: _app.search.hasErrors ? "white" : "lightgray"
+                enabled: _app.search.hasErrors
+                onClicked: _app.search.retry()
             }
 
             LineEdit {
@@ -48,13 +48,18 @@ Flickable {
                 anchors.right: parent.right
                 anchors.margins: 20
                 label: "Search"
-                onClicked: _query.search(textInput.text)
+                onClicked: _app.search.search(textInput.text)
             }
+        }
 
+        Rectangle {
+            width: column.width
+            height: 2
+            color: "white"
         }
 
         Repeater {
-            model: _query.model
+            model: _app.search.model
 
             delegate: SearchResultDelegate {
                 width: root.width

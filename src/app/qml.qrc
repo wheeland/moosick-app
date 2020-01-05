@@ -3,10 +3,12 @@
         <file>qml/main.qml</file>
         <file>qml/SimpleButton.qml</file>
         <file>qml/LineEdit.qml</file>
+        <file>qml/SelectBox.qml</file>
         <file>qml/SearchResultDelegate.qml</file>
+        <file>qml/SearchResultPopup.qml</file>
         <file>qml/SearchPane.qml</file>
         <file>qml/PlaylistPane.qml</file>
-        <file>qml/PlaylistEntry.qml</file>
+        <file>qml/PlaylistDelegate.qml</file>
         <file>qml/SwipeHeader.qml</file>
     </qresource>
 </RCC>

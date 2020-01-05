@@ -109,4 +109,25 @@ Item {
             }
         }
     }
+
+    SearchResultPopup {
+        id: popup
+        visible: false
+    }
+
+    MouseArea {
+        id: mouseArea
+        anchors.fill: parent
+        preventStealing: true
+
+        onPressAndHold: popup.show(mouse.x, mouse.y)
+        onReleased: {
+            if (popup.selected1) {
+
+            }
+
+            popup.hide()
+        }
+        onPositionChanged: popup.move(mouse.x, mouse.y)
+    }
 }
