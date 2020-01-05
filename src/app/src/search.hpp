@@ -80,14 +80,15 @@ private:
 class BandcampArtistResult : public Result
 {
     Q_OBJECT
-    Q_PROPERTY(ModelAdapter::Model *albums READ albums CONSTANT)
+    Q_PROPERTY(ModelAdapter::Model *albums READ albumsModel CONSTANT)
 
 public:
     BandcampArtistResult(const QString &title, const QString &url, const QString &icon, QObject *parent = nullptr);
     ~BandcampArtistResult();
 
     void addAlbum(BandcampAlbumResult *album);
-    ModelAdapter::Model *albums() const { return m_albums.model(); }
+    ModelAdapter::Model *albumsModel() const { return m_albums.model(); }
+    QVector<BandcampAlbumResult*> albums() const { return m_albums.data(); }
 
 private:
     ModelAdapter::Adapter<BandcampAlbumResult*> m_albums;
@@ -96,14 +97,15 @@ private:
 class BandcampAlbumResult : public Result
 {
     Q_OBJECT
-    Q_PROPERTY(ModelAdapter::Model *tracks READ tracks CONSTANT)
+    Q_PROPERTY(ModelAdapter::Model *tracks READ tracksModel CONSTANT)
 
 public:
     BandcampAlbumResult(const QString &title, const QString &url, const QString &icon, QObject *parent = nullptr);
     ~BandcampAlbumResult();
 
     void addTrack(BandcampTrackResult *track);
-    ModelAdapter::Model *tracks() const { return m_tracks.model(); }
+    ModelAdapter::Model *tracksModel() const { return m_tracks.model(); }
+    QVector<BandcampTrackResult*> tracks() const { return m_tracks.data(); }
 
 private:
     ModelAdapter::Adapter<BandcampTrackResult*> m_tracks;
