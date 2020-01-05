@@ -102,8 +102,9 @@ void BandcampArtistResult::addAlbum(BandcampAlbumResult *album)
         m_albums.add(album);
 }
 
-BandcampAlbumResult::BandcampAlbumResult(const QString &title, const QString &url, const QString &icon, QObject *parent)
+BandcampAlbumResult::BandcampAlbumResult(const QString &artist, const QString &title, const QString &url, const QString &icon, QObject *parent)
     : Result(BandcampAlbum, title, url, icon, parent)
+    , m_artist(artist)
 {
     m_tracks.addValueAccessor("result");
 }
@@ -120,9 +121,10 @@ void BandcampAlbumResult::addTrack(BandcampTrackResult *track)
         m_tracks.add(track);
 }
 
-BandcampTrackResult::BandcampTrackResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent)
+BandcampTrackResult::BandcampTrackResult(BandcampAlbumResult *album, const QString &title, const QString &url, const QString &icon, int secs, QObject *parent)
     : Result(BandcampTrack, title, url, icon, parent)
     , m_secs(secs)
+    , m_album(album)
 {
 }
 
@@ -250,6 +252,7 @@ bool Query::populateRootResults(const QByteArray &json)
     for (const QJsonValue &entry : root) {
         const QString type = entry["type"].toString();
         const QString name = entry["name"].toString();
+        const QString artist = entry["artist"].toString();
         const QString url = entry["url"].toString();
         const QString icon = entry["icon"].toString();
 
@@ -257,7 +260,7 @@ bool Query::populateRootResults(const QByteArray &json)
             newResults << createArtistResult(name, url, icon);
         }
         else if (type == "album") {
-            newResults << createAlbumResult(name, url, icon);
+            newResults << createAlbumResult(artist, name, url, icon);
         }
         else if (type == "video") {
             qWarning() << "video not implemented";
@@ -277,7 +280,7 @@ bool Query::populateRootResults(const QByteArray &json)
 void Query::populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo)
 {
     for (const NetCommon::BandcampSongInfo &song : albumInfo.tracks) {
-        BandcampTrackResult *track = new BandcampTrackResult(song.name, song.url, albumInfo.icon, song.secs, this);
+        BandcampTrackResult *track = new BandcampTrackResult(album, song.name, song.url, albumInfo.icon, song.secs, this);
         album->addTrack(track);
     }
 }
@@ -294,7 +297,7 @@ bool Query::populateArtist(BandcampArtistResult *artist, const QByteArray &artis
         const QString url = entry["url"].toString();
         const QString icon = entry["icon"].toString();
 
-        BandcampAlbumResult *newAlbum = createAlbumResult(name, url, icon);
+        BandcampAlbumResult *newAlbum = createAlbumResult(artist->title(), name, url, icon);
         artist->addAlbum(newAlbum);
     }
 
@@ -413,9 +416,9 @@ void Query::requestIcon(Result *result)
     m_runningQueries << reply;
 }
 
-BandcampAlbumResult *Query::createAlbumResult(const QString &name, const QString &url, const QString &icon)
+BandcampAlbumResult *Query::createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon)
 {
-    BandcampAlbumResult *album = new BandcampAlbumResult(name, url, icon, this);
+    BandcampAlbumResult *album = new BandcampAlbumResult(artist, name, url, icon, this);
 
     connect(album, &Result::queryInfoRequested, this, [=]() {
         if (album->status() != Result::Querying && album->status() != Result::Done) {

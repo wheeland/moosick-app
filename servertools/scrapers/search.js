@@ -37,6 +37,7 @@ function bandcampSearchResult(error, searchResults) {
         if (result.type === "album") {
             results.push({
                 type: "album",
+                artist: result.artist,
                 url: result.url,
                 name: sanitizeStr(result.name),
                 icon: result.imageUrl

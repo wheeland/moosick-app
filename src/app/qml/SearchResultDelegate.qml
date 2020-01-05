@@ -62,7 +62,13 @@ Item {
         id: titleText
         anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; margins: 10 }
         color: root.textColor
-        text: root.result.title
+        text: {
+            switch (root.result.type) {
+            case SearchResult.BandcampAlbum: return root.result.artist + " - " + root.result.title
+            case SearchResult.BandcampTrack: return root.result.album.artist + " - " + root.result.album.title + " - " + root.result.title
+            default: root.result.title
+            }
+        }
         font.bold: true
     }
 

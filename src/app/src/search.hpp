@@ -98,31 +98,39 @@ class BandcampAlbumResult : public Result
 {
     Q_OBJECT
     Q_PROPERTY(ModelAdapter::Model *tracks READ tracksModel CONSTANT)
+    Q_PROPERTY(QString artist READ artist CONSTANT)
 
 public:
-    BandcampAlbumResult(const QString &title, const QString &url, const QString &icon, QObject *parent = nullptr);
+    BandcampAlbumResult(const QString &artist, const QString &title, const QString &url, const QString &icon, QObject *parent = nullptr);
     ~BandcampAlbumResult();
 
     void addTrack(BandcampTrackResult *track);
     ModelAdapter::Model *tracksModel() const { return m_tracks.model(); }
     QVector<BandcampTrackResult*> tracks() const { return m_tracks.data(); }
 
+    QString artist() const { return m_artist; }
+
 private:
     ModelAdapter::Adapter<BandcampTrackResult*> m_tracks;
+    QString m_artist;
 };
 
 class BandcampTrackResult : public Result
 {
     Q_OBJECT
     Q_PROPERTY(int secs READ secs CONSTANT)
+    Q_PROPERTY(BandcampAlbumResult *album READ album CONSTANT)
 
 public:
-    BandcampTrackResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent = nullptr);
+    BandcampTrackResult(BandcampAlbumResult *album, const QString &title, const QString &url, const QString &icon, int secs, QObject *parent = nullptr);
     ~BandcampTrackResult() = default;
     int secs() const { return m_secs; }
 
+    BandcampAlbumResult *album() const { return m_album; }
+
 private:
     int m_secs;
+    BandcampAlbumResult *m_album;
 };
 
 /**
@@ -170,7 +178,7 @@ private:
 
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
 
-    BandcampAlbumResult *createAlbumResult(const QString &name, const QString &url, const QString &icon);
+    BandcampAlbumResult *createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon);
     BandcampArtistResult *createArtistResult(const QString &name, const QString &url, const QString &icon);
 
     bool populateRootResults(const QByteArray &json);
