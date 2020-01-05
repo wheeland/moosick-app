@@ -4,6 +4,7 @@
 #include "playlist.hpp"
 #include "audio.hpp"
 #include "httpclient.hpp"
+#include "database.hpp"
 
 class Controller : public QObject
 {
@@ -28,6 +29,7 @@ private:
     void queueBandcampTrack(Search::BandcampTrackResult *track, bool append);
 
     HttpClient *m_httpClient;
+    Database *m_database;
     Playlist::Playlist *m_playlist;
     Search::Query *m_search;
     Audio *m_audio;

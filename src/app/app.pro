@@ -11,6 +11,7 @@ SOURCES += \
     src/playlist.cpp \
     src/controller.cpp \
     src/audio.cpp \
+    src/database.cpp \
     src/util/androidutil.cpp \
     src/util/qmlutil.cpp \
     src/util/modeladapter.cpp \
@@ -21,6 +22,7 @@ HEADERS += \
     src/playlist.hpp \
     src/controller.hpp \
     src/audio.hpp \
+    src/database.hpp \
     src/util/androidutil.hpp \
     src/util/qmlutil.hpp \
     src/util/modeladapter.hpp \
