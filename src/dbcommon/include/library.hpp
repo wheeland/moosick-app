@@ -87,10 +87,10 @@ private:
 
     QVector<TagId> m_rootTags;
 
-    friend SongId;
-    friend AlbumId;
-    friend ArtistId;
-    friend TagId;
+    friend class SongId;
+    friend class AlbumId;
+    friend class ArtistId;
+    friend class TagId;
 
     friend QDataStream &operator<<(QDataStream &stream, const Library &lib);
     friend QDataStream &operator>>(QDataStream &stream, Library &lib);
