@@ -80,14 +80,19 @@ Item {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        preventStealing: true
 
-        onClicked: root.result.queryInfo();
-        onPressAndHold: popup.show(mouse.x, mouse.y)
+        onClicked: root.result.queryInfo()
+        onPressAndHold: {
+            preventStealing = true;
+            popup.show(mouse.x, mouse.y);
+        }
         onReleased: {
-            if (popup.selected1) {
+            preventStealing = false;
 
-            }
+            if (popup.selected1)
+                _app.addToPlaylist(root.result, false);
+            if (popup.selected2)
+                _app.addToPlaylist(root.result, true);
 
             popup.hide()
         }
