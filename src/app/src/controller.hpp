@@ -20,6 +20,7 @@ public:
     Q_INVOKABLE void download(Search::Result *result);
 
 private:
+    bool queueBandcampAlbum(Search::BandcampAlbumResult *album, bool append);
     void queueBandcampTrack(Search::BandcampTrackResult *track, bool append);
 
     Playlist::Playlist *m_playlist;

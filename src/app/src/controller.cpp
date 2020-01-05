@@ -22,25 +22,21 @@ void Controller::addToPlaylist(Search::Result *result, bool append)
         if (!album) return;
 
         // if the album songs are already downloaded, add them now
-        const QVector<Search::BandcampTrackResult*> tracks = album->tracks();
-        if (!tracks.isEmpty()) {
-            if (append) {
-                for (auto it = tracks.begin(); it != tracks.end(); ++it)
-                    queueBandcampTrack(*it, true);
-            } else {
-                for (auto it = tracks.rbegin(); it != tracks.rend(); ++it)
-                    queueBandcampTrack(*it, false);
-            }
-        }
-        // otherwise, we'll need to schedule a download, and wait for the result
-        else {
-
+        if (!queueBandcampAlbum(album, append)) {
+            // otherwise, we'll need to schedule a download, and wait for the result
+            album->queryInfo();
+            connect(album, &Search::BandcampAlbumResult::statusChanged, this, [=](Search::Result::Status status) {
+                if (status == Search::Result::Done)
+                    queueBandcampAlbum(album, append);
+            });
         }
 
         break;
     }
     case Search::Result::BandcampTrack: {
-//        queueBandcampTrack(result, append);
+        Search::BandcampTrackResult *track = qobject_cast<Search::BandcampTrackResult*>(result);
+        if (track)
+            queueBandcampTrack(track, append);
         return;
     }
     case Search::Result::BandcampArtist:
@@ -54,7 +50,32 @@ void Controller::download(Search::Result *result)
 
 }
 
+bool Controller::queueBandcampAlbum(Search::BandcampAlbumResult *album, bool append)
+{
+    const QVector<Search::BandcampTrackResult*> tracks = album->tracks();
+    if (!tracks.isEmpty()) {
+        if (append) {
+            for (auto it = tracks.begin(); it != tracks.end(); ++it)
+                queueBandcampTrack(*it, true);
+        } else {
+            for (auto it = tracks.rbegin(); it != tracks.rend(); ++it)
+                queueBandcampTrack(*it, false);
+        }
+
+        return true;
+    }
+    return false;
+}
+
 void Controller::queueBandcampTrack(Search::BandcampTrackResult *track, bool append)
 {
-//    m_playlist->append(Playlist::Entry::Bandcamp, track->);
+    if (append) {
+        m_playlist->append(Playlist::Entry::Bandcamp,
+                           track->album()->artist(), track->album()->title(), track->title(),
+                           track->url(), track->secs(), track->iconUrl());
+    } else {
+        m_playlist->prepend(Playlist::Entry::Bandcamp,
+                           track->album()->artist(), track->album()->title(), track->title(),
+                           track->url(), track->secs(), track->iconUrl());
+    }
 }
