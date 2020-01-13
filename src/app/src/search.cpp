@@ -128,6 +128,12 @@ BandcampTrackResult::BandcampTrackResult(BandcampAlbumResult *album, const QStri
 {
 }
 
+YoutubeVideoResult::YoutubeVideoResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent)
+    : Result(YoutubeVideo, title, url, icon, parent)
+    , m_secs(secs)
+{
+}
+
 QueryFilterModel::QueryFilterModel(QObject *parent)
     : QSortFilterProxyModel(parent)
 {
@@ -237,7 +243,9 @@ bool Query::populateRootResults(const QByteArray &json)
             newResults << createAlbumResult(artist, name, url, icon);
         }
         else if (type == "video") {
-            qWarning() << "video not implemented";
+            const QString audioUrl = entry["audioUrl"].toString();
+            const int secs = entry["duration"].toInt();
+            newResults << createYoutubeVideoResult(artist, name, audioUrl, icon, secs);
         }
         else if (type == "playlist") {
             qWarning() << "playlist not implemented";
@@ -388,6 +396,13 @@ BandcampArtistResult *Query::createArtistResult(const QString &name, const QStri
     requestIcon(artist);
 
     return artist;
+}
+
+YoutubeVideoResult *Query::createYoutubeVideoResult(const QString &artist, const QString &name, const QString &url, const QString &icon, int secs)
+{
+    YoutubeVideoResult *video = new YoutubeVideoResult(name, url, icon, secs, this);
+    requestIcon(video);
+    return video;
 }
 
 } // namespace Search

@@ -131,6 +131,20 @@ private:
     BandcampAlbumResult *m_album;
 };
 
+class YoutubeVideoResult : public Result
+{
+    Q_OBJECT
+    Q_PROPERTY(int secs READ secs CONSTANT)
+
+public:
+    YoutubeVideoResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent = nullptr);
+    ~YoutubeVideoResult() = default;
+    int secs() const { return m_secs; }
+
+private:
+    int m_secs;
+};
+
 /**
  * Encapsulates all results from one specific search
  *
@@ -175,6 +189,7 @@ private:
 
     BandcampAlbumResult *createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon);
     BandcampArtistResult *createArtistResult(const QString &name, const QString &url, const QString &icon);
+    YoutubeVideoResult *createYoutubeVideoResult(const QString &artist, const QString &name, const QString &url, const QString &icon, int secs);
 
     bool populateRootResults(const QByteArray &json);
     void populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);

@@ -46,6 +46,12 @@ void Controller::addToPlaylist(Search::Result *result, bool append)
             queueBandcampTrack(track, append);
         return;
     }
+    case Search::Result::YoutubeVideo: {
+        Search::YoutubeVideoResult *video = qobject_cast<Search::YoutubeVideoResult*>(result);
+        if (video)
+            queueYoutubeVideo(video, append);
+        return;
+    }
     case Search::Result::BandcampArtist:
     default:
         break;
@@ -85,4 +91,12 @@ void Controller::queueBandcampTrack(Search::BandcampTrackResult *track, bool app
                            track->album()->artist(), track->album()->title(), track->title(),
                            track->url(), track->secs(), track->iconUrl());
     }
+}
+
+void Controller::queueYoutubeVideo(Search::YoutubeVideoResult *video, bool append)
+{
+    if (append)
+        m_playlist->append(Playlist::Entry::Youtube, "", "", video->title(), video->url(), video->secs(), video->iconUrl());
+    else
+        m_playlist->prepend(Playlist::Entry::Youtube, "", "", video->title(), video->url(), video->secs(), video->iconUrl());
 }

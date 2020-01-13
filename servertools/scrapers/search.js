@@ -1,5 +1,6 @@
 var bandcamp = require('bandcamp-scraper');
 var youtube = require('scrape-youtube');
+var spawn = require('child_process');
 
 // check search pattern
 if (process.argv.length < 3) {
@@ -57,13 +58,16 @@ function bandcampSearchResult(error, searchResults) {
 };
 
 function youtubeResults(searchResults) {
+    var videos = [];
+    
     searchResults.forEach(function(result) {
         if (result.type == "video") {
-            results.push({
+            videos.push({
                 type: "video",
                 url: result.link,
                 name: sanitizeStr(result.title),
-                icon: result.thumbnail
+                icon: result.thumbnail,
+                duration: result.duration,
             });
         }
         else if (result.type == "playlist") {
@@ -76,11 +80,29 @@ function youtubeResults(searchResults) {
             });
         }
     });
+
+    for (var i = 0; i < videos.length; ++i) {
+        let video = videos[i];
+        
+        spawn.exec('youtube-dl -g "' + videos[i].url + '"', function(error, stdout, stderr) {
+            var lines = stdout.split("\n");
+            var line = lines[0];
+            lines.forEach(function(l) { 
+                if (l.includes("mime=audio"))
+                    line = l;
+            });
+            video.audioUrl = line.trim();
+            results.push(video);
+            done();
+        });
+    }
+    left += videos.length;
     
     done();
 }
 
 bandcamp.search({ query: pattern, page: 1 }, bandcampSearchResult);
+youtube(pattern, { limit : 5, type : "any" }).then(youtubeResults, function(err) {});
+
 //bandcamp.search({ query: pattern, page: 2 }, bandcampSearchResult);
 
-youtube(pattern, { limit : 10, type : "any" }).then(youtubeResults, function(err) {});

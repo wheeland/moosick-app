@@ -27,6 +27,7 @@ public:
 private:
     bool queueBandcampAlbum(Search::BandcampAlbumResult *album, bool append);
     void queueBandcampTrack(Search::BandcampTrackResult *track, bool append);
+    void queueYoutubeVideo(Search::YoutubeVideoResult *video, bool append);
 
     HttpClient *m_httpClient;
     Database *m_database;

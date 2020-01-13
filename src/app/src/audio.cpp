@@ -7,6 +7,7 @@ Audio::Audio(Playlist::Playlist *playlist, QObject *parent)
     , m_playlist(playlist)
     , m_player(new QMediaPlayer(this))
 {
+    // TODO: pre-read stuff from a HTTP connection to pass to setMedia()
     connect(playlist, &Playlist::Playlist::currentSongChanged, this, &Audio::onCurrentSongChanged);
     connect(m_player, &QMediaPlayer::positionChanged, this, &Audio::positionChanged);
     connect(m_player, static_cast<void (QMediaPlayer::*)(QMediaPlayer::Error)>(&QMediaPlayer::error), this, &Audio::updateStatus);
