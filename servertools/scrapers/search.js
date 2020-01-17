@@ -57,6 +57,27 @@ function bandcampSearchResult(error, searchResults) {
     done();
 };
 
+function findBestFormat(formats) {
+    if (formats.length == 0)
+        return "";
+
+    var bestAudioSize = 0;
+    var bestUrl = "";
+    for (var i = 0; i < formats.length; ++i) {
+        // we ain't wanna deal with DASH
+        if (formats[i].format.toLowerCase().includes("dash"))
+            continue;
+        // set fallback
+        if (bestUrl === "")
+            bestUrl = formats[i].url;
+        // check if best audio format
+        if (formats[i].format.includes("audio only") && formats[i].filesize && formats[i].filesize > bestAudioSize)
+            bestUrl = formats[i].url;
+    }
+
+    return bestUrl;
+}
+
 function youtubeResults(searchResults) {
     var videos = [];
     
@@ -84,14 +105,9 @@ function youtubeResults(searchResults) {
     for (var i = 0; i < videos.length; ++i) {
         let video = videos[i];
         
-        spawn.exec('youtube-dl -g "' + videos[i].url + '"', function(error, stdout, stderr) {
-            var lines = stdout.split("\n");
-            var line = lines[0];
-            lines.forEach(function(l) { 
-                if (l.includes("mime=audio"))
-                    line = l;
-            });
-            video.audioUrl = line.trim();
+        spawn.exec('youtube-dl -j "' + videos[i].url + '"', function(error, stdout, stderr) {
+            var result = JSON.parse(stdout);
+            video.audioUrl = findBestFormat(result.formats);
             results.push(video);
             done();
         });
