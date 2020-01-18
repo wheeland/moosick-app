@@ -30,7 +30,7 @@ private:
     void queueYoutubeVideo(Search::YoutubeVideoResult *video, bool append);
 
     HttpClient *m_httpClient;
-    Database *m_database;
+    Database::Database *m_database;
     Playlist::Playlist *m_playlist;
     Search::Query *m_search;
     Audio *m_audio;

@@ -1,5 +1,57 @@
 #include "database.hpp"
 
+// let the Database be consistent and do ALL allocations
+// the QObjects are just exposure to QML, all the data lies in the Database
+// when tags change, all the classes need to get them anew from the DB
+
+namespace Database {
+
+DbItem::DbItem(Database *db, DbItem::Type tp)
+    : QObject(db)
+    , m_database(db)
+    , m_type(tp)
+{
+}
+
+const Moosick::Library &DbItem::library() const
+{
+    return m_database->library();
+}
+
+DbTag::DbTag(Database *db, Moosick::TagId tag)
+    : DbItem(db, DbItem::Tag)
+    , m_tag(tag)
+{
+    m_childTags.addValueAccessor("tag");
+}
+
+DbTaggedItem::DbTaggedItem(Database *db, DbItem::Type tp, const Moosick::TagIdList &tags)
+    : DbItem(db, tp)
+{
+    m_tags.addValueAccessor("tag");
+    for (Moosick::TagId tag : tags)
+        m_tags.add(db->tagForTagId(tag));
+}
+
+DbArtist::DbArtist(Database *db, Moosick::ArtistId artist)
+    : DbTaggedItem(db, DbItem::Artist, artist.tags(db->library()))
+    , m_artist(artist)
+{
+    m_albums.addValueAccessor("album");
+}
+
+DbAlbum::DbAlbum(Database *db, Moosick::AlbumId album)
+    : DbTaggedItem(db, DbItem::Album, album.tags(db->library()))
+    , m_album(album)
+{
+    m_songs.addValueAccessor("song");
+}
+
+DbSong::DbSong(Database *db, Moosick::SongId song)
+    : DbTaggedItem(db, DbItem::Song, song.tags(db->library()))
+{
+}
+
 Database::Database(HttpClient *httpClient, QObject *parent)
     : QObject(parent)
     , m_http(new HttpRequester(httpClient, this))
@@ -27,15 +79,20 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
 
     switch (requestType) {
     case LibrarySync:
-        m_libray.deserialize(QByteArray::fromBase64(data));
-        qWarning().noquote() << m_libray.dumpToStringList();
+        m_library.deserialize(QByteArray::fromBase64(data));
+        qWarning().noquote() << m_library.dumpToStringList();
         break;
     default:
         break;
     }
 }
 
-bool Database::hasRunningRequestType(Database::RequestType requestType) const
+DbTag *Database::tagForTagId(Moosick::TagId tagId) const
+{
+    return nullptr;
+}
+
+bool Database::hasRunningRequestType(RequestType requestType) const
 {
     for (auto it = m_requests.begin(); it != m_requests.end(); ++it) {
         if (it.value() == requestType)
@@ -43,3 +100,5 @@ bool Database::hasRunningRequestType(Database::RequestType requestType) const
     }
     return false;
 }
+
+} // namespace Database
