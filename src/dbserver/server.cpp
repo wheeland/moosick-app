@@ -1,22 +1,30 @@
 #include "server.hpp"
 #include "messages.hpp"
+#include "jsonconv.hpp"
 
 #include <QFile>
 #include <QTcpSocket>
 #include <QJsonDocument>
+#include <QDate>
 
-Server::Server(const QString &libraryPath, const QString &logPath, const QString &dataPath)
+Server::Server(const QString &libraryPath,
+               const QString &logPath,
+               const QString &dataPath,
+               const QString &backupBasePath)
     : QObject ()
     , m_libraryPath(libraryPath)
     , m_logPath(logPath)
     , m_dataPath(dataPath)
+    , m_backupBasePath(backupBasePath)
 {
     // maybe load library file
     QFile libraryFile(libraryPath);
     if (libraryFile.open(QIODevice::ReadOnly)) {
-        QDataStream stream(&libraryFile);
-        stream >> m_library;
-        qDebug() << "Parsed library from" << libraryPath;
+        const QJsonObject jsonRoot = parseJsonObject(libraryFile.readAll(), "Library");
+        if (m_library.deserializeFromJson(jsonRoot))
+            qDebug() << "Parsed library from" << libraryPath;
+        else
+            qDebug() << "Failed parsing library from" << libraryPath;
     } else {
         qDebug() << "Could not read file" << libraryPath;
     }
@@ -167,9 +175,20 @@ void Server::onNewDataReady(QTcpSocket *socket)
 
 void Server::saveLibrary() const
 {
-    QFile libFile(m_libraryPath);
-    if (libFile.open(QIODevice::WriteOnly)) {
-        QDataStream out(&libFile);
-        out << m_library;
-    }
+    const auto save = [&](const QString &path) {
+        QFile libFile(path);
+        if (libFile.open(QIODevice::WriteOnly)) {
+            const QJsonDocument doc(m_library.serializeToJson());
+            libFile.write(doc.toJson());
+        }
+    };
+
+    save(m_libraryPath);
+
+    // check if back-up for today already exists
+    const QDate today = QDate::currentDate();
+    const QString dateString = QString::asprintf("%d_%02d_%02d", today.year(), today.month(), today.day());
+    const QString backupPath = m_backupBasePath + "." + dateString + ".json";
+    if (!QFile::exists(backupPath))
+        save(backupPath);
 }

@@ -2,6 +2,8 @@
 #include <QCommandLineParser>
 #include <QFile>
 #include <QDataStream>
+#include <QFileInfo>
+#include <QDir>
 
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -11,6 +13,12 @@
 #include "signalhandler.hpp"
 
 static constexpr quint16 DEFAULT_PORT = 12345;
+
+static QString getBackupPath(const QString &libPath)
+{
+    QFileInfo file(libPath);
+    return file.dir().path() + QDir::separator() + file.baseName();
+}
 
 int main(int argc, char **argv)
 {
@@ -23,6 +31,7 @@ int main(int argc, char **argv)
     parser.addOption({{"p", "port"}, "Specify port to listen on.", "port"});
     parser.addOption({{"d", "data"}, "Specify path to library data.", "data", "."});
     parser.addOption({{"l", "log"}, "Specify path to library log.", "log", "."});
+    parser.addOption({{"b", "backup"}, "Specify base path for backup files.", "backup", "."});
     parser.process(app);
 
     const QStringList posArgs = parser.positionalArguments();
@@ -39,7 +48,13 @@ int main(int argc, char **argv)
     const QString libraryPath = posArgs[0];
     const QString dataPath = parser.value("data");
     const QString logPath = parser.isSet("log") ? parser.value("log") : (libraryPath + ".log");
-    Server server(libraryPath, logPath, dataPath);
+    const QString backupPath = parser.isSet("backup") ? parser.value("backup") : getBackupPath(libraryPath);
+
+    qWarning() << "Data Path =" << dataPath;
+    qWarning() << "Log Path =" << logPath;
+    qWarning() << "Backup Base Path =" << backupPath;
+
+    Server server(libraryPath, logPath, dataPath, backupPath);
     if (!server.listen(port))
         return 1;
 
