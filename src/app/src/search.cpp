@@ -1,5 +1,6 @@
 #include "search.hpp"
 #include "json.hpp"
+#include "jsonconv.hpp"
 #include "util/qmlutil.hpp"
 
 #include <QtGlobal>
@@ -11,47 +12,6 @@
 #include <QJsonArray>
 #include <QBuffer>
 #include <QImage>
-
-static QJsonDocument parseJson(const QByteArray &json, const QByteArray &name)
-{
-    QJsonParseError error;
-    const QJsonDocument doc = QJsonDocument::fromJson(json, &error);
-    if (doc.isNull()) {
-        qWarning().noquote() << "Failed to parse" << name;
-        qWarning().noquote() << json;
-        qWarning() << "Error:";
-        qWarning().noquote() << error.errorString();
-    }
-    return doc;
-}
-
-static QJsonArray parseJsonArray(const QByteArray &json, const QByteArray &name)
-{
-    const QJsonDocument doc = parseJson(json, name);
-    if (doc.isNull())
-        return QJsonArray();
-
-    if (!doc.isArray()) {
-        qWarning().noquote() << name << "is not a JSON array";
-        return QJsonArray();
-    }
-
-    return doc.array();
-}
-
-static QJsonObject parseJsonObject(const QByteArray &json, const QByteArray &name)
-{
-    const QJsonDocument doc = parseJson(json, name);
-    if (doc.isNull())
-        return QJsonObject();
-
-    if (!doc.isObject()) {
-        qWarning().noquote() << name << "is not a JSON object";
-        return QJsonObject();
-    }
-
-    return doc.object();
-}
 
 namespace Search {
 

@@ -2,8 +2,10 @@
 
 #include "type_ids.hpp"
 #include "itemcollection.hpp"
+
 #include <QHash>
 #include <QDataStream>
+#include <QJsonObject>
 
 namespace Moosick {
 
@@ -66,6 +68,9 @@ public:
 
     QStringList dumpToStringList() const;
 
+    QJsonObject serializeToJson() const;
+    bool deserializeFromJson(const QJsonObject &json);
+
     QByteArray serialize() const;
     void deserialize(const QByteArray &bytes);
 
@@ -103,3 +108,6 @@ QDataStream &operator<<(QDataStream &stream, const LibraryChange &lch);
 QDataStream &operator>>(QDataStream &stream, LibraryChange &lch);
 
 } // namespace Moosick
+
+QJsonValue toJson(const Moosick::LibraryChange &change);
+bool fromJson(const QJsonValue &json, Moosick::LibraryChange &change);

@@ -3,6 +3,7 @@
 
 #include <QFile>
 #include <QTcpSocket>
+#include <QJsonDocument>
 
 Server::Server(const QString &libraryPath, const QString &logPath, const QString &dataPath)
     : QObject ()
@@ -145,8 +146,7 @@ void Server::onNewDataReady(QTcpSocket *socket)
         // send back whole library
         ClientCommon::Message response;
         response.tp = ClientCommon::LibraryReponse;
-        QDataStream out(&response.data, QIODevice::WriteOnly);
-        out << m_library;
+        response.data = QJsonDocument(m_library.serializeToJson()).toJson();
 
         qDebug() << "Sending LibraryResponse to" << socket->peerAddress();
 

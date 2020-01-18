@@ -1,42 +1,50 @@
 #include "library.hpp"
+#include "library_priv.hpp"
+
 #include <QDebug>
+#include <QJsonArray>
+#include <QJsonObject>
 
 namespace Moosick {
 
-struct Library::Song
+LibraryChange::LibraryChange(LibraryChange::Type tp, quint32 subj, quint32 det, const QString &nm)
+    : changeType(tp)
+    , subject(subj)
+    , detail(det)
+    , name(nm)
 {
-    QString name;
-    AlbumId album;
-    quint32 fileEnding = 0;
-    quint32 position = 0;
-    quint32 secs = 0;
-    TagIdList tags;
-};
+}
 
-struct Library::Album
+bool LibraryChange::isCreatingNewId(Type changeType)
 {
-    QString name;
-    ArtistId artist;
-    SongIdList songs;
-    TagIdList tags;
-};
+    switch (changeType) {
+    case TagAdd:
+    case ArtistAdd:
+    case AlbumAdd:
+    case SongAdd:
+        return true;
+    default:
+        return false;
+    }
+}
 
-struct Library::Artist
+bool LibraryChange::hasStringArg(Type changeType)
 {
-    QString name;
-    AlbumIdList albums;
-    TagIdList tags;
-};
-
-struct Library::Tag
-{
-    QString name;
-    TagId parent;
-    TagIdList children;
-    SongIdList songs;
-    AlbumIdList albums;
-    ArtistIdList artists;
-};
+    switch (changeType) {
+    case TagAdd:
+    case ArtistAdd:
+    case AlbumAdd:
+    case SongAdd:
+    case SongSetFileEnding:
+    case TagSetName:
+    case ArtistSetName:
+    case AlbumSetName:
+    case SongSetName:
+        return true;
+    default:
+        return false;
+    }
+}
 
 Library::Library()
 {
@@ -57,57 +65,6 @@ QVector<ArtistId> Library::artistsByName() const
     std::sort(ret.begin(), ret.end(), [&](ArtistId a, ArtistId b) {
         return a.name(*this).localeAwareCompare(b.name(*this));
     });
-    return ret;
-}
-
-QStringList Library::dumpToStringList() const
-{
-    QStringList ret;
-
-    const auto infoStr = [&](quint32 id, const TagIdList &tags) {
-        QString ret(" (id=");
-        ret += QString::number(id);
-        ret += ", tags=[";
-        for (int i = 0; i < tags.size(); ++i) {
-            if (i > 0)
-                ret += ", ";
-            ret += tags[i].name(*this);
-        }
-        ret += "])";
-        return ret;
-    };
-
-    // dump tags
-    ret << "Tags:";
-    const std::function<void(TagId, const QString&)> dumpTag = [&](TagId tag, const QString &indent) {
-        ret << (indent + tag.name(*this) + "(id=" + QString::number(tag) + ")");
-        QString childIndent = indent + " |-- ";
-        for (TagId child : tag.children(*this))
-            dumpTag(child, childIndent);
-    };
-
-    for (TagId tagId : m_rootTags) {
-        dumpTag(tagId, "    ");
-    }
-
-    // dump artists/albums/songs
-    ret << "Artists:";
-    for (ArtistId artist : artistsByName()) {
-        ret << QString("    ") + artist.name(*this) + infoStr(artist, artist.tags(*this));
-
-        for (AlbumId album : artist.albums(*this)) {
-            ret << QString("     |-- ") + album.name(*this) + infoStr(album, album.tags(*this));
-
-            for (SongId song : album.songs(*this)) {
-                const QString pos = QString::asprintf("[%2d] ", song.position(*this));
-                const QString filePath = song.filePath(*this);
-                const quint32 secs = song.secs(*this);
-                const QString fileInfo = QString::asprintf(" (%s - %d:%02d)", qPrintable(filePath), secs/60, secs%60);
-                ret << QString("     |    |-- ") + pos + song.name(*this) + fileInfo + infoStr(song, song.tags(*this));
-            }
-        }
-    }
-
     return ret;
 }
 
@@ -510,218 +467,5 @@ QString TagId::name(const Library &library) const
 }
 
 #undef FETCH
-
-QString readUtf8(QDataStream &stream)
-{
-    QByteArray bytes;
-    stream >> bytes;
-    return QString::fromUtf8(bytes);
-};
-
-QDataStream &operator<<(QDataStream &stream, const LibraryChange &lch)
-{
-    stream << static_cast<quint32>(lch.changeType);
-    stream << lch.subject;
-    stream << lch.detail;
-    stream << lch.name.toUtf8();
-    return stream;
-}
-
-QDataStream &operator>>(QDataStream &stream, LibraryChange &lch)
-{
-    quint32 tp;
-    stream >> tp;
-    lch.changeType = static_cast<LibraryChange::Type>(tp);
-    stream >> lch.subject;
-    stream >> lch.detail;
-    lch.name = readUtf8(stream);
-    return stream;
-}
-
-template <class T, class IntType>
-void dumpCollection(QDataStream &stream, const ItemCollection<T, IntType> &col, const std::function<void(const T&)> &dumper)
-{
-    stream << col.size();
-    for (auto it = col.begin(), end = col.end(); it != end; ++it) {
-        stream << it.key();
-        dumper(it.value());
-    }
-}
-
-QDataStream &operator<<(QDataStream &stream, const Library &lib)
-{
-    stream << lib.m_revision;
-
-    dumpCollection<Library::Tag>(stream, lib.m_tags, [&](const Library::Tag &tag) {
-        stream << tag.name.toUtf8();
-        stream << tag.parent;
-    });
-
-    dumpCollection<QString>(stream, lib.m_fileEndings, [&](const QString &fileEnding) {
-        stream << fileEnding.toUtf8();
-    });
-
-    dumpCollection<Library::Artist>(stream, lib.m_artists, [&](const Library::Artist &artist) {
-        stream << artist.name.toUtf8();
-        stream << artist.tags;
-    });
-
-    dumpCollection<Library::Album>(stream, lib.m_albums, [&](const Library::Album &album) {
-        stream << album.name.toUtf8();
-        stream << album.artist;
-        stream << album.tags;
-    });
-
-    dumpCollection<Library::Song>(stream, lib.m_songs, [&](const Library::Song &song) {
-        stream << song.name.toUtf8();
-        stream << song.album;
-        stream << song.fileEnding;
-        stream << song.position;
-        stream << song.secs;
-        stream << song.tags;
-    });
-
-    return stream;
-}
-
-template <class T, class IntType>
-void readCollection(QDataStream &stream, ItemCollection<T, IntType> &col, const std::function<T(IntType)> &reader)
-{
-    quint32 sz;
-    stream >> sz;
-
-    for (quint32 i = 0; i < sz; ++i) {
-        IntType id;
-        stream >> id;
-
-        const T newItem = reader(id);
-        col.add(id, newItem);
-    }
-}
-
-template <class IntType>
-QDataStream &operator>>(QDataStream &stream, detail::FromInt<IntType> &dst) {
-    quint32 into;
-    stream >> into;
-    dst = into;
-    return stream;
-}
-
-QDataStream &operator>>(QDataStream &stream, Library &lib)
-{
-    lib.m_tags.clear();
-    lib.m_songs.clear();
-    lib.m_albums.clear();
-    lib.m_artists.clear();
-    lib.m_fileEndings.clear();
-
-    stream >> lib.m_revision;
-
-    readCollection<Library::Tag, quint32>(stream, lib.m_tags, [&](quint32) {
-        Library::Tag newTag;
-        newTag.name = readUtf8(stream);
-        stream >> newTag.parent;
-        return newTag;
-    });
-
-#define TAG_PUSH_ID(tagId, member, id) \
-    do { \
-        Library::Tag *tag = lib.m_tags.findItem(tagId); \
-        if (tag) tag->member << (id); \
-    } while (0)
-
-    // fix up tag child lists and fill root parent list
-    for (auto it = lib.m_tags.begin(); it != lib.m_tags.end(); ++it) {
-        TAG_PUSH_ID(it.value().parent, children, it.key());
-        if (it.value().parent == 0)
-            lib.m_rootTags << it.key();
-    }
-
-    readCollection<QString, quint32>(stream, lib.m_fileEndings, [&](quint32) {
-        return readUtf8(stream);
-    });
-
-    // read artists
-    readCollection<Library::Artist, quint32>(stream, lib.m_artists, [&](quint32 id) {
-        Library::Artist newArtist;
-        newArtist.name = readUtf8(stream);
-        stream >> newArtist.tags;
-        for (quint32 tagId : newArtist.tags)
-            TAG_PUSH_ID(tagId, artists, id);
-        return newArtist;
-    });
-
-    // read albums
-    readCollection<Library::Album, quint32>(stream, lib.m_albums, [&](quint32 id) {
-        Library::Album newAlbum;
-        newAlbum.name = readUtf8(stream);
-        stream >> newAlbum.artist;
-        stream >> newAlbum.tags;
-        for (quint32 tagId : newAlbum.tags)
-            TAG_PUSH_ID(tagId, albums, id);
-        if (Library::Artist *artist = lib.m_artists.findItem(newAlbum.artist))
-            artist->albums << id;
-        return newAlbum;
-    });
-
-    // read songs
-    readCollection<Library::Song, quint32>(stream, lib.m_songs, [&](quint32 id) {
-        Library::Song newSong;
-        newSong.name = readUtf8(stream);
-        stream >> newSong.album;
-        stream >> newSong.fileEnding;
-        stream >> newSong.position;
-        stream >> newSong.secs;
-        stream >> newSong.tags;
-        for (quint32 tagId : newSong.tags)
-            TAG_PUSH_ID(tagId, songs, id);
-        if (Library::Album *album = lib.m_albums.findItem(newSong.album))
-            album->songs << id;
-        return newSong;
-    });
-
-#undef TAG_PUSH_ID
-
-    return stream;
-}
-
-LibraryChange::LibraryChange(LibraryChange::Type tp, quint32 subj, quint32 det, const QString &nm)
-    : changeType(tp)
-    , subject(subj)
-    , detail(det)
-    , name(nm)
-{
-}
-
-bool LibraryChange::isCreatingNewId(Type changeType)
-{
-    switch (changeType) {
-    case TagAdd:
-    case ArtistAdd:
-    case AlbumAdd:
-    case SongAdd:
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool LibraryChange::hasStringArg(Type changeType)
-{
-    switch (changeType) {
-    case TagAdd:
-    case ArtistAdd:
-    case AlbumAdd:
-    case SongAdd:
-    case SongSetFileEnding:
-    case TagSetName:
-    case ArtistSetName:
-    case AlbumSetName:
-    case SongSetName:
-        return true;
-    default:
-        return false;
-    }
-}
 
 } // namespace Moosick

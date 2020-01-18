@@ -6,6 +6,7 @@
 #include "library.hpp"
 #include "messages.hpp"
 #include "download.hpp"
+#include "jsonconv.hpp"
 
 static ClientCommon::ServerConfig s_serverConfig;
 
@@ -188,10 +189,16 @@ int main(int argc, char **argv)
         else if (QString("library").startsWith(line.toLower())) {
             sendRecv(s_serverConfig, ClientCommon::Message{ ClientCommon::LibraryRequest }, answer);
             Moosick::Library lib;
-            lib.deserialize(answer.data);
-            const QStringList libDump = lib.dumpToStringList();
-            for (const QString &line : libDump)
-                qWarning().noquote() << line;
+            const QJsonObject json = parseJsonObject(answer.data, "Library");
+            if (!lib.deserializeFromJson(json)) {
+                qWarning() << "Failed to de-serialize from JSON:";
+                qWarning().noquote() << answer.data;
+            }
+            else {
+                const QStringList libDump = lib.dumpToStringList();
+                for (const QString &line : libDump)
+                    qWarning().noquote() << line;
+            }
         }
         else if (QString("bandcamp").startsWith(line.split("\t").first().toLower())) {
             const QStringList parts = line.split("\t").mid(1);
