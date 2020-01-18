@@ -6,6 +6,7 @@
 #include <QTcpSocket>
 #include <QJsonDocument>
 #include <QDate>
+#include <QProcess>
 
 Server::Server(const QString &libraryPath,
                const QString &logPath,
@@ -189,6 +190,8 @@ void Server::saveLibrary() const
     const QDate today = QDate::currentDate();
     const QString dateString = QString::asprintf("%d_%02d_%02d", today.year(), today.month(), today.day());
     const QString backupPath = m_backupBasePath + "." + dateString + ".json";
-    if (!QFile::exists(backupPath))
+    if (!QFile::exists(backupPath) && !QFile::exists(backupPath + ".gz")) {
         save(backupPath);
+        QProcess::execute("gzip", { backupPath });
+    }
 }
