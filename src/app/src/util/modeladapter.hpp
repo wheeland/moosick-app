@@ -96,6 +96,13 @@ public:
         endAdd();
     }
 
+    void addExclusive(const T &val)
+    {
+        if (!m_data.contains(val)) {
+            add(val);
+        }
+    }
+
     void insert(int index, const T& val)
     {
         if (index < 0)
