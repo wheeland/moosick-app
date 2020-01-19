@@ -29,8 +29,11 @@ DbTaggedItem::DbTaggedItem(Database *db, DbItem::Type tp, const Moosick::TagIdLi
     : DbItem(db, tp)
 {
     m_tags.addValueAccessor("tag");
-    for (Moosick::TagId tag : tags)
-        m_tags.add(db->tagForTagId(tag));
+    for (Moosick::TagId tagId : tags) {
+        DbTag *tag = db->tagForTagId(tagId);
+        m_tags.add(tag);
+        connect(tag, &QObject::destroyed, this, [=]() { removeTag(tag); });
+    }
 }
 
 DbArtist::DbArtist(Database *db, Moosick::ArtistId artist)
@@ -89,16 +92,60 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
 
 DbTag *Database::tagForTagId(Moosick::TagId tagId) const
 {
-    return nullptr;
+    return m_tags.value(tagId, nullptr);
+}
+
+DbTag *Database::addTag(Moosick::TagId tagId)
+{
+    Q_ASSERT(tagId.isValid());
+
+    auto it = m_tags.find(tagId);
+
+    if (it == m_tags.end()) {
+        it = m_tags.insert(tagId, new DbTag(this, tagId));
+
+        // link to parent
+        const Moosick::TagId parentId = tagId.parent(m_library);
+        if (parentId.isValid()) {
+            DbTag *parent = addTag(parentId);
+            parent->addChildTag(it.value());
+        }
+
+        // link to children
+        for (const Moosick::TagId childId : tagId.children(m_library)) {
+            DbTag *child = addTag(childId);
+            it.value()->addChildTag(child);
+        }
+    }
+
+    return it.value();
+}
+
+void Database::removeTag(Moosick::TagId tagId)
+{
+    Q_ASSERT(tagId.isValid());
+
+    const auto it = m_tags.find(tagId);
+    if (it == m_tags.end())
+        return;
+
+    // remove from parent
+    DbTag *parent = tagForTagId(tagId.parent(m_library));
+    if (parent)
+        parent->removeChildTag(it.value());
+
+    // remove children
+    for (const Moosick::TagId childId : tagId.children(m_library))
+        removeTag(childId);
+
+    m_tags.erase(it);
 }
 
 bool Database::hasRunningRequestType(RequestType requestType) const
 {
-    for (auto it = m_requests.begin(); it != m_requests.end(); ++it) {
-        if (it.value() == requestType)
-            return true;
-    }
-    return false;
+    return std::any_of(m_requests.begin(), m_requests.end(), [=](RequestType tp) {
+        return tp == requestType;
+    });
 }
 
 } // namespace Database

@@ -166,12 +166,14 @@ private:
 class Database : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(ModelAdapter::Model *rootTags READ rootTagsModel CONSTANT)
 
 public:
     Database(HttpClient *httpClient, QObject *parent = nullptr);
     ~Database() override;
 
     const Moosick::Library &library() const { return m_library; }
+    ModelAdapter::Model *rootTagsModel() const { return m_rootTags.model(); }
 
 public slots:
     void sync();
@@ -190,6 +192,8 @@ private:
     };
 
     DbTag *tagForTagId(Moosick::TagId tagId) const;
+    DbTag *addTag(Moosick::TagId tagId);
+    void removeTag(Moosick::TagId tagId);
 
     bool hasRunningRequestType(RequestType requestType) const;
 
@@ -197,6 +201,9 @@ private:
 
     HttpRequester *m_http;
     QHash<QNetworkReply*, RequestType> m_requests;
+
+    QHash<Moosick::TagId::IntType, DbTag*> m_tags;  // instantiations for all tag IDs
+    ModelAdapter::Adapter<DbTag*> m_rootTags;       // view on root tags only
 };
 
 } // namespace Database
