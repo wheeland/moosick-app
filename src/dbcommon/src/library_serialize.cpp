@@ -153,7 +153,9 @@ bool Library::deserializeFromJson(const QJsonObject &json)
 
     success &= readJsonCollection<Library::Tag, quint32>(json["tags"], tags, [&](const QJsonObject &obj, quint32, Tag &tag) {
         JSON_REQUIRE_STRING(name, obj, "name");
+        JSON_REQUIRE_INT(parent, obj, "parent");
         tag.name = name;
+        tag.parent = parent;
         return true;
     });
 
