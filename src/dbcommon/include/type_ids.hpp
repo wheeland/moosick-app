@@ -9,17 +9,19 @@ class Library;
 
 namespace detail {
 
-template <class IntType>
+template <class Int>
 class FromInt
 {
 public:
     FromInt() {}
-    FromInt(IntType value) : m_value(value) {}
+    FromInt(Int value) : m_value(value) {}
     FromInt(const FromInt &) = default;
 
-    operator IntType() const { return m_value; }
+    operator Int() const { return m_value; }
 
     bool isValid() const { return m_value > 0; }
+
+    using IntType = Int;
 
 protected:
     IntType m_value;
