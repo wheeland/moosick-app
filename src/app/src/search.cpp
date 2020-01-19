@@ -139,7 +139,6 @@ Query::Query(HttpClient *http, QObject *parent)
 
 Query::~Query()
 {
-    abort();
     clear();
 }
 
