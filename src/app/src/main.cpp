@@ -7,6 +7,7 @@
 #include "controller.hpp"
 #include "search.hpp"
 #include "playlist.hpp"
+#include "database.hpp"
 
 int main(int argc, char **argv)
 {
@@ -28,6 +29,10 @@ int main(int argc, char **argv)
     qRegisterMetaType<Search::BandcampTrackResult*>();
     qmlRegisterUncreatableType<Search::Result>("Moosick", 1, 0, "SearchResult", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<Playlist::Entry>("Moosick", 1, 0, "PlaylistEntry", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<Database::DbTag>("Moosick", 1, 0, "DbTag", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<Database::DbArtist>("Moosick", 1, 0, "DbArtist", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<Database::DbAlbum>("Moosick", 1, 0, "DbAlbum", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<Database::DbSong>("Moosick", 1, 0, "DbSong", "ain't gonna do that from QML!");
 
     QQuickView view;
     view.resize(screenSize);
