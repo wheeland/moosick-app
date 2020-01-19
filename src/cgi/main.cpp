@@ -49,7 +49,7 @@ int main(int argc, char **argv)
         ClientCommon::Message answer;
         sendRecv(s_server, ClientCommon::Message{ ClientCommon::LibraryRequest }, answer);
 
-        std::cout << answer.data.toBase64().constData() << "\n";
+        std::cout << answer.data.constData() << "\n";
 
         return 0;
     }
