@@ -1,17 +1,24 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
-        <file>qml/SimpleButton.qml</file>
-        <file>qml/PlayerBar.qml</file>
-        <file>qml/PlayerBarButton.qml</file>
+
         <file>qml/LineEdit.qml</file>
         <file>qml/SelectBox.qml</file>
+        <file>qml/SimpleButton.qml</file>
+        <file>qml/SwipeHeader.qml</file>
+        <file>qml/TagBubble.qml</file>
+
+        <file>qml/PlayerBar.qml</file>
+        <file>qml/PlayerBarButton.qml</file>
+
         <file>qml/SearchResultDelegate.qml</file>
         <file>qml/SearchResultPopup.qml</file>
         <file>qml/SearchPane.qml</file>
+
         <file>qml/PlaylistPane.qml</file>
         <file>qml/PlaylistDelegate.qml</file>
-        <file>qml/SwipeHeader.qml</file>
+
+        <file>qml/LibraryPane.qml</file>
     </qresource>
 </RCC>
 

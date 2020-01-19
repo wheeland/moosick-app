@@ -87,11 +87,11 @@ class DbArtist : public DbTaggedItem
 {
     Q_OBJECT
     Q_PROPERTY(QString name READ name CONSTANT)
-    Q_PROPERTY(ModelAdapter::Model *albums READ albumsModel CONSTANT)
+    Q_PROPERTY(ModelAdapter::Model *albums READ albumsModel NOTIFY albumsChanged)
 
 public:
     DbArtist(Database *db, Moosick::ArtistId artist);
-    ~DbArtist() = default;
+    ~DbArtist();
 
     QString name() const { return m_artist.name(library()); }
 
@@ -100,6 +100,9 @@ public:
 
     QVector<DbAlbum*> albums() const { return m_albums.data(); }
     ModelAdapter::Model *albumsModel() const { return m_albums.model(); }
+
+signals:
+    void albumsChanged(ModelAdapter::Model * albums);
 
 private:
     Moosick::ArtistId m_artist;
@@ -110,11 +113,11 @@ class DbAlbum : public DbTaggedItem
 {
     Q_OBJECT
     Q_PROPERTY(QString name READ name CONSTANT)
-    Q_PROPERTY(ModelAdapter::Model *songs READ songsModel CONSTANT)
+    Q_PROPERTY(ModelAdapter::Model *songs READ songsModel NOTIFY songsChanged)
 
 public:
     DbAlbum(Database *db, Moosick::AlbumId album);
-    ~DbAlbum() = default;
+    ~DbAlbum();
 
     QString name() const { return m_album.name(library()); }
 
@@ -123,6 +126,9 @@ public:
 
     QVector<DbSong*> songs() const { return m_songs.data(); }
     ModelAdapter::Model *songsModel() const { return m_songs.model(); }
+
+signals:
+    void songsChanged(ModelAdapter::Model * songs);
 
 private:
     Moosick::AlbumId m_album;
@@ -166,7 +172,10 @@ private:
 class Database : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(bool hasLibrary READ hasLibrary NOTIFY hasLibraryChanged)
     Q_PROPERTY(ModelAdapter::Model *rootTags READ rootTagsModel CONSTANT)
+    Q_PROPERTY(ModelAdapter::Model *searchResults READ searchResults CONSTANT)
+    Q_PROPERTY(QString searchString READ searchString NOTIFY searchStringChanged)
 
 public:
     Database(HttpClient *httpClient, QObject *parent = nullptr);
@@ -174,14 +183,21 @@ public:
 
     const Moosick::Library &library() const { return m_library; }
     ModelAdapter::Model *rootTagsModel() const { return m_rootTags.model(); }
+    ModelAdapter::Model *searchResults() const { return m_searchResults.model(); }
 
-public slots:
-    void sync();
+    bool hasLibrary() const { return m_hasLibrary; }
+    QString searchString() const { return m_searchString; }
 
-signals:
+    Q_INVOKABLE void sync();
+    Q_INVOKABLE void search(QString searchString);
+    Q_INVOKABLE void clickOnArtist(DbArtist *artist);
 
 private slots:
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
+
+signals:
+    void hasLibraryChanged();
+    void searchStringChanged(QString searchString);
 
 private:
     friend class DbTaggedItem;
@@ -191,12 +207,18 @@ private:
         LibrarySync,
     };
 
+    void onNewLibrary();
+
     DbTag *tagForTagId(Moosick::TagId tagId) const;
     DbTag *addTag(Moosick::TagId tagId);
     void removeTag(Moosick::TagId tagId);
 
+    void clearSearchResults();
+    void repopulateSearchResults();
+
     bool hasRunningRequestType(RequestType requestType) const;
 
+    bool m_hasLibrary = false;
     Moosick::Library m_library;
 
     HttpRequester *m_http;
@@ -204,6 +226,19 @@ private:
 
     QHash<Moosick::TagId::IntType, DbTag*> m_tags;  // instantiations for all tag IDs
     ModelAdapter::Adapter<DbTag*> m_rootTags;       // view on root tags only
+
+    struct SearchResultAlbum {
+        Moosick::AlbumId albumId;
+        Moosick::SongIdList songs;
+    };
+
+    struct SearchResultArtist {
+        DbArtist *artist;
+        QVector<SearchResultAlbum> albums;
+    };
+
+    QString m_searchString;
+    ModelAdapter::Adapter<SearchResultArtist> m_searchResults;
 };
 
 } // namespace Database

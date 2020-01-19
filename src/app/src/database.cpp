@@ -1,4 +1,5 @@
 #include "database.hpp"
+#include "jsonconv.hpp"
 
 // let the Database be consistent and do ALL allocations
 // the QObjects are just exposure to QML, all the data lies in the Database
@@ -43,6 +44,11 @@ DbArtist::DbArtist(Database *db, Moosick::ArtistId artist)
     m_albums.addValueAccessor("album");
 }
 
+DbArtist::~DbArtist()
+{
+    qDeleteAll(m_albums.data());
+}
+
 DbAlbum::DbAlbum(Database *db, Moosick::AlbumId album)
     : DbTaggedItem(db, DbItem::Album, album.tags(db->library()))
     , m_album(album)
@@ -50,8 +56,14 @@ DbAlbum::DbAlbum(Database *db, Moosick::AlbumId album)
     m_songs.addValueAccessor("song");
 }
 
+DbAlbum::~DbAlbum()
+{
+    qDeleteAll(m_songs.data());
+}
+
 DbSong::DbSong(Database *db, Moosick::SongId song)
     : DbTaggedItem(db, DbItem::Song, song.tags(db->library()))
+    , m_song(song)
 {
 }
 
@@ -60,6 +72,11 @@ Database::Database(HttpClient *httpClient, QObject *parent)
     , m_http(new HttpRequester(httpClient, this))
 {
     connect(m_http, &HttpRequester::receivedReply, this, &Database::onNetworkReplyFinished);
+
+    m_rootTags.addValueAccessor("tag");
+    m_searchResults.addAccessor("artist", [&](const SearchResultArtist &artist) {
+        return QVariant::fromValue(artist.artist);
+    });
 }
 
 Database::~Database()
@@ -68,7 +85,7 @@ Database::~Database()
 
 void Database::sync()
 {
-    if (hasRunningRequestType(LibrarySync))
+    if (hasRunningRequestType(LibrarySync) || m_hasLibrary)
         return;
 
     QNetworkReply *reply = m_http->requestFromServer("/lib.do", "");
@@ -81,13 +98,27 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
     const QByteArray data = reply->readAll();
 
     switch (requestType) {
-    case LibrarySync:
-        m_library.deserialize(QByteArray::fromBase64(data));
-        qWarning().noquote() << m_library.dumpToStringList();
+    case LibrarySync: {
+        const QJsonObject obj = parseJsonObject(data, "Library");
+        if (m_library.deserializeFromJson(obj))
+            onNewLibrary();
         break;
+    }
     default:
         break;
     }
+}
+
+void Database::onNewLibrary()
+{
+    qWarning().noquote() << m_library.dumpToStringList().join("\n");
+
+    // add tags
+    for (const Moosick::TagId tagId : m_library.rootTags())
+        addTag(tagId);
+
+    m_hasLibrary = true;
+    emit hasLibraryChanged();
 }
 
 DbTag *Database::tagForTagId(Moosick::TagId tagId) const
@@ -116,6 +147,9 @@ DbTag *Database::addTag(Moosick::TagId tagId)
             DbTag *child = addTag(childId);
             it.value()->addChildTag(child);
         }
+
+        if (!parentId.isValid())
+            m_rootTags.addExclusive(it.value());
     }
 
     return it.value();
@@ -139,6 +173,77 @@ void Database::removeTag(Moosick::TagId tagId)
         removeTag(childId);
 
     m_tags.erase(it);
+}
+
+void Database::search(QString searchString)
+{
+    if (m_searchString == searchString)
+        return;
+
+    repopulateSearchResults();
+
+    m_searchString = searchString;
+    emit searchStringChanged(m_searchString);
+}
+
+void Database::clickOnArtist(DbArtist *artist)
+{
+    if (!artist->albums().isEmpty())
+        return;
+
+    const QVector<SearchResultArtist> artists = m_searchResults.data();
+    auto it = std::find_if(artists.begin(), artists.end(), [=](const SearchResultArtist &sra) {
+        return sra.artist == artist;
+    });
+
+    Q_ASSERT(it != artists.end());
+    Q_ASSERT(it->artist == artist);
+
+    // populate artist with album/songs objects
+    for (const SearchResultAlbum &albumResult : it->albums) {
+        DbAlbum *album = new DbAlbum(this, albumResult.albumId);
+
+        for (const Moosick::SongId songId : albumResult.songs)
+            album->addSong(new DbSong(this, songId));
+
+        artist->addAlbum(album);
+    }
+}
+
+void Database::clearSearchResults()
+{
+    for (const SearchResultArtist &artist : m_searchResults.data()) {
+        if (artist.artist)
+            artist.artist->deleteLater();
+    }
+    m_searchResults.clear();
+}
+
+void Database::repopulateSearchResults()
+{
+    clearSearchResults();
+
+    QStringList keywords;
+    for (const QString searchWord : m_searchString.split(' '))
+        keywords << searchWord.toLower();
+
+    for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
+        const QString lowerName = artistId.name(m_library).toLower();
+
+        // see if we match the search keywords
+        const bool matches = std::all_of(keywords.cbegin(), keywords.cend(), [&](const QString &keyword) {
+            return lowerName.contains(keyword);
+        });
+
+        // build search result item
+        if (matches) {
+            SearchResultArtist artist;
+            artist.artist = new DbArtist(this, artistId);
+            for (const Moosick::AlbumId albumId : artistId.albums(m_library))
+                artist.albums << SearchResultAlbum { albumId, albumId.songs(m_library) };
+            m_searchResults.add(artist);
+        }
+    }
 }
 
 bool Database::hasRunningRequestType(RequestType requestType) const
