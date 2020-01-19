@@ -132,7 +132,7 @@ static bool readJsonCollection(const QJsonValue &val, ItemCollection<T, IntType>
         if (!reader(obj, id, newItem))
             return false;
 
-        ret.insert(id, newItem);
+        ret.add(id, newItem);
     }
 
     col = ret;
