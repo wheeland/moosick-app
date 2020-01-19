@@ -314,6 +314,7 @@ bool Library::commit(const LibraryChange &change, quint32 *createdId)
     case Moosick::LibraryChange::TagSetParent: {
         fetchItem(m_tags, tag, change.subject);
         requireThat(change.detail != tag->parent, "Parent is the same");
+        requireThat(change.subject != change.detail, "Can't be your own parent");
 
         auto oldParent = m_tags.findItem(tag->parent);
         auto newParent = m_tags.findItem(change.detail);
