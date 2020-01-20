@@ -38,7 +38,7 @@ public:
 
 protected:
     AdapterBase();
-    ~AdapterBase();
+    virtual ~AdapterBase();
 
     void beginAdd(int start, int end);
     void endAdd();

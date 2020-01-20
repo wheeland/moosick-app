@@ -5,6 +5,7 @@
 #include "httpclient.hpp"
 #include "library.hpp"
 #include "util/modeladapter.hpp"
+#include "stringmodel.hpp"
 
 namespace Database {
 
@@ -179,6 +180,7 @@ class Database : public QObject
     Q_PROPERTY(ModelAdapter::Model *rootTags READ rootTagsModel CONSTANT)
     Q_PROPERTY(ModelAdapter::Model *searchResults READ searchResults CONSTANT)
     Q_PROPERTY(QString searchString READ searchString NOTIFY searchStringChanged)
+    Q_PROPERTY(StringModel *artistNames READ artistNames CONSTANT)
 
 public:
     Database(HttpClient *httpClient, QObject *parent = nullptr);
@@ -190,6 +192,7 @@ public:
 
     bool hasLibrary() const { return m_hasLibrary; }
     QString searchString() const { return m_searchString; }
+    StringModel *artistNames() const { return m_artistNames; }
 
     Q_INVOKABLE void sync();
     Q_INVOKABLE void search(QString searchString);
@@ -242,6 +245,7 @@ private:
 
     QString m_searchString;
     ModelAdapter::Adapter<SearchResultArtist> m_searchResults;
+    StringModel *m_artistNames;
 };
 
 } // namespace Database

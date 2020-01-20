@@ -97,6 +97,7 @@ QString DbSong::durationString() const
 Database::Database(HttpClient *httpClient, QObject *parent)
     : QObject(parent)
     , m_http(new HttpRequester(httpClient, this))
+    , m_artistNames(new StringModel(this))
 {
     connect(m_http, &HttpRequester::receivedReply, this, &Database::onNetworkReplyFinished);
 
@@ -143,6 +144,10 @@ void Database::onNewLibrary()
         addTag(tagId);
 
     repopulateSearchResults();
+
+    for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
+        m_artistNames->add((int) artistId, artistId.name(m_library));
+    }
 
     m_hasLibrary = true;
     emit hasLibraryChanged();

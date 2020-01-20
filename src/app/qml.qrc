@@ -4,6 +4,7 @@
 
         <file>qml/KeyboardItem.qml</file>
         <file>qml/LineEdit.qml</file>
+        <file>qml/StringChoiceDialog.qml</file>
         <file>qml/SelectBox.qml</file>
         <file>qml/SimpleButton.qml</file>
         <file>qml/SwipeHeader.qml</file>

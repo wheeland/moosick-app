@@ -8,6 +8,7 @@ Rectangle {
     property color backgroundClicked: Qt.lighter(background, 2.0)
     property alias foreground: text.color
     property bool enabled: true
+    property alias fontSize : text.font.pixelSize
     signal clicked
 
     color: mouse.pressed ? backgroundClicked : background
