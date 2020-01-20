@@ -33,6 +33,7 @@ import QtQuick.VirtualKeyboard 2.1
 KeyboardLayout {
     inputMode: InputEngine.InputMode.Latin
     keyWeight: 160
+
     KeyboardRow {
         Key {
             key: Qt.Key_Q
@@ -81,7 +82,6 @@ KeyboardLayout {
             key: Qt.Key_P
             text: "p"
         }
-        BackspaceKey {}
     }
     KeyboardRow {
         FillerKey {
@@ -128,13 +128,14 @@ KeyboardLayout {
             text: "l"
             alternativeKeys: "ĺŀłļľl"
         }
-        EnterKey {
-            weight: 283
+        FillerKey {
+            weight: 56
         }
     }
     KeyboardRow {
-        keyWeight: 156
-        ShiftKey {}
+        ShiftKey {
+            weight: 216
+        }
         Key {
             key: Qt.Key_Z
             text: "z"
@@ -166,16 +167,8 @@ KeyboardLayout {
             key: Qt.Key_M
             text: "m"
         }
-        Key {
-            key: Qt.Key_Comma
-            text: ","
-        }
-        Key {
-            key: Qt.Key_Period
-            text: "."
-        }
-        ShiftKey {
-            weight: 204
+        BackspaceKey {
+            weight: 216
         }
     }
     KeyboardRow {
@@ -186,20 +179,16 @@ KeyboardLayout {
         ChangeLanguageKey {
             weight: 154
         }
-        HandwritingModeKey {
-            weight: 154
+        Key {
+            key: Qt.Key_Comma
+            text: ","
         }
         SpaceKey {
             weight: 864
         }
         Key {
-            key: Qt.Key_Apostrophe
-            text: "'"
-        }
-        Key {
-            key: 0xE000
-            text: ":-)"
-            alternativeKeys: [ ";-)", ":-)", ":-D", ":-(", "<3" ]
+            key: Qt.Key_Period
+            text: "."
         }
         HideKeyboardKey {
             weight: 204
