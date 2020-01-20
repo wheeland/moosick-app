@@ -114,7 +114,7 @@ void Server::onNewDataReady(QTcpSocket *socket)
         QVector<Moosick::LibraryChange> changes;
         in >> changes;
 
-        QVector<QPair<quint32, Moosick::LibraryChange>> appliedChanges;
+        QVector<Moosick::CommittedLibraryChange> appliedChanges;
 
         // apply changes
         for (const Moosick::LibraryChange &change : qAsConst(changes)) {
@@ -127,7 +127,7 @@ void Server::onNewDataReady(QTcpSocket *socket)
                 if (Moosick::LibraryChange::isCreatingNewId(change.changeType))
                     resultChange.detail = newId;
 
-                appliedChanges << qMakePair(result, resultChange);
+                appliedChanges << Moosick::CommittedLibraryChange{resultChange, result};
             }
         }
 
@@ -142,10 +142,16 @@ void Server::onNewDataReady(QTcpSocket *socket)
 
         // append library log
         QFile logFile(m_logPath);
+        const qint64 sz = logFile.exists() ? logFile.size() : 0;
         if (logFile.open(QIODevice::Append)) {
-            QDataStream out(&logFile);
-            for (const auto &ch : qAsConst(changes))
-                out << ch;
+            bool first = (sz <= 0);
+            for (const auto &ch : qAsConst(appliedChanges)) {
+                if (!first)
+                    logFile.write(",\n");
+                first = false;
+
+                logFile.write(QJsonDocument(toJson(ch).toObject()).toJson().trimmed());
+            }
         }
 
         saveLibrary();

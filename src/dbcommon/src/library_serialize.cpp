@@ -46,6 +46,30 @@ bool fromJson(const QJsonValue &json, Moosick::LibraryChange &change)
     return true;
 }
 
+QJsonValue toJson(const Moosick::CommittedLibraryChange &change)
+{
+    QJsonObject obj = toJson(change.change).toObject();
+    obj["revision"] = (int) change.revision;
+    return obj;
+}
+
+bool fromJson(const QJsonValue &json, Moosick::CommittedLibraryChange &change)
+{
+    if (json.type() != QJsonValue::Object)
+        return false;
+
+    Moosick::LibraryChange ch;
+    if (!fromJson(json, ch))
+        return false;
+
+    const QJsonObject obj = json.toObject();
+    JSON_REQUIRE_INT(rev, obj, "revision");
+
+    change.change = ch;
+    change.revision = rev;
+    return true;
+}
+
 bool fromJson(const QJsonValue &json, Moosick::TagId &tag)
 {
     int id;

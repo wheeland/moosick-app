@@ -251,12 +251,12 @@ int main(int argc, char **argv)
             out << changes;
 
             sendRecv(s_serverConfig, message, answer);
-            QVector<QPair<quint32, Moosick::LibraryChange>> appliedChanges;
+            QVector<Moosick::CommittedLibraryChange> appliedChanges;
             if (!fromJson(parseJsonArray(answer.data, "Server Response"), appliedChanges)) {
                 qWarning() << "Couldn't parse JSON result";
             } else {
                 for (const auto &ch : appliedChanges)
-                    qWarning().noquote() << ch.first << ":" << answerToString(ch.second);
+                    qWarning().noquote() << ch.revision << ":" << answerToString(ch.change);
             }
         }
         else {

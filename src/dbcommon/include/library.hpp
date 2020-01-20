@@ -55,6 +55,12 @@ struct LibraryChange
     static bool hasStringArg(Type changeType);
 };
 
+struct CommittedLibraryChange
+{
+    LibraryChange change;
+    quint32 revision;
+};
+
 class Library
 {
 public:
@@ -114,3 +120,6 @@ QDataStream &operator>>(QDataStream &stream, LibraryChange &lch);
 
 QJsonValue toJson(const Moosick::LibraryChange &change);
 bool fromJson(const QJsonValue &json, Moosick::LibraryChange &change);
+
+QJsonValue toJson(const Moosick::CommittedLibraryChange &change);
+bool fromJson(const QJsonValue &json, Moosick::CommittedLibraryChange &change);
