@@ -114,28 +114,29 @@ void Server::onNewDataReady(QTcpSocket *socket)
         QVector<Moosick::LibraryChange> changes;
         in >> changes;
 
+        QVector<QPair<quint32, Moosick::LibraryChange>> appliedChanges;
+
         // apply changes
-        for (auto it = changes.begin(); it != changes.end(); /* empty */) {
-            quint32 newId;
-            if (m_library.commit(*it, &newId)) {
+        for (const Moosick::LibraryChange &change : qAsConst(changes)) {
+            quint32 newId, result = m_library.commit(change, &newId);
+            Moosick::LibraryChange resultChange = change;
+
+            if (result != 0) {
                 // if this was an Add change, we'll want to communicate the newly created
                 // ID back to the caller
-                if (Moosick::LibraryChange::isCreatingNewId(it->changeType))
-                    it->detail = newId;
+                if (Moosick::LibraryChange::isCreatingNewId(change.changeType))
+                    resultChange.detail = newId;
 
-                ++it;
-            } else {
-                it = changes.erase(it);
+                appliedChanges << qMakePair(result, resultChange);
             }
         }
 
-        qDebug() << "Applied" << changes.size() << "changes to Library. Sending ChangesResponse to" << socket->peerAddress();
+        qDebug() << "Applied" << appliedChanges.size() << "changes to Library. Sending ChangesResponse to" << socket->peerAddress();
 
         // send back all successful changes
         ClientCommon::Message response;
         response.tp = ClientCommon::ChangesResponse;
-        QDataStream out(&response.data, QIODevice::WriteOnly);
-        out << changes;
+        response.data = QJsonDocument(toJson(appliedChanges).toArray()).toJson();
 
         ClientCommon::send(socket, response);
 

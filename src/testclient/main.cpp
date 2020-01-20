@@ -251,12 +251,13 @@ int main(int argc, char **argv)
             out << changes;
 
             sendRecv(s_serverConfig, message, answer);
-            QDataStream in(answer.data);
-            changes.clear();
-            in >> changes;
-
-            for (const Moosick::LibraryChange &ch : changes)
-                qWarning().noquote() << answerToString(ch);
+            QVector<QPair<quint32, Moosick::LibraryChange>> appliedChanges;
+            if (!fromJson(parseJsonArray(answer.data, "Server Response"), appliedChanges)) {
+                qWarning() << "Couldn't parse JSON result";
+            } else {
+                for (const auto &ch : appliedChanges)
+                    qWarning().noquote() << ch.first << ":" << answerToString(ch.second);
+            }
         }
         else {
             qWarning() << "Not a valid message type:" << line;

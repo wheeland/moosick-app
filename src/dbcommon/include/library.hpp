@@ -64,7 +64,10 @@ public:
     QVector<TagId> rootTags() const;
     QVector<ArtistId> artistsByName() const;
 
-    bool commit(const LibraryChange &change, quint32 *createdId = nullptr);
+    /**
+     * Upon success, it returns the new revision of the database, otherwise 0
+     */
+    quint32 commit(const LibraryChange &change, quint32 *createdId = nullptr);
 
     QStringList dumpToStringList() const;
 

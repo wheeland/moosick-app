@@ -93,10 +93,10 @@ quint32 Library::getFileEnding(const QString &ending)
     return newEntry.first;
 }
 
-bool Library::commit(const LibraryChange &change, quint32 *createdId)
+quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
 {
 #define requireThat(condition, message) \
-    do { if (!(condition)) { qWarning() << (message); return false; } } while (0)
+    do { if (!(condition)) { qWarning() << (message); return 0; } } while (0)
 
 #define fetchItem(Collection, Name, id) \
     auto *Name = Collection.findItem(id); requireThat(Name, #Name " not found");
@@ -356,7 +356,7 @@ bool Library::commit(const LibraryChange &change, quint32 *createdId)
 
     m_revision += 1;
 
-    return true;
+    return m_revision;
 }
 
 #define FETCH(name, Collection, id) \
