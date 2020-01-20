@@ -10,7 +10,7 @@ Rectangle {
     property color backgroundColor: "#aa9977"
     property color foregroundColor: "#000000"
     property color borderColor: "#ffffff"
-    property real size: 20.0
+    property real size: 10.0
 
     color: root.borderColor
 

@@ -2,29 +2,20 @@ import QtQuick 2.11
 
 import Moosick 1.0 as Moosick
 
-Item {
+Rectangle {
     id: root
+    color: "black"
 
-    Flickable {
-        id: flickable
-
+    ListView {
         anchors.fill: parent
-        interactive: column.height > root.height
-        contentWidth: column.width
-        contentHeight: column.height
 
-        Column {
-            id: column
-            width: root.width
-            height: childrenRect.height
+        model: _app.database.searchResults
+        spacing: 3
 
-            Repeater {
-                model: _app.database.rootTags
-
-                delegate: TagBubble {
-                    tag: model.tag
-                }
-            }
+        delegate: LibraryArtist {
+            id: libArtist
+            artist: model.artist
+            width: parent.width
         }
     }
 }
