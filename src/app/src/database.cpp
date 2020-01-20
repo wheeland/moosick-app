@@ -173,6 +173,7 @@ DbTag *Database::addTag(Moosick::TagId tagId)
         if (parentId.isValid()) {
             DbTag *parent = addTag(parentId);
             parent->addChildTag(it.value());
+            it.value()->setParentTag(parent);
         }
 
         // link to children
@@ -205,6 +206,7 @@ void Database::removeTag(Moosick::TagId tagId)
     for (const Moosick::TagId childId : tagId.children(m_library))
         removeTag(childId);
 
+    it.value()->deleteLater();
     m_tags.erase(it);
 }
 

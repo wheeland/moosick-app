@@ -53,11 +53,15 @@ public:
     void removeChildTag(DbTag *child) { m_childTags.remove(child); }
 
     QString name() const { return m_tag.name(library()); }
+    DbTag *parentTag() const { return m_parentTag; }
     QVector<DbTag*> childTags() const { return m_childTags.data(); }
     ModelAdapter::Model *childTagsModel() const { return m_childTags.model(); }
 
+    void setParentTag(DbTag *parentTag) { m_parentTag = parentTag; }
+
 private:
     Moosick::TagId m_tag;
+    DbTag *m_parentTag = nullptr;
     ModelAdapter::Adapter<DbTag*> m_childTags;
 };
 
