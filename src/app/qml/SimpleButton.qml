@@ -23,14 +23,14 @@ Rectangle {
         color: "white"
         font.pixelSize: 20
         anchors.centerIn: parent
+    }
 
-        MouseArea {
-            id: mouse
-            anchors.fill: parent
-            onClicked: {
-                if (root.enabled)
-                    root.clicked()
-            }
+    MouseArea {
+        id: mouse
+        anchors.fill: parent
+        onClicked: {
+            if (root.enabled)
+                root.clicked()
         }
     }
 }
