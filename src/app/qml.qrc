@@ -2,6 +2,7 @@
     <qresource prefix="/">
         <file>qml/main.qml</file>
 
+        <file>qml/KeyboardItem.qml</file>
         <file>qml/LineEdit.qml</file>
         <file>qml/SelectBox.qml</file>
         <file>qml/SimpleButton.qml</file>
@@ -23,6 +24,12 @@
         <file>qml/LibraryAlbum.qml</file>
         <file>qml/LibrarySong.qml</file>
         <file>qml/LibraryTagSpace.qml</file>
+
+        <file>qml/layouts/en_GB/main.qml</file>
+        <file>qml/layouts/en_GB/dialpad.qml</file>
+        <file>qml/layouts/en_GB/digits.qml</file>
+        <file>qml/layouts/en_GB/numbers.qml</file>
+        <file>qml/layouts/en_GB/symbols.qml</file>
     </qresource>
 </RCC>
 

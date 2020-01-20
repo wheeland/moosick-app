@@ -11,6 +11,9 @@
 
 int main(int argc, char **argv)
 {
+    qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
+    qputenv("QT_VIRTUALKEYBOARD_LAYOUT_PATH", QByteArray(":/qml/layouts/"));
+
     QGuiApplication app(argc, argv);
 
 #ifdef Q_OS_ANDROID

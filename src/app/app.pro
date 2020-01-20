@@ -2,7 +2,11 @@ TARGET = moosick
 CONFIG += c++11
 TEMPLATE = app
 
-QT += core quick qml network multimedia
+QT += core quick qml network multimedia virtualkeyboard
+QTPLUGIN += qtvirtualkeyboardplugin
+
+# force application integration for QtVirtualKeyboard
+CONFIG += disable-desktop
 
 SOURCES += \
     src/main.cpp \

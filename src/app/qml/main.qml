@@ -55,4 +55,10 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
     }
+
+    KeyboardItem {
+        id: keyboard
+        width: parent.width
+        anchors.bottom: parent.bottom
+    }
 }
