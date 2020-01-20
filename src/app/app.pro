@@ -28,6 +28,7 @@ HEADERS += \
     src/controller.hpp \
     src/audio.hpp \
     src/database.hpp \
+    src/database_items.hpp \
     src/stringmodel.hpp \
     src/util/androidutil.hpp \
     src/util/qmlutil.hpp \

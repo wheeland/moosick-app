@@ -1,4 +1,5 @@
 #include "database.hpp"
+#include "database_items.hpp"
 #include "jsonconv.hpp"
 
 // let the Database be consistent and do ALL allocations
