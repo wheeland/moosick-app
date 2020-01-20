@@ -113,6 +113,7 @@ class DbAlbum : public DbTaggedItem
 {
     Q_OBJECT
     Q_PROPERTY(QString name READ name CONSTANT)
+    Q_PROPERTY(QString durationString READ durationString NOTIFY songsChanged)
     Q_PROPERTY(ModelAdapter::Model *songs READ songsModel NOTIFY songsChanged)
 
 public:
@@ -120,15 +121,16 @@ public:
     ~DbAlbum();
 
     QString name() const { return m_album.name(library()); }
+    QString durationString() const;
 
-    void addSong(DbSong *song) { m_songs.addExclusive(song); }
-    void removeSong(DbSong *song) { m_songs.remove(song); }
+    void addSong(DbSong *song);
+    void removeSong(DbSong *song);
 
     QVector<DbSong*> songs() const { return m_songs.data(); }
     ModelAdapter::Model *songsModel() const { return m_songs.model(); }
 
 signals:
-    void songsChanged(ModelAdapter::Model * songs);
+    void songsChanged();
 
 private:
     Moosick::AlbumId m_album;
@@ -139,7 +141,7 @@ class DbSong : public DbTaggedItem
 {
     Q_OBJECT
     Q_PROPERTY(QString name READ name CONSTANT)
-    Q_PROPERTY(int secs READ secs CONSTANT)
+    Q_PROPERTY(QString durationString READ durationString CONSTANT)
     Q_PROPERTY(int position READ position CONSTANT)
 
 public:
@@ -147,6 +149,7 @@ public:
     ~DbSong() = default;
 
     QString name() const { return m_song.name(library()); }
+    QString durationString() const;
     int secs() const { return m_song.secs(library()); }
     int position() const { return m_song.position(library()); }
 

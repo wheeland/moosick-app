@@ -61,10 +61,37 @@ DbAlbum::~DbAlbum()
     qDeleteAll(m_songs.data());
 }
 
+QString DbAlbum::durationString() const
+{
+    const QVector<DbSong*> &songs = m_songs.data();
+    const int secs = std::accumulate(songs.begin(), songs.end(), 0, [&](int sum, DbSong *song) {
+        return sum + song->secs();
+    });
+    return QString::asprintf("%d:%02d", secs/60, secs%60);
+}
+
+void DbAlbum::addSong(DbSong *song)
+{
+    m_songs.addExclusive(song);
+    emit songsChanged();
+}
+
+void DbAlbum::removeSong(DbSong *song)
+{
+    m_songs.remove(song);
+    emit songsChanged();
+}
+
 DbSong::DbSong(Database *db, Moosick::SongId song)
     : DbTaggedItem(db, DbItem::Song, song.tags(db->library()))
     , m_song(song)
 {
+}
+
+QString DbSong::durationString() const
+{
+    const int secs = m_song.secs(library());
+    return QString::asprintf("%d:%02d", secs/60, secs%60);
 }
 
 Database::Database(HttpClient *httpClient, QObject *parent)
