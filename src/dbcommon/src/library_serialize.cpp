@@ -229,6 +229,7 @@ bool Library::deserializeFromJson(const QJsonObject &json)
         song.fileEnding = ending;
         song.position = pos;
         song.secs = secs;
+        song.tags = aTags;
         TAG_PUSH_IDS(song.tags, songs, id);
         if (Library::Album *album = albums.findItem(song.album))
             album->songs << id;
