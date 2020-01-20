@@ -11,6 +11,8 @@ Rectangle {
     border.color: foreground
     border.width: 1
 
+    implicitHeight: input.implicitHeight + 10
+
     TextInput {
         id: input
         font.pixelSize: root.pixelSize
