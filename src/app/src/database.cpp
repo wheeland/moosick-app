@@ -144,6 +144,8 @@ void Database::onNewLibrary()
     for (const Moosick::TagId tagId : m_library.rootTags())
         addTag(tagId);
 
+    repopulateSearchResults();
+
     m_hasLibrary = true;
     emit hasLibraryChanged();
 }
@@ -213,7 +215,7 @@ void Database::search(QString searchString)
     emit searchStringChanged(m_searchString);
 }
 
-void Database::clickOnArtist(DbArtist *artist)
+void Database::fillArtistInfo(DbArtist *artist)
 {
     if (!artist->albums().isEmpty())
         return;
@@ -230,8 +232,14 @@ void Database::clickOnArtist(DbArtist *artist)
     for (const SearchResultAlbum &albumResult : it->albums) {
         DbAlbum *album = new DbAlbum(this, albumResult.albumId);
 
+        QVector<DbSong*> songs;
         for (const Moosick::SongId songId : albumResult.songs)
-            album->addSong(new DbSong(this, songId));
+            songs << new DbSong(this, songId);
+        qSort(songs.begin(), songs.end(), [=](DbSong *lhs, DbSong *rhs) {
+            return lhs->position() < rhs->position();
+        });
+        for (DbSong *song : songs)
+            album->addSong(song);
 
         artist->addAlbum(album);
     }
@@ -254,13 +262,19 @@ void Database::repopulateSearchResults()
     for (const QString searchWord : m_searchString.split(' '))
         keywords << searchWord.toLower();
 
-    for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
-        const QString lowerName = artistId.name(m_library).toLower();
+    // see if we match the search keywords
+    const auto matchesSearchString = [&](const QString &name) {
+        if (m_searchString.isEmpty())
+            return true;
 
-        // see if we match the search keywords
-        const bool matches = std::all_of(keywords.cbegin(), keywords.cend(), [&](const QString &keyword) {
-            return lowerName.contains(keyword);
+        const QString lower = name.toLower();
+        return std::all_of(keywords.cbegin(), keywords.cend(), [&](const QString &keyword) {
+            return lower.contains(keyword);
         });
+    };
+
+    for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
+        const bool matches = matchesSearchString(artistId.name(m_library));
 
         // build search result item
         if (matches) {

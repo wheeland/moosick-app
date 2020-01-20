@@ -193,7 +193,7 @@ public:
 
     Q_INVOKABLE void sync();
     Q_INVOKABLE void search(QString searchString);
-    Q_INVOKABLE void clickOnArtist(DbArtist *artist);
+    Q_INVOKABLE void fillArtistInfo(DbArtist *artist);
 
 private slots:
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
