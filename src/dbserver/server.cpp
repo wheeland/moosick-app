@@ -169,6 +169,18 @@ void Server::onNewDataReady(QTcpSocket *socket)
         ClientCommon::send(socket, response);
         break;
     }
+    case ClientCommon::ChangeListRequest: {
+        const quint32 rev = message.data.toUInt();
+        const QVector<Moosick::CommittedLibraryChange> changes = m_library.committedChangesSince(rev);
+
+        ClientCommon::Message response;
+        response.tp = ClientCommon::ChangeListReponse;
+        response.data = QJsonDocument(toJson(changes).toArray()).toJson();
+
+        qDebug().nospace() << "Sending ChangeListRequest(" << rev << "), " << changes.size() << "items, to" << socket->peerAddress();
+        ClientCommon::send(socket, response);
+        break;
+    }
     default: {
         qDebug() << "Sending Error to" << socket->peerAddress();
         ClientCommon::send(socket, {ClientCommon::Error, {}});

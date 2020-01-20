@@ -95,6 +95,8 @@ quint32 Library::getFileEnding(const QString &ending)
 
 quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
 {
+    CommittedLibraryChange commit{change, 0};
+
 #define requireThat(condition, message) \
     do { if (!(condition)) { qWarning() << (message); return 0; } } while (0)
 
@@ -111,6 +113,7 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
         album->songs << song.first;
         if (createdId)
             *createdId = song.first;
+        commit.change.detail = song.first;
         break;
     }
     case Moosick::LibraryChange::SongRemove: {
@@ -185,6 +188,7 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
         artist->albums << album.first;
         if (createdId)
             *createdId = album.first;
+        commit.change.detail = album.first;
         break;
     }
     case Moosick::LibraryChange::AlbumRemove: {
@@ -238,6 +242,8 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
         artist.second->name = change.name;
         if (createdId)
             *createdId = artist.first;
+        commit.change.detail = artist.first;
+
         break;
     }
     case Moosick::LibraryChange::ArtistRemove: {
@@ -285,6 +291,8 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
 
         if (createdId)
             *createdId = tag.first;
+        commit.change.detail = tag.first;
+
         break;
     }
     case Moosick::LibraryChange::TagRemove: {
@@ -355,8 +363,23 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
 #undef fetchItem
 
     m_revision += 1;
+    commit.revision = m_revision;
+    m_committedChanges << commit;
 
     return m_revision;
+}
+
+QVector<CommittedLibraryChange> Library::committedChangesSince(quint32 revision) const
+{
+    QVector<CommittedLibraryChange> ret;
+    ret.reserve(m_committedChanges.size());
+
+    for (const CommittedLibraryChange &committed : m_committedChanges) {
+        if (committed.revision >= revision)
+            ret << committed;
+    }
+
+    return ret;
 }
 
 #define FETCH(name, Collection, id) \

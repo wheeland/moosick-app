@@ -75,6 +75,8 @@ public:
      */
     quint32 commit(const LibraryChange &change, quint32 *createdId = nullptr);
 
+    QVector<CommittedLibraryChange> committedChangesSince(quint32 revision) const;
+
     QStringList dumpToStringList() const;
 
     QJsonObject serializeToJson() const;
@@ -92,6 +94,7 @@ private:
     quint32 getFileEnding(const QString &ending);
 
     quint32 m_revision = 0;
+    QVector<CommittedLibraryChange> m_committedChanges;
 
     ItemCollection<Song> m_songs;
     ItemCollection<Album> m_albums;

@@ -53,6 +53,19 @@ int main(int argc, char **argv)
 
         return 0;
     }
+    else if (command == "change-list.do") {
+        if (values.contains("v") && !values["v"].isEmpty()) {
+            const ClientCommon::Message request{ ClientCommon::ChangeListRequest, values["v"] };
+            ClientCommon::Message answer;
+            sendRecv(s_server, request, answer);
+
+            std::cout << answer.data.constData() << "\n";
+
+            return 0;
+        } else {
+            std::cout << "[]" << std::endl;
+        }
+    }
     else if (command == "search.do") {
         if (values.contains("v") && !values["v"].isEmpty()) {
             const QString searchPattern = QByteArray::fromBase64(values["v"], QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);

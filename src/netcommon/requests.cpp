@@ -12,6 +12,7 @@ QByteArray DownloadRequest::toBase64() const
     out << artistId;
     out << artistName;
     out << albumName;
+    out << currentRevision;
     return ret.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
 }
 
@@ -20,13 +21,14 @@ bool DownloadRequest::fromBase64(const QByteArray &base64)
     QByteArray data = QByteArray::fromBase64(base64, QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
     QDataStream in(&data, QIODevice::ReadOnly);
 
-    quint32 tp32, id32;
+    quint32 tp32, id32, rev;
     QString u, artist, album;
     in >> tp32;
     in >> u;
     in >> id32;
     in >> artist;
     in >> album;
+    in >> rev;
 
     if (in.status() == QDataStream::Ok) {
         tp = static_cast<Type>(tp32);
@@ -34,6 +36,7 @@ bool DownloadRequest::fromBase64(const QByteArray &base64)
         artistId = id32;
         artistName = artist;
         albumName = album;
+        currentRevision = rev;
         return true;
     }
 

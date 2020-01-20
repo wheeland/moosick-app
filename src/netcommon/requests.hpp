@@ -18,6 +18,7 @@ struct DownloadRequest
     Moosick::ArtistId artistId;
     QString artistName;
     QString albumName;
+    quint32 currentRevision;
 
     QByteArray toBase64() const;
     bool fromBase64(const QByteArray &base64);

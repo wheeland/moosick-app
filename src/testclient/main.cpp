@@ -148,6 +148,23 @@ bool readLine(const QString &prompt, QString &line)
     return true;
 }
 
+void printCommittedChanges(const QByteArray &data)
+{
+    QVector<Moosick::CommittedLibraryChange> appliedChanges;
+    const QJsonArray json = parseJsonArray(data, "Committed Changes");
+    if (json.isEmpty())
+        qWarning().noquote() << data;
+
+
+    if (!fromJson(json, appliedChanges)) {
+        qWarning() << "Couldn't parse JSON result:";
+        qWarning().noquote() << data;
+    } else {
+        for (const auto &ch : appliedChanges)
+            qWarning().noquote() << ch.revision << ":" << answerToString(ch.change);
+    }
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -219,6 +236,15 @@ int main(int argc, char **argv)
             for (const Moosick::LibraryChange &ch : ret)
                 qWarning().noquote() << answerToString(ch);
         }
+        else if (QString("history").startsWith(line.split("\t").first().toLower())) {
+            const QStringList parts = line.split("\t").mid(1);
+            if (parts.size() < 1) {
+                qWarning() << "Needs revision number";
+                continue;
+            }
+            sendRecv(s_serverConfig, ClientCommon::Message{ ClientCommon::ChangeListRequest, parts[0].toLocal8Bit()}, answer);
+            printCommittedChanges(answer.data);
+        }
         else if (QString("changes").startsWith(line.toLower())) {
             QVector<Moosick::LibraryChange> changes;
 
@@ -254,13 +280,7 @@ int main(int argc, char **argv)
             out << changes;
 
             sendRecv(s_serverConfig, message, answer);
-            QVector<Moosick::CommittedLibraryChange> appliedChanges;
-            if (!fromJson(parseJsonArray(answer.data, "Server Response"), appliedChanges)) {
-                qWarning() << "Couldn't parse JSON result";
-            } else {
-                for (const auto &ch : appliedChanges)
-                    qWarning().noquote() << ch.revision << ":" << answerToString(ch.change);
-            }
+            printCommittedChanges(answer.data);
         }
         else {
             qWarning() << "Not a valid message type:" << line;

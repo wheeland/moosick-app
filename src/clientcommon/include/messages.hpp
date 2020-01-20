@@ -15,6 +15,8 @@ enum MessageType : quint32
     LibraryReponse,
     ChangesRequest,
     ChangesResponse,
+    ChangeListRequest,
+    ChangeListReponse,
 };
 
 struct Message
