@@ -1,4 +1,5 @@
 #include "util.hpp"
+#include "jsonconv.hpp"
 
 #include <QTcpSocket>
 #include <QProcess>
@@ -8,7 +9,7 @@ namespace ClientCommon {
 bool sendChanges(
         const ServerConfig &config,
         const QVector<Moosick::LibraryChange> &changes,
-        QVector<Moosick::LibraryChange> &answers)
+        QVector<Moosick::CommittedLibraryChange> &answers)
 {
     // try to connect to TCP server
     QTcpSocket sock;
@@ -33,11 +34,7 @@ bool sendChanges(
     if (answer.tp != ClientCommon::ChangesResponse)
         return false;
 
-    QDataStream reader(answer.data);
-    answers.clear();
-    reader >> answers;
-
-    return true;
+    return fromJson(parseJsonArray(answer.data), answers);
 }
 
 int runProcess(

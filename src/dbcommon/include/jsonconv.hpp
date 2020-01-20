@@ -6,8 +6,8 @@
 #include <QVector>
 #include <QPair>
 
-QJsonArray parseJsonArray(const QByteArray &json, const QByteArray &name);
-QJsonObject parseJsonObject(const QByteArray &json, const QByteArray &name);
+QJsonArray parseJsonArray(const QByteArray &json, const QByteArray &name = QByteArray());
+QJsonObject parseJsonObject(const QByteArray &json, const QByteArray &name = QByteArray());
 
 QJsonValue toJson(qint32 value);
 QJsonValue toJson(quint32 value);

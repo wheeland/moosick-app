@@ -1,5 +1,6 @@
 #include <QCoreApplication>
 #include <QProcess>
+#include <QJsonDocument>
 #include <iostream>
 
 #include "library.hpp"
@@ -7,6 +8,7 @@
 #include "requests.hpp"
 #include "download.hpp"
 #include "json.hpp"
+#include "jsonconv.hpp"
 
 static ClientCommon::ServerConfig s_server;
 
@@ -60,11 +62,11 @@ int main(int argc, char **argv)
             sendRecv(s_server, request, answer);
 
             std::cout << answer.data.constData() << "\n";
-
-            return 0;
         } else {
             std::cout << "[]" << std::endl;
         }
+
+        return 0;
     }
     else if (command == "search.do") {
         if (values.contains("v") && !values["v"].isEmpty()) {
@@ -84,10 +86,10 @@ int main(int argc, char **argv)
             return 0;
         }
 
-        const QVector<Moosick::LibraryChange> changes = ClientCommon::bandcampDownload(
+        const QVector<Moosick::CommittedLibraryChange> changes = ClientCommon::bandcampDownload(
                     s_server, request, mediaDir, toolDir, tmpDir);
 
-        std::cout << toBase64(changes).data() << std::endl;
+        std::cout << QJsonDocument(toJson(changes).toArray()).toJson().constData() << std::endl;
         return 0;
     }
     else if (command == "bandcamp-artist-info.do") {

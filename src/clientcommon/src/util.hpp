@@ -10,7 +10,7 @@ namespace ClientCommon {
 bool sendChanges(
         const ServerConfig &config,
         const QVector<Moosick::LibraryChange> &changes,
-        QVector<Moosick::LibraryChange> &answers
+        QVector<Moosick::CommittedLibraryChange> &answers
 );
 
 int runProcess(

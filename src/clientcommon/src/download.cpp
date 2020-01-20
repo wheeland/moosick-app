@@ -1,5 +1,6 @@
 #include "download.hpp"
 #include "util.hpp"
+#include "jsonconv.hpp"
 
 #include <QFile>
 #include <QDir>
@@ -16,14 +17,14 @@ static QString createTempDir(const QString &dir)
 
 namespace ClientCommon {
 
-QVector<Moosick::LibraryChange> bandcampDownload(
+QVector<Moosick::CommittedLibraryChange> bandcampDownload(
         const ServerConfig &server,
         const NetCommon::DownloadRequest &request,
         const QString &mediaDir,
         const QString &toolDir,
         const QString &tempDir)
 {
-    QVector<Moosick::LibraryChange> ret;
+    QVector<Moosick::CommittedLibraryChange> ret;
 
 #define REQUIRE(condition) do { if (!(condition)) { qWarning() << "Failed:" << #condition; return {}; } } while (0)
 
@@ -57,7 +58,8 @@ QVector<Moosick::LibraryChange> bandcampDownload(
     const int numSongs = albumInfo.tracks.size();
 
     // download album into temp. directory
-    const QString dstDir = createTempDir(tempDir);
+    QProcess::execute("mkdir -p " + tempDir);
+    const QString dstDir = createTempDir(tempDir) + "/";
     status = runProcess(toolDir + "/bandcamp-dl", {
                    QString("--base-dir=") + dstDir,
                    "--template=%{track}",
@@ -83,14 +85,14 @@ QVector<Moosick::LibraryChange> bandcampDownload(
 
     // add artist, if not yet existing
     Moosick::ArtistId artistId = request.artistId;
-    QVector<Moosick::LibraryChange> resultChanges;
+    QVector<Moosick::CommittedLibraryChange> resultChanges;
     if (!artistId.isValid()) {
         const Moosick::LibraryChange addArtist(Moosick::LibraryChange::ArtistAdd, 0, 0, request.artistName);
         REQUIRE(sendChanges(server, {addArtist}, resultChanges));
         REQUIRE(!resultChanges.isEmpty());
-        REQUIRE(resultChanges.first().changeType == Moosick::LibraryChange::ArtistAdd);
-        REQUIRE(resultChanges.first().detail != 0);
-        artistId = resultChanges.first().detail;
+        REQUIRE(resultChanges.first().change.changeType == Moosick::LibraryChange::ArtistAdd);
+        REQUIRE(resultChanges.first().change.detail != 0);
+        artistId = resultChanges.first().change.detail;
         ret << resultChanges;
     }
 
@@ -98,10 +100,10 @@ QVector<Moosick::LibraryChange> bandcampDownload(
     const Moosick::LibraryChange addAlbum(Moosick::LibraryChange::AlbumAdd, artistId, 0, request.albumName);
     REQUIRE(sendChanges(server, {addAlbum}, resultChanges));
     REQUIRE(!resultChanges.isEmpty());
-    REQUIRE(resultChanges.first().changeType == Moosick::LibraryChange::AlbumAdd);
-    REQUIRE(resultChanges.first().detail != 0);
+    REQUIRE(resultChanges.first().change.changeType == Moosick::LibraryChange::AlbumAdd);
+    REQUIRE(resultChanges.first().change.detail != 0);
     ret << resultChanges;
-    const Moosick::AlbumId albumId = resultChanges.first().detail;
+    const Moosick::AlbumId albumId = resultChanges.first().change.detail;
 
     // add songs to database
     QVector<Moosick::LibraryChange> songChanges;
@@ -109,15 +111,15 @@ QVector<Moosick::LibraryChange> bandcampDownload(
         songChanges << Moosick::LibraryChange(Moosick::LibraryChange::SongAdd, albumId, 0, song.name);
     REQUIRE(sendChanges(server, songChanges, resultChanges));
     REQUIRE(resultChanges.size() == songChanges.size());
-    for (const Moosick::LibraryChange &result : resultChanges) {
-        REQUIRE(result.changeType == Moosick::LibraryChange::SongAdd);
-        REQUIRE(result.detail != 0);
+    for (const Moosick::CommittedLibraryChange &result : resultChanges) {
+        REQUIRE(result.change.changeType == Moosick::LibraryChange::SongAdd);
+        REQUIRE(result.change.detail != 0);
     }
     ret << resultChanges;
 
     // move songs to media directory
     for (int i = 0; i < numSongs; ++i) {
-        const QString newFilePath = mediaDir + QString::asprintf("/%d.mp3", resultChanges[i].detail);
+        const QString newFilePath = mediaDir + QString::asprintf("/%d.mp3", resultChanges[i].change.detail);
         QFile(tempFilePaths[i]).rename(newFilePath);
     }
 
@@ -127,7 +129,7 @@ QVector<Moosick::LibraryChange> bandcampDownload(
     // set library information for all new files
     QVector<Moosick::LibraryChange> songDetails;
     for (int i = 0; i < numSongs; ++i) {
-        const quint32 id = resultChanges[i].detail;
+        const quint32 id = resultChanges[i].change.detail;
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetFileEnding, id, 0, ".mp3");
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetLength, id, albumInfo.tracks[i].secs, "");
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetPosition, id, i+1, "");
@@ -136,7 +138,15 @@ QVector<Moosick::LibraryChange> bandcampDownload(
     REQUIRE(resultChanges.size() == songDetails.size());
     ret << resultChanges;
 
-    return ret;
+    // get whole change-list from beginning from server
+    const ClientCommon::Message changeListRequest{ ClientCommon::ChangeListRequest, QByteArray::number(request.currentRevision) };
+    ClientCommon::Message answer;
+    REQUIRE(sendRecv(server, changeListRequest, answer));
+
+    QVector<Moosick::CommittedLibraryChange> appliedChanges;
+    REQUIRE(fromJson(parseJsonArray(answer.data, ""), appliedChanges));
+
+    return appliedChanges;
 
 #undef REQUIRE
 }

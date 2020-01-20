@@ -222,19 +222,19 @@ int main(int argc, char **argv)
         }
         else if (QString("bandcamp").startsWith(line.split("\t").first().toLower())) {
             const QStringList parts = line.split("\t").mid(1);
-            if (parts.size() < 3) {
-                qWarning() << "Usage: bandcamp    [url]    [artist name OR id]    [album name]";
+            if (parts.size() < 4) {
+                qWarning() << "Usage: bandcamp    [url]    [artist name OR id]    [album name]    [revision]";
                 continue;
             }
 
             const NetCommon::DownloadRequest download{
                 NetCommon::DownloadRequest::BandcampAlbum,
-                parts[0], parts[1].toInt(), parts[1], parts[2]
+                parts[0], parts[1].toUInt(), parts[1], parts[2], parts[3].toUInt()
             };
 
-            const QVector<Moosick::LibraryChange> ret = ClientCommon::bandcampDownload(s_serverConfig, download, mediaDir, toolsDir, tempDir);
-            for (const Moosick::LibraryChange &ch : ret)
-                qWarning().noquote() << answerToString(ch);
+            const QVector<Moosick::CommittedLibraryChange> ret = ClientCommon::bandcampDownload(s_serverConfig, download, mediaDir, toolsDir, tempDir);
+            for (const Moosick::CommittedLibraryChange &ch : ret)
+                qWarning().noquote() << ch.revision << ":" << answerToString(ch.change);
         }
         else if (QString("history").startsWith(line.split("\t").first().toLower())) {
             const QStringList parts = line.split("\t").mid(1);
