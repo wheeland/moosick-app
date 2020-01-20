@@ -4,6 +4,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QVector>
+#include <QPair>
 
 QJsonArray parseJsonArray(const QByteArray &json, const QByteArray &name);
 QJsonObject parseJsonObject(const QByteArray &json, const QByteArray &name);
@@ -43,5 +44,35 @@ template <class T> bool fromJson(const QJsonValue &json, QVector<T> &values)
         ret.append(tVal);
     }
     values = ret;
+    return true;
+}
+
+template <class A, class B> QJsonValue toJson(const QPair<A, B> &pair)
+{
+    QJsonObject obj;
+    obj.insert("p1", toJson(pair.first));
+    obj.insert("p2", toJson(pair.second));
+    return obj;
+}
+
+template <class A, class B> bool fromJson(const QJsonValue &json, QPair<A, B> &pair)
+{
+    if (json.type() != QJsonValue::Object)
+        return false;
+
+    const QJsonObject obj = json.toObject();
+    const auto p1 = obj.find("p1");
+    const auto p2 = obj.find("p2");
+    if (p1 == obj.end() || p2 == obj.end())
+        return false;
+
+    A a;
+    B b;
+    if (!fromJson(p1.value(), a) || !fromJson(p2.value(), b))
+        return false;
+
+    pair.first = a;
+    pair.second = b;
+
     return true;
 }
