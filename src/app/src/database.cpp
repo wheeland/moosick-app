@@ -138,8 +138,6 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
 
 void Database::onNewLibrary()
 {
-    qWarning().noquote() << m_library.dumpToStringList().join("\n");
-
     // add tags
     for (const Moosick::TagId tagId : m_library.rootTags())
         addTag(tagId);
