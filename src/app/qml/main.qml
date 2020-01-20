@@ -59,6 +59,8 @@ Rectangle {
     KeyboardItem {
         id: keyboard
         width: parent.width
-        anchors.bottom: parent.bottom
+        y: Qt.inputMethod.visible ? parent.height - height : parent.height
+        visible: (y < parent.height)
+        Behavior on y { NumberAnimation { duration: 100 } }
     }
 }
