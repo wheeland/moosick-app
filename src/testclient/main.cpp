@@ -182,6 +182,9 @@ int main(int argc, char **argv)
 
         ClientCommon::Message answer;
 
+        if (line.isEmpty())
+            continue;
+
         if (line.toLower() == "ping") {
             sendRecv(s_serverConfig, ClientCommon::Message{ ClientCommon::Ping }, answer);
             qWarning().noquote() << answer.format();
