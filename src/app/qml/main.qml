@@ -60,6 +60,18 @@ Rectangle {
         anchors.bottom: parent.bottom
     }
 
+    LibraryItemEditPopup {
+        id: stringChoice
+        visible: _app.database.editItemVisible
+        stringsModel: _app.database.editStringList
+        tagsModel: _app.database.tagsModel
+        anchors.centerIn: parent
+        width: parent.width * 0.8
+        height: parent.height * 0.4
+        onOkClicked: _app.database.editOkClicked()
+        onCancelClicked: _app.database.editCancelClicked()
+    }
+
     KeyboardItem {
         id: keyboard
         width: parent.width

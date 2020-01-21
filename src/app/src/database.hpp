@@ -8,8 +8,10 @@
 #include "stringmodel.hpp"
 #include "selecttagsmodel.hpp"
 #include "database_items.hpp"
+#include "requests.hpp"
 
 namespace Search {
+class Result;
 class BandcampAlbumResult;
 class YoutubeVideoResult;
 }
@@ -48,6 +50,7 @@ class Database : public QObject
     Q_PROPERTY(EditItemType editItemType READ editItemType NOTIFY stateChanged)
     Q_PROPERTY(EditItemSource editItemSource READ editItemSource NOTIFY stateChanged)
     Q_PROPERTY(StringModel *editStringList READ editStringList CONSTANT)
+    Q_PROPERTY(bool editItemVisible READ editItemVisible NOTIFY stateChanged)
 
 public:
 
@@ -80,6 +83,7 @@ public:
     StringModel *editStringList() const { return m_editStringList; }
     EditItemType editItemType() const { return m_editItemType; }
     EditItemSource editItemSource() const { return m_editItemSource; }
+    bool editItemVisible() const;
 
     Q_INVOKABLE void sync();
     Q_INVOKABLE void search(QString searchString);
@@ -104,16 +108,20 @@ private:
     enum RequestType {
         None,
         LibrarySync,
+        BandcampDownload,
     };
 
     void onNewLibrary();
+    bool applyLibraryChanges(const QByteArray &changesJsonData);
 
     DbTag *tagForTagId(Moosick::TagId tagId) const;
-    DbTag *addTag(Moosick::TagId tagId);
+    DbTag *getOrCreateDbTag(Moosick::TagId tagId);
     void removeTag(Moosick::TagId tagId);
 
     void clearSearchResults();
     void repopulateSearchResults();
+    void repopulateEditStringList();
+    void repopulateTagsModel();
 
     bool hasRunningRequestType(RequestType requestType) const;
 
@@ -140,9 +148,27 @@ private:
     QString m_searchString;
     ModelAdapter::Adapter<SearchResultArtist> m_searchResults;
 
+    /**
+     * Currently edited thing
+     */
     EditItemType m_editItemType = EditNone;
     EditItemSource m_editItemSource = SourceNone;
     StringModel *m_editStringList;
+
+    /**
+     * Runnning Downloads
+     */
+    struct Download {
+        NetCommon::DownloadRequest request;
+        Moosick::TagIdList artistTags;
+        QPointer<Search::Result> searchResult;
+        QNetworkReply *networkReply;
+    };
+
+    void startDownload();
+
+    QScopedPointer<Download> m_requestedDownload;
+    QVector<Download> m_runningDownloads;
 };
 
 } // namespace Database

@@ -38,6 +38,14 @@ void Result::setStatus(Result::Status status)
     }
 }
 
+void Result::setDownloadStatus(Result::DownloadStatus downloadStatus)
+{
+    if (m_downloadStatus != downloadStatus) {
+        m_downloadStatus = downloadStatus;
+        downloadStatusChanged(downloadStatus);
+    }
+}
+
 void Result::queryInfo()
 {
     if (m_status == InfoOnly || m_status == Error)

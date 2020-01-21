@@ -1,6 +1,7 @@
 #include "database.hpp"
 #include "database_items.hpp"
 #include "jsonconv.hpp"
+#include "search.hpp"
 
 // let the Database be consistent and do ALL allocations
 // the QObjects are just exposure to QML, all the data lies in the Database
@@ -125,12 +126,37 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
 {
     const RequestType requestType = m_requests.take(reply);
     const QByteArray data = reply->readAll();
+    const bool hasError = (error != QNetworkReply::NoError);
+
+    if (hasError) {
+        qWarning() << reply->errorString();
+    }
 
     switch (requestType) {
     case LibrarySync: {
-        const QJsonObject obj = parseJsonObject(data, "Library");
-        if (m_library.deserializeFromJson(obj))
-            onNewLibrary();
+        if (!hasError) {
+            const QJsonObject obj = parseJsonObject(data, "Library");
+            if (m_library.deserializeFromJson(obj))
+                onNewLibrary();
+        }
+        break;
+    }
+    case BandcampDownload: {
+        const auto downloadIt = std::find_if(m_runningDownloads.begin(), m_runningDownloads.end(), [&](const Download &download) {
+            return download.networkReply == reply;
+        });
+
+        if (!hasError) {
+            applyLibraryChanges(data);
+        }
+
+        if (downloadIt != m_runningDownloads.end()) {
+            if (downloadIt->searchResult && !hasError)
+                downloadIt->searchResult->setDownloadStatus(Search::Result::DownloadDone);
+            // TODO: add downloadIt->artistTags to downloadIt->query.artistId
+            m_runningDownloads.erase(downloadIt);
+        }
+
         break;
     }
     default:
@@ -140,20 +166,31 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
 
 void Database::onNewLibrary()
 {
-    // add tags
-    for (const Moosick::TagId &tagId : m_library.rootTags()) {
-        DbTag *rootTag = addTag(tagId);
-        m_tagsModel->addTag(rootTag);
-    }
-
+    repopulateTagsModel();
     repopulateSearchResults();
-
-    for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
-        m_editStringList->add((int) artistId, artistId.name(m_library));
-    }
+    repopulateEditStringList();
 
     m_hasLibrary = true;
     emit hasLibraryChanged();
+}
+
+bool Database::applyLibraryChanges(const QByteArray &changesJsonData)
+{
+    const QJsonArray changesJson = parseJsonArray(changesJsonData, "Library Changes");
+    QVector<Moosick::CommittedLibraryChange> changes;
+    if (!fromJson(changesJson, changes)) {
+        qWarning() << "Unable to parse server library changes from JSON:";
+        qWarning().noquote() << changesJsonData;
+        return false;
+    }
+
+    m_library.commit(changes);
+
+    repopulateTagsModel();
+    repopulateSearchResults();
+    repopulateEditStringList();
+
+    return true;
 }
 
 DbTag *Database::tagForTagId(Moosick::TagId tagId) const
@@ -161,7 +198,7 @@ DbTag *Database::tagForTagId(Moosick::TagId tagId) const
     return m_tags.value(tagId, nullptr);
 }
 
-DbTag *Database::addTag(Moosick::TagId tagId)
+DbTag *Database::getOrCreateDbTag(Moosick::TagId tagId)
 {
     Q_ASSERT(tagId.isValid());
 
@@ -173,14 +210,14 @@ DbTag *Database::addTag(Moosick::TagId tagId)
         // link to parent
         const Moosick::TagId parentId = tagId.parent(m_library);
         if (parentId.isValid()) {
-            DbTag *parent = addTag(parentId);
+            DbTag *parent = getOrCreateDbTag(parentId);
             parent->addChildTag(it.value());
             it.value()->setParentTag(parent);
         }
 
         // link to children
         for (const Moosick::TagId &childId : tagId.children(m_library)) {
-            DbTag *child = addTag(childId);
+            DbTag *child = getOrCreateDbTag(childId);
             it.value()->addChildTag(child);
         }
 
@@ -241,7 +278,7 @@ void Database::fillArtistInfo(DbArtist *artist)
         DbAlbum *album = new DbAlbum(this, albumResult.albumId);
 
         QVector<DbSong*> songs;
-        for (const Moosick::SongId songId : albumResult.songs)
+        for (const Moosick::SongId &songId : albumResult.songs)
             songs << new DbSong(this, songId);
         qSort(songs.begin(), songs.end(), [=](DbSong *lhs, DbSong *rhs) {
             return lhs->position() < rhs->position();
@@ -253,24 +290,85 @@ void Database::fillArtistInfo(DbArtist *artist)
     }
 }
 
-void Database::editOkClicked()
-{
-
-}
-
-void Database::editCancelClicked()
-{
-
-}
-
 void Database::startBandcampDownload(Search::BandcampAlbumResult *bc)
 {
+    Q_ASSERT(m_requestedDownload.isNull());
+    Q_ASSERT(m_editItemType == EditNone);
+    Q_ASSERT(m_editItemSource == SourceNone);
 
+    m_requestedDownload.reset(new Download {
+        NetCommon::DownloadRequest {
+            NetCommon::DownloadRequest::BandcampAlbum,
+            bc->url(), 0, bc->artist(), bc->title(), m_library.revision()
+        }, Moosick::TagIdList(), bc, nullptr
+    });
+
+    m_editItemType = EditArtist;
+    m_editItemSource = SourceBandcamp;
+    emit stateChanged();
 }
 
 void Database::startYoutubeDownload(Search::YoutubeVideoResult *yt)
 {
 
+}
+
+void Database::editOkClicked()
+{
+    const int selectedId = m_editStringList->selectedId();
+    const QString enteredName = m_editStringList->enteredString();
+    const Moosick::TagIdList selectedTags = m_tagsModel->selectedTagsIds();
+
+    if (m_editItemSource == SourceBandcamp) {
+        Q_ASSERT(!m_requestedDownload.isNull());
+
+        if (m_editItemType == EditArtist) {
+            if (selectedId > 0) {
+                m_requestedDownload->request.artistId = selectedId;
+            } else {
+                m_requestedDownload->request.artistName = enteredName;
+                m_requestedDownload->artistTags = selectedTags;
+            }
+        }
+
+        m_editItemType = EditNone;
+        m_editItemSource = SourceNone;
+
+        startDownload();
+    }
+
+    emit stateChanged();
+}
+
+void Database::editCancelClicked()
+{
+    m_requestedDownload.reset();
+    m_editItemType = EditNone;
+    m_editItemSource = SourceNone;
+    emit stateChanged();
+}
+
+void Database::startDownload()
+{
+    Q_ASSERT(!m_requestedDownload.isNull());
+
+    if (m_requestedDownload->searchResult)
+        m_requestedDownload->searchResult->setDownloadStatus(Search::Result::DownloadStarted);
+
+    switch (m_requestedDownload->request.tp) {
+    case NetCommon::DownloadRequest::BandcampAlbum: {
+        const QString query = QString("v=") + m_requestedDownload->request.toBase64();
+        QNetworkReply *reply = m_http->requestFromServer("/bandcamp-download.do", query);
+        m_requests[reply] = BandcampDownload;
+        m_requestedDownload->networkReply = reply;
+        break;
+    }
+    default:
+        qFatal("No Such download request supported");
+    }
+
+    m_runningDownloads << *m_requestedDownload;
+    m_requestedDownload.reset();
 }
 
 void Database::clearSearchResults()
@@ -308,10 +406,26 @@ void Database::repopulateSearchResults()
         if (matches) {
             SearchResultArtist artist;
             artist.artist = new DbArtist(this, artistId);
-            for (const Moosick::AlbumId albumId : artistId.albums(m_library))
+            for (const Moosick::AlbumId &albumId : artistId.albums(m_library))
                 artist.albums << SearchResultAlbum { albumId, albumId.songs(m_library) };
             m_searchResults.add(artist);
         }
+    }
+}
+
+void Database::repopulateEditStringList()
+{
+    m_editStringList->clear();
+    for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
+        m_editStringList->add((int) artistId, artistId.name(m_library));
+    }
+}
+
+void Database::repopulateTagsModel()
+{
+    for (const Moosick::TagId &tagId : m_library.rootTags()) {
+        DbTag *rootTag = getOrCreateDbTag(tagId);
+        m_tagsModel->addTag(rootTag);
     }
 }
 
@@ -320,6 +434,11 @@ bool Database::hasRunningRequestType(RequestType requestType) const
     return std::any_of(m_requests.begin(), m_requests.end(), [=](RequestType tp) {
         return tp == requestType;
     });
+}
+
+bool Database::editItemVisible() const
+{
+    return (m_editItemType != EditNone) && (m_editItemSource != SourceNone);
 }
 
 } // namespace Database

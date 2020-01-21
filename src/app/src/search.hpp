@@ -23,6 +23,7 @@ class Result : public QObject
     Q_OBJECT
     Q_PROPERTY(QString title READ title CONSTANT)
     Q_PROPERTY(Type type READ resultType CONSTANT)
+    Q_PROPERTY(DownloadStatus downloadStatus READ downloadStatus NOTIFY downloadStatusChanged)
     Q_PROPERTY(QString url READ url CONSTANT)
     Q_PROPERTY(QString iconUrl READ iconUrl CONSTANT)
     Q_PROPERTY(QString iconData READ iconData NOTIFY iconDataChanged)
@@ -38,6 +39,13 @@ public:
     };
     Q_ENUM(Type)
 
+    enum DownloadStatus {
+        DownloadNotStarted,
+        DownloadStarted,
+        DownloadDone,
+    };
+    Q_ENUM(DownloadStatus)
+
     enum Status {
         InfoOnly,
         Querying,
@@ -51,6 +59,7 @@ public:
 
     QString title() const { return m_title; }
     Type resultType() const { return m_type; }
+    DownloadStatus downloadStatus() const { return m_downloadStatus; }
     QString url() const { return m_url; }
     QString iconUrl() const { return m_iconUrl; }
     Status status() const { return m_status; }
@@ -58,6 +67,7 @@ public:
 
     void setIconData(const QString &url, const QByteArray &data);
     void setStatus(Status status);
+    void setDownloadStatus(DownloadStatus downloadStatus);
 
     Q_INVOKABLE void queryInfo();
 
@@ -65,6 +75,7 @@ signals:
     void statusChanged(Status status);
     void queryInfoRequested();
     void iconDataChanged();
+    void downloadStatusChanged(DownloadStatus downloadStatus);
 
 private:
     QString m_title;
@@ -73,6 +84,7 @@ private:
     QString m_iconUrl;
     QString m_iconData;
     Status m_status = InfoOnly;
+    DownloadStatus m_downloadStatus = DownloadNotStarted;
 };
 
 class BandcampArtistResult : public Result

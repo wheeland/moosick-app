@@ -73,12 +73,28 @@ Item {
     }
 
     MultiChoice {
-        options: ["Prepend", "Append"]
-        anchors.fill: parent
+        options: {
+            switch (root.result.type) {
+            case SearchResult.BandcampArtist: return [];
+            case SearchResult.BandcampAlbum: return ["Prepend", "Append", "Download"];
+            case SearchResult.BandcampTrack: return ["Prepend", "Append"];
+            case SearchResult.YoutubeVideo: return ["Prepend", "Append"];
+            case SearchResult.YoutubePlaylist: return ["Prepend", "Append"];
+            default: return [];
+            }
+        }
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            bottom: childRect.visible ? childRect.top : parent.bottom
+        }
+
         onClicked: root.result.queryInfo()
         onSelected: {
             if (index === 0) _app.addToPlaylist(root.result, false);
             else if (index === 1) _app.addToPlaylist(root.result, true);
+            else if (index === 2) _app.database.startBandcampDownload(root.result);
         }
     }
 
