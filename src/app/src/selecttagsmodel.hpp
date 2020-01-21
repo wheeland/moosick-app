@@ -27,6 +27,7 @@ public:
     Q_INVOKABLE void setSelected(Database::DbTag *tag, bool selected);
 
     QVector<Database::DbTag*> selectedTags() const;
+    Moosick::TagIdList selectedTagsIds() const;
 
 public slots:
     void updateEntries();

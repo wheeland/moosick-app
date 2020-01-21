@@ -80,3 +80,13 @@ QVector<DbTag*> SelectTagsModel::selectedTags() const
     }
     return ret;
 }
+
+Moosick::TagIdList SelectTagsModel::selectedTagsIds() const
+{
+    Moosick::TagIdList ret;
+    for (const TagEntry &entry : m_tagEntries.data()) {
+        if (entry.selected)
+            ret << entry.tag->id();
+    }
+    return ret;
+}
