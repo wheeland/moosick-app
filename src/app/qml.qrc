@@ -4,7 +4,6 @@
 
         <file>qml/KeyboardItem.qml</file>
         <file>qml/LineEdit.qml</file>
-        <file>qml/StringChoiceDialog.qml</file>
         <file>qml/SelectBox.qml</file>
         <file>qml/SimpleButton.qml</file>
         <file>qml/SwipeHeader.qml</file>
@@ -25,6 +24,7 @@
         <file>qml/LibraryAlbum.qml</file>
         <file>qml/LibrarySong.qml</file>
         <file>qml/LibraryTagSpace.qml</file>
+        <file>qml/LibraryItemEditPopup.qml</file>
 
         <file>qml/layouts/en_GB/main.qml</file>
         <file>qml/layouts/en_GB/dialpad.qml</file>

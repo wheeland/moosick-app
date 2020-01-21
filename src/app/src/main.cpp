@@ -9,6 +9,7 @@
 #include "playlist.hpp"
 #include "database.hpp"
 #include "stringmodel.hpp"
+#include "selecttagsmodel.hpp"
 
 int main(int argc, char **argv)
 {
@@ -41,6 +42,7 @@ int main(int argc, char **argv)
     qmlRegisterUncreatableType<Database::DbAlbum>("Moosick", 1, 0, "DbAlbum", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<Database::DbSong>("Moosick", 1, 0, "DbSong", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<StringModel>("Moosick", 1, 0, "StringModel", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<SelectTagsModel>("Moosick", 1, 0, "SelectTagsModel", "ain't gonna do that from QML!");
 
     QQuickView view;
     view.resize(screenSize);

@@ -98,11 +98,11 @@ QString DbSong::durationString() const
 Database::Database(HttpClient *httpClient, QObject *parent)
     : QObject(parent)
     , m_http(new HttpRequester(httpClient, this))
-    , m_artistNames(new StringModel(this))
+    , m_tagsModel(new SelectTagsModel(this))
+    , m_editStringList(new StringModel(this))
 {
     connect(m_http, &HttpRequester::receivedReply, this, &Database::onNetworkReplyFinished);
 
-    m_rootTags.addValueAccessor("tag");
     m_searchResults.addAccessor("artist", [&](const SearchResultArtist &artist) {
         return QVariant::fromValue(artist.artist);
     });
@@ -141,13 +141,15 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
 void Database::onNewLibrary()
 {
     // add tags
-    for (const Moosick::TagId tagId : m_library.rootTags())
-        addTag(tagId);
+    for (const Moosick::TagId &tagId : m_library.rootTags()) {
+        DbTag *rootTag = addTag(tagId);
+        m_tagsModel->addTag(rootTag);
+    }
 
     repopulateSearchResults();
 
     for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
-        m_artistNames->add((int) artistId, artistId.name(m_library));
+        m_editStringList->add((int) artistId, artistId.name(m_library));
     }
 
     m_hasLibrary = true;
@@ -177,13 +179,13 @@ DbTag *Database::addTag(Moosick::TagId tagId)
         }
 
         // link to children
-        for (const Moosick::TagId childId : tagId.children(m_library)) {
+        for (const Moosick::TagId &childId : tagId.children(m_library)) {
             DbTag *child = addTag(childId);
             it.value()->addChildTag(child);
         }
 
         if (!parentId.isValid())
-            m_rootTags.addExclusive(it.value());
+            m_tagsModel->addTag(it.value());
     }
 
     return it.value();
@@ -203,7 +205,7 @@ void Database::removeTag(Moosick::TagId tagId)
         parent->removeChildTag(it.value());
 
     // remove children
-    for (const Moosick::TagId childId : tagId.children(m_library))
+    for (const Moosick::TagId &childId : tagId.children(m_library))
         removeTag(childId);
 
     it.value()->deleteLater();
@@ -251,6 +253,26 @@ void Database::fillArtistInfo(DbArtist *artist)
     }
 }
 
+void Database::editOkClicked()
+{
+
+}
+
+void Database::editCancelClicked()
+{
+
+}
+
+void Database::startBandcampDownload(Search::BandcampAlbumResult *bc)
+{
+
+}
+
+void Database::startYoutubeDownload(Search::YoutubeVideoResult *yt)
+{
+
+}
+
 void Database::clearSearchResults()
 {
     for (const SearchResultArtist &artist : m_searchResults.data()) {
@@ -265,7 +287,7 @@ void Database::repopulateSearchResults()
     clearSearchResults();
 
     QStringList keywords;
-    for (const QString searchWord : m_searchString.split(' '))
+    for (const QString &searchWord : m_searchString.split(' '))
         keywords << searchWord.toLower();
 
     // see if we match the search keywords
