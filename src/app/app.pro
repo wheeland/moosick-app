@@ -18,6 +18,7 @@ SOURCES += \
     src/database.cpp \
     src/stringmodel.cpp \
     src/selecttagsmodel.cpp \
+    src/multichoicecontroller.cpp \
     src/util/androidutil.cpp \
     src/util/qmlutil.cpp \
     src/util/modeladapter.cpp \
@@ -32,6 +33,7 @@ HEADERS += \
     src/database_items.hpp \
     src/stringmodel.hpp \
     src/selecttagsmodel.hpp \
+    src/multichoicecontroller.hpp \
     src/util/androidutil.hpp \
     src/util/qmlutil.hpp \
     src/util/modeladapter.hpp \

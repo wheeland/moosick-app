@@ -49,6 +49,10 @@ Rectangle {
         }
     }
 
+    MultiChoicePopup {
+        anchors.fill: parent
+    }
+
     PlayerBar {
         id: player
         anchors.left: parent.left

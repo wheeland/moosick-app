@@ -72,31 +72,14 @@ Item {
         font.bold: true
     }
 
-    SearchResultPopup {
-        id: popup
-        visible: false
-    }
-
-    MouseArea {
-        id: mouseArea
+    MultiChoice {
+        options: ["Prepend", "Append"]
         anchors.fill: parent
-
         onClicked: root.result.queryInfo()
-        onPressAndHold: {
-            preventStealing = true;
-            popup.show(mouse.x, mouse.y);
+        onSelected: {
+            if (index === 0) _app.addToPlaylist(root.result, false);
+            else if (index === 1) _app.addToPlaylist(root.result, true);
         }
-        onReleased: {
-            preventStealing = false;
-
-            if (popup.selected1)
-                _app.addToPlaylist(root.result, false);
-            if (popup.selected2)
-                _app.addToPlaylist(root.result, true);
-
-            popup.hide()
-        }
-        onPositionChanged: popup.move(mouse.x, mouse.y)
     }
 
     Rectangle {

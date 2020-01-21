@@ -10,6 +10,7 @@
 #include "database.hpp"
 #include "stringmodel.hpp"
 #include "selecttagsmodel.hpp"
+#include "multichoicecontroller.hpp"
 
 int main(int argc, char **argv)
 {
@@ -43,6 +44,9 @@ int main(int argc, char **argv)
     qmlRegisterUncreatableType<Database::DbSong>("Moosick", 1, 0, "DbSong", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<StringModel>("Moosick", 1, 0, "StringModel", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<SelectTagsModel>("Moosick", 1, 0, "SelectTagsModel", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<MultiChoiceController>("Moosick", 1, 0, "MultiChoiceController", "ain't gonna do that from QML!");
+
+    MultiChoiceController multiChoiceController;
 
     QQuickView view;
     view.resize(screenSize);
@@ -51,6 +55,7 @@ int main(int argc, char **argv)
     view.rootContext()->setContextProperty("_logger", &logger);
 #endif
     view.rootContext()->setContextProperty("_app", &controller);
+    view.rootContext()->setContextProperty("_multiChoiceController", &multiChoiceController);
     view.setSource(QUrl("qrc:/qml/main.qml"));
     view.show();
 
