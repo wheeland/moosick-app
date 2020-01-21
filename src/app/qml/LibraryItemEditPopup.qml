@@ -9,6 +9,9 @@ Rectangle {
     property Moosick.StringModel stringsModel
     property Moosick.SelectTagsModel tagsModel
 
+    signal okClicked()
+    signal cancelClicked()
+
     color: "black"
     property real fontSize: 20
 
@@ -23,6 +26,7 @@ Rectangle {
         width: parent.width * 0.22
         x: 0.2 * parent.width - 0.5 * width
         y: parent.width / 16
+        onClicked: root.cancelClicked()
     }
 
     SimpleButton {
@@ -40,6 +44,7 @@ Rectangle {
         width: parent.width * 0.22
         x: 0.8 * parent.width - 0.5 * width
         y: parent.width / 16
+        onClicked: root.okClicked()
     }
 
     Text {
