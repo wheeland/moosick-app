@@ -52,6 +52,7 @@ public:
     void addChildTag(DbTag *child) { m_childTags.addExclusive(child); }
     void removeChildTag(DbTag *child) { m_childTags.remove(child); }
 
+    Moosick::TagId id() const { return m_tag; }
     QString name() const { return m_tag.name(library()); }
     DbTag *parentTag() const { return m_parentTag; }
     QVector<DbTag*> childTags() const { return m_childTags.data(); }
