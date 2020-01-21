@@ -355,7 +355,7 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
     }
     case Moosick::LibraryChange::Invalid:
     default: {
-        return false;
+        return 0;
     }
     }
 
@@ -367,6 +367,16 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
     m_committedChanges << commit;
 
     return m_revision;
+}
+
+void Library::commit(const QVector<CommittedLibraryChange> &changes)
+{
+    for (const CommittedLibraryChange &change : changes) {
+        if (change.revision > m_revision) {
+            const quint32 expectedRevision = commit(change.change);
+            Q_ASSERT(expectedRevision == change.revision);
+        }
+    }
 }
 
 QVector<CommittedLibraryChange> Library::committedChangesSince(quint32 revision) const

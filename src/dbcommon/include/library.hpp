@@ -67,6 +67,8 @@ public:
     Library();
     ~Library();
 
+    quint32 revision() const { return m_revision; }
+
     QVector<TagId> rootTags() const;
     QVector<ArtistId> artistsByName() const;
 
@@ -74,6 +76,11 @@ public:
      * Upon success, it returns the new revision of the database, otherwise 0
      */
     quint32 commit(const LibraryChange &change, quint32 *createdId = nullptr);
+
+    /**
+     * Applies those changes that are from the future (i.e. the DB server)
+     */
+    void commit(const QVector<CommittedLibraryChange> &changes);
 
     QVector<CommittedLibraryChange> committedChangesSince(quint32 revision) const;
 
