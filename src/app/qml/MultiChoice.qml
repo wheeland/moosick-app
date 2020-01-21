@@ -19,11 +19,17 @@ Item {
         }
 
         onPressAndHold: {
+            if (root.options.length === 0)
+                return;
+
             preventStealing = true;
             _multiChoiceController.show(root, root.options, mouse.x, mouse.y);
         }
 
         onReleased: {
+            if (root.options.length === 0)
+                return;
+
             preventStealing = false;
             if (_multiChoiceController.selected >= 0)
                 root.selected(_multiChoiceController.selected);
@@ -31,6 +37,9 @@ Item {
         }
 
         onPositionChanged: {
+            if (root.options.length === 0)
+                return;
+
             _multiChoiceController.move(mouse.x, mouse.y);
         }
     }
