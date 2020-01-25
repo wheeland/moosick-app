@@ -29,6 +29,8 @@ public:
     QVector<Database::DbTag*> selectedTags() const;
     Moosick::TagIdList selectedTagsIds() const;
 
+    void setSelectedTagIds(const Moosick::TagIdList &tags);
+
 public slots:
     void updateEntries();
 

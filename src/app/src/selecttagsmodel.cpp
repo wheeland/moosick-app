@@ -90,3 +90,21 @@ Moosick::TagIdList SelectTagsModel::selectedTagsIds() const
     }
     return ret;
 }
+
+void SelectTagsModel::setSelectedTagIds(const Moosick::TagIdList &tags)
+{
+    for (int i = 0; i < m_tagEntries.size(); ++i) {
+        TagEntry entry = m_tagEntries[i];
+
+        // remove selected flag?
+        if (entry.selected && !tags.contains(entry.tag->id())) {
+            entry.selected = false;
+            m_tagEntries.set(i, entry);
+        }
+        // add selected flag?
+        else if (!entry.selected && tags.contains(entry.tag->id())) {
+            entry.selected = true;
+            m_tagEntries.set(i, entry);
+        }
+    }
+}
