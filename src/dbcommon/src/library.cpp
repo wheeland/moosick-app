@@ -373,7 +373,7 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
 void Library::commit(const QVector<CommittedLibraryChange> &changes)
 {
     for (const CommittedLibraryChange &change : changes) {
-        if (change.revision > m_revision) {
+        if (change.revision == m_revision + 1) {
             const quint32 expectedRevision = commit(change.change);
             Q_ASSERT(expectedRevision == change.revision);
         }

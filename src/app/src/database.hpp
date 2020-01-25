@@ -136,6 +136,12 @@ private:
     SelectTagsModel *m_tagsModel;
 
     /**
+     * If we are not ready to commit() some result transitions yet,
+     * we will save them for later application
+     */
+    QVector<Moosick::CommittedLibraryChange> m_waitingChanges;
+
+    /**
      * Data structures for all currently active search results:
      */
     struct SearchResultAlbum {

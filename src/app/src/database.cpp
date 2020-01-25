@@ -186,11 +186,31 @@ bool Database::applyLibraryChanges(const QByteArray &changesJsonData)
         return false;
     }
 
-    m_library.commit(changes);
+    bool hasChanged = false;
 
-    repopulateTagsModel();
-    repopulateSearchResults();
-    repopulateEditStringList();
+    // add into existing committed changes and apply as many as possible, and delete duplicates
+    m_waitingChanges << changes;
+    qSort(m_waitingChanges.begin(), m_waitingChanges.end(), [](const Moosick::CommittedLibraryChange &a, const Moosick::CommittedLibraryChange &b) {
+        return a.revision <= b.revision;
+    });
+    for (auto it = m_waitingChanges.begin(); it != m_waitingChanges.end(); /*empty*/) {
+        if (it->revision <= m_library.revision()) {
+            it = m_waitingChanges.erase(it);
+        }
+        else if (it->revision == m_library.revision() + 1) {
+            m_library.commit(it->change);
+            hasChanged = true;
+            ++it;
+        } else {
+            break;
+        }
+    }
+
+    if (hasChanged) {
+        repopulateTagsModel();
+        repopulateSearchResults();
+        repopulateEditStringList();
+    }
 
     return true;
 }
