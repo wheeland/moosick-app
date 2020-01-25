@@ -92,9 +92,9 @@ Item {
 
         onClicked: root.result.queryInfo()
         onSelected: {
-            if (index === 0) _app.addToPlaylist(root.result, false);
-            else if (index === 1) _app.addToPlaylist(root.result, true);
-            else if (index === 2) _app.database.startBandcampDownload(root.result);
+            if (index === 0) _app.addSearchResultToPlaylist(root.result, false);
+            else if (index === 1) _app.addSearchResultToPlaylist(root.result, true);
+            else if (index === 2) _app.download(root.result);
         }
     }
 

@@ -18,7 +18,7 @@ Controller::~Controller()
 {
 }
 
-void Controller::addToPlaylist(Search::Result *result, bool append)
+void Controller::addSearchResultToPlaylist(Search::Result *result, bool append)
 {
     if (!result)
         return;
@@ -58,9 +58,31 @@ void Controller::addToPlaylist(Search::Result *result, bool append)
     }
 }
 
-void Controller::download(Search::Result *result)
+void Controller::addLibraryItemToPlaylist(Database::DbItem *item, bool append)
 {
 
+}
+
+void Controller::download(Search::Result *result)
+{
+    NetCommon::DownloadRequest request;
+
+    switch (result->resultType()) {
+    case Search::Result::BandcampAlbum: {
+        Search::BandcampAlbumResult *bc = qobject_cast<Search::BandcampAlbumResult*>(result);
+        Q_ASSERT(bc);
+        request = NetCommon::DownloadRequest {
+            NetCommon::DownloadRequest::BandcampAlbum,
+            bc->url(), 0, bc->artist(), bc->title(), 0
+        };
+        break;
+    }
+    default:
+        qWarning() << "Not supported";
+        return;
+    }
+
+    m_database->startDownload(request, result);
 }
 
 bool Controller::queueBandcampAlbum(Search::BandcampAlbumResult *album, bool append)

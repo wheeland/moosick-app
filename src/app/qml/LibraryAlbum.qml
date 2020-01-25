@@ -59,9 +59,17 @@ Rectangle {
         font.pixelSize: textSize
     }
 
-    MouseArea {
+    MultiChoice {
+        options: ["Play", "Edit"]
         anchors.fill: parent
-        onClicked: root.expanded = !root.expanded
+        anchors.bottomMargin: column.height
+
+        onClicked: root.expanded = !expanded
+
+        onSelected: {
+            if (index === 0) _app.addLibraryItemToPlaylist(root.album, false);
+            if (index === 1) _app.database.editItem(root.album);
+        }
     }
 
     Column {

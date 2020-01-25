@@ -39,29 +39,19 @@ Rectangle {
         height: Math.max(childrenRect.height, artistNameText.height)
     }
 
-    MouseArea {
-        id: mouseArea
+    MultiChoice {
+        options: ["Edit"]
         anchors.fill: parent
+        anchors.bottomMargin: albumsColumn.height
 
         onClicked: {
             _app.database.fillArtistInfo(root.artist);
             root.expanded = !expanded;
         }
-        onPressAndHold: {
-            preventStealing = true;
-//            popup.show(mouse.x, mouse.y);
-        }
-        onReleased: {
-            preventStealing = false;
 
-//            if (popup.selected1)
-//                _app.addToPlaylist(root.result, false);
-//            if (popup.selected2)
-//                _app.addToPlaylist(root.result, true);
-
-//            popup.hide()
+        onSelected: {
+            if (index === 0) _app.database.editItem(root.artist)
         }
-//        onPositionChanged: popup.move(mouse.x, mouse.y)
     }
 
     Column {

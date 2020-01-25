@@ -3,6 +3,8 @@
 #include "jsonconv.hpp"
 #include "search.hpp"
 
+using NetCommon::DownloadRequest;
+
 // let the Database be consistent and do ALL allocations
 // the QObjects are just exposure to QML, all the data lies in the Database
 // when tags change, all the classes need to get them anew from the DB
@@ -312,21 +314,31 @@ void Database::fillArtistInfo(DbArtist *artist)
     }
 }
 
-void Database::startBandcampDownload(Search::BandcampAlbumResult *bc)
+void Database::editItem(DbItem *item)
+{
+    Q_ASSERT(m_editItemType == EditNone);
+    Q_ASSERT(m_editItemSource == SourceNone);
+
+    DbArtist *artist = qobject_cast<DbArtist*>(item);
+    DbAlbum *album = qobject_cast<DbAlbum*>(item);
+    DbSong *song = qobject_cast<DbSong*>(item);
+
+    m_editItemType = artist ? EditArtist : album ? EditAlbum : song ? EditSong : EditNone;
+    m_editItemSource = (m_editItemType != EditNone) ? SourceLibrary : SourceNone;
+    emit stateChanged();
+}
+
+void Database::startDownload(const DownloadRequest &request, Search::Result *result)
 {
     Q_ASSERT(m_requestedDownload.isNull());
     Q_ASSERT(m_editItemType == EditNone);
     Q_ASSERT(m_editItemSource == SourceNone);
 
-    m_requestedDownload.reset(new Download {
-        NetCommon::DownloadRequest {
-            NetCommon::DownloadRequest::BandcampAlbum,
-            bc->url(), 0, bc->artist(), bc->title(), m_library.revision()
-        }, Moosick::TagIdList(), bc, nullptr
-    });
+    m_requestedDownload.reset(new Download { request, Moosick::TagIdList(), result, nullptr });
+    m_requestedDownload->request.currentRevision = m_library.revision();
 
     m_editItemType = EditArtist;
-    m_editItemSource = SourceBandcamp;
+    m_editItemSource = (request.tp == DownloadRequest::BandcampAlbum) ? SourceBandcamp : SourceYoutube;
     emit stateChanged();
 }
 

@@ -23,7 +23,8 @@ public:
     Database::Database *database() const { return m_database; }
     Audio *audio() const { return m_audio; }
 
-    Q_INVOKABLE void addToPlaylist(Search::Result *result, bool append);
+    Q_INVOKABLE void addSearchResultToPlaylist(Search::Result *result, bool append);
+    Q_INVOKABLE void addLibraryItemToPlaylist(Database::DbItem *item, bool append);
     Q_INVOKABLE void download(Search::Result *result);
 
 private:
