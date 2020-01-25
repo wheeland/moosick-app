@@ -282,6 +282,7 @@ void Database::search(QString searchString)
     repopulateSearchResults();
 
     m_searchString = searchString;
+    m_searchKeywords = searchString.split(" ");
     emit searchStringChanged(m_searchString);
 }
 
@@ -417,45 +418,37 @@ void Database::startDownload()
     m_requestedDownload.reset();
 }
 
-void Database::clearSearchResults()
+void Database::repopulateSearchResults()
 {
+    QVector<Moosick::ArtistId> newSearchResults;
+
+    // get all results for new search keywords
+    if (m_searchString.isEmpty()) {
+        newSearchResults = m_library.artistsByName();
+    } else {
+        for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
+            const QString lowerName = artistId.name(m_library).toLower();
+            const bool matches = std::all_of(m_searchKeywords.cbegin(), m_searchKeywords.cend(), [&](const QString &keyword) {
+                return lowerName.contains(keyword);
+            });
+            if (matches)
+                newSearchResults << artistId;
+        }
+    }
+
+    // TODO: we could do smarter than this
     for (const SearchResultArtist &artist : m_searchResults.data()) {
         if (artist.artist)
             artist.artist->deleteLater();
     }
     m_searchResults.clear();
-}
 
-void Database::repopulateSearchResults()
-{
-    clearSearchResults();
-
-    QStringList keywords;
-    for (const QString &searchWord : m_searchString.split(' '))
-        keywords << searchWord.toLower();
-
-    // see if we match the search keywords
-    const auto matchesSearchString = [&](const QString &name) {
-        if (m_searchString.isEmpty())
-            return true;
-
-        const QString lower = name.toLower();
-        return std::all_of(keywords.cbegin(), keywords.cend(), [&](const QString &keyword) {
-            return lower.contains(keyword);
-        });
-    };
-
-    for (const Moosick::ArtistId &artistId : m_library.artistsByName()) {
-        const bool matches = matchesSearchString(artistId.name(m_library));
-
-        // build search result item
-        if (matches) {
-            SearchResultArtist artist;
-            artist.artist = new DbArtist(this, artistId);
-            for (const Moosick::AlbumId &albumId : artistId.albums(m_library))
-                artist.albums << SearchResultAlbum { albumId, albumId.songs(m_library) };
-            m_searchResults.add(artist);
-        }
+    for (const Moosick::ArtistId &artistId : newSearchResults) {
+        SearchResultArtist artist;
+        artist.artist = new DbArtist(this, artistId);
+        for (const Moosick::AlbumId &albumId : artistId.albums(m_library))
+            artist.albums << SearchResultAlbum { albumId, albumId.songs(m_library) };
+        m_searchResults.add(artist);
     }
 }
 

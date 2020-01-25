@@ -119,7 +119,6 @@ private:
     DbTag *getOrCreateDbTag(Moosick::TagId tagId);
     void removeTag(Moosick::TagId tagId);
 
-    void clearSearchResults();
     void repopulateSearchResults();
     void repopulateEditStringList();
     void repopulateTagsModel();
@@ -140,6 +139,14 @@ private:
      * we will save them for later application
      */
     QVector<Moosick::CommittedLibraryChange> m_waitingChanges;
+    /**
+     * TODO:
+     * changes that have been requested at the server, but where the response hasn't yet
+     * been received, plus the waiting changes that we know have finished, but just didn't get
+     * the prior CommitedLibraryChanges, we should all group in a second Library.
+     * This m_overlayLibrary will be based on the synced m_library, but with all pending
+     * patches applied to it.
+     */
 
     /**
      * Data structures for all currently active search results:
@@ -153,6 +160,7 @@ private:
         QVector<SearchResultAlbum> albums;
     };
     QString m_searchString;
+    QStringList m_searchKeywords;
     ModelAdapter::Adapter<SearchResultArtist> m_searchResults;
 
     /**
