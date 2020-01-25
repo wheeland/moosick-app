@@ -5,7 +5,7 @@
 
 namespace Database {
 
-class Database;
+class DatabaseInterface;
 class DbItem;
 class DbTag;
 class DbArtist;
@@ -25,18 +25,18 @@ public:
         Song
     };
 
-    DbItem(Database *db, Type tp, quint32 id);
+    DbItem(DatabaseInterface *db, Type tp, quint32 id);
     ~DbItem() override = default;
 
     Type getType() const { return m_type; }
     quint32 id() const { return m_id; }
 
 protected:
-    Database *database() const { return m_database; }
+    DatabaseInterface *database() const { return m_database; }
     const Moosick::Library &library() const;
 
 private:
-    Database * const m_database;
+    DatabaseInterface * const m_database;
     const Type m_type;
     const quint32 m_id;
 };
@@ -48,7 +48,7 @@ class DbTag : public DbItem
     Q_PROPERTY(ModelAdapter::Model *childTags READ childTagsModel CONSTANT)
 
 public:
-    DbTag(Database *db, Moosick::TagId tag);
+    DbTag(DatabaseInterface *db, Moosick::TagId tag);
     ~DbTag() override = default;
 
     void addChildTag(DbTag *child) { m_childTags.addExclusive(child); }
@@ -74,14 +74,15 @@ class DbTaggedItem : public DbItem
     Q_PROPERTY(ModelAdapter::Model *tags READ tagsModel CONSTANT)
 
 public:
-    DbTaggedItem(Database *db, DbItem::Type tp, quint32 id, const Moosick::TagIdList &tags);
+    DbTaggedItem(DatabaseInterface *db, DbItem::Type tp, quint32 id, const Moosick::TagIdList &tags);
     ~DbTaggedItem() = default;
-
-    void addTag(DbTag *tag) { m_tags.addExclusive(tag); }
-    void removeTag(DbTag *tag) { m_tags.remove(tag); }
 
     QVector<DbTag*> tags() const { return m_tags.data(); }
     ModelAdapter::Model *tagsModel() const { return m_tags.model(); }
+
+protected:
+    void addTag(DbTag *tag) { m_tags.addExclusive(tag); }
+    void removeTag(DbTag *tag) { m_tags.remove(tag); }
 
 private:
     ModelAdapter::Adapter<DbTag*> m_tags;
@@ -94,7 +95,7 @@ class DbArtist : public DbTaggedItem
     Q_PROPERTY(ModelAdapter::Model *albums READ albumsModel NOTIFY albumsChanged)
 
 public:
-    DbArtist(Database *db, Moosick::ArtistId artist);
+    DbArtist(DatabaseInterface *db, Moosick::ArtistId artist);
     ~DbArtist();
 
     QString name() const { return m_artist.name(library()); }
@@ -121,7 +122,7 @@ class DbAlbum : public DbTaggedItem
     Q_PROPERTY(ModelAdapter::Model *songs READ songsModel NOTIFY songsChanged)
 
 public:
-    DbAlbum(Database *db, Moosick::AlbumId album);
+    DbAlbum(DatabaseInterface *db, Moosick::AlbumId album);
     ~DbAlbum();
 
     QString name() const { return m_album.name(library()); }
@@ -149,7 +150,7 @@ class DbSong : public DbTaggedItem
     Q_PROPERTY(int position READ position CONSTANT)
 
 public:
-    DbSong(Database *db, Moosick::SongId song);
+    DbSong(DatabaseInterface *db, Moosick::SongId song);
     ~DbSong() = default;
 
     QString name() const { return m_song.name(library()); }

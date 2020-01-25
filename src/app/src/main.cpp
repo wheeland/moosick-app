@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     qmlRegisterUncreatableType<Search::Result>("Moosick", 1, 0, "SearchResult", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<Playlist::Playlist>("Moosick", 1, 0, "Playlist", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<Playlist::Entry>("Moosick", 1, 0, "PlaylistEntry", "ain't gonna do that from QML!");
-    qmlRegisterUncreatableType<Database::Database>("Moosick", 1, 0, "Database", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<Database::DatabaseInterface>("Moosick", 1, 0, "Database", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<Database::DbTag>("Moosick", 1, 0, "DbTag", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<Database::DbArtist>("Moosick", 1, 0, "DbArtist", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<Database::DbAlbum>("Moosick", 1, 0, "DbAlbum", "ain't gonna do that from QML!");

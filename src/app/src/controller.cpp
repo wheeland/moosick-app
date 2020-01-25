@@ -2,16 +2,12 @@
 
 Controller::Controller(QObject *parent)
     : QObject(parent)
-    , m_httpClient(new HttpClient(this))
-    , m_database(new Database::Database(m_httpClient, this))
+    , m_httpClient(new HttpClient("localhost", 8080, this))
+    , m_database(new Database::DatabaseInterface(m_httpClient, this))
     , m_playlist(new Playlist::Playlist(m_httpClient, this))
     , m_search(new Search::Query(m_httpClient, this))
     , m_audio(new Audio(m_playlist, this))
 {
-    m_httpClient->setHost("localhost");
-    m_httpClient->setPort(8080);
-
-    m_database->sync();
 }
 
 Controller::~Controller()

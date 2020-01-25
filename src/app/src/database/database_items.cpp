@@ -1,9 +1,10 @@
 #include "database_items.hpp"
+#include "database_interface.hpp"
 #include "database.hpp"
 
 namespace Database {
 
-DbItem::DbItem(Database *db, DbItem::Type tp, quint32 id)
+DbItem::DbItem(DatabaseInterface *db, DbItem::Type tp, quint32 id)
     : QObject(db)
     , m_database(db)
     , m_type(tp)
@@ -16,14 +17,14 @@ const Moosick::Library &DbItem::library() const
     return m_database->library();
 }
 
-DbTag::DbTag(Database *db, Moosick::TagId tag)
+DbTag::DbTag(DatabaseInterface *db, Moosick::TagId tag)
     : DbItem(db, DbItem::Tag, tag)
     , m_tag(tag)
 {
     m_childTags.addValueAccessor("tag");
 }
 
-DbTaggedItem::DbTaggedItem(Database *db, DbItem::Type tp, quint32 id, const Moosick::TagIdList &tags)
+DbTaggedItem::DbTaggedItem(DatabaseInterface *db, DbItem::Type tp, quint32 id, const Moosick::TagIdList &tags)
     : DbItem(db, tp, id)
 {
     m_tags.addValueAccessor("tag");
@@ -34,7 +35,7 @@ DbTaggedItem::DbTaggedItem(Database *db, DbItem::Type tp, quint32 id, const Moos
     }
 }
 
-DbArtist::DbArtist(Database *db, Moosick::ArtistId artist)
+DbArtist::DbArtist(DatabaseInterface *db, Moosick::ArtistId artist)
     : DbTaggedItem(db, DbItem::Artist, artist, artist.tags(db->library()))
     , m_artist(artist)
 {
@@ -46,7 +47,7 @@ DbArtist::~DbArtist()
     qDeleteAll(m_albums.data());
 }
 
-DbAlbum::DbAlbum(Database *db, Moosick::AlbumId album)
+DbAlbum::DbAlbum(DatabaseInterface *db, Moosick::AlbumId album)
     : DbTaggedItem(db, DbItem::Album, album, album.tags(db->library()))
     , m_album(album)
 {
@@ -79,7 +80,7 @@ void DbAlbum::removeSong(DbSong *song)
     emit songsChanged();
 }
 
-DbSong::DbSong(Database *db, Moosick::SongId song)
+DbSong::DbSong(DatabaseInterface *db, Moosick::SongId song)
     : DbTaggedItem(db, DbItem::Song, song, song.tags(db->library()))
     , m_song(song)
 {

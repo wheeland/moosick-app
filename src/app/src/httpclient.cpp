@@ -42,9 +42,11 @@ void HttpRequester::requestDone(QNetworkReply *reply, QNetworkReply::NetworkErro
     emit runningRequestsChanged(runningRequests());
 }
 
-HttpClient::HttpClient(QObject *parent)
+HttpClient::HttpClient(const QString &host, quint16 port, QObject *parent)
     : QObject(parent)
     , m_manager(new QNetworkAccessManager(this))
+    , m_host(host)
+    , m_port(port)
 {
     connect(m_manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
         onNetworkReplyFinished(reply, QNetworkReply::NoError);

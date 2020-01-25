@@ -40,7 +40,7 @@ class HttpClient : public QObject
     Q_OBJECT
 
 public:
-    HttpClient(QObject *parent = nullptr);
+    HttpClient(const QString &host, quint16 port, QObject *parent = nullptr);
     ~HttpClient() override;
 
     void setHost(const QString &name);
