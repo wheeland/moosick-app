@@ -158,6 +158,7 @@ private:
     /**
      * Currently edited thing
      */
+    quint32 m_editedItemId;
     EditItemType m_editItemType = EditNone;
     EditItemSource m_editItemSource = SourceNone;
     StringModel *m_editStringList;

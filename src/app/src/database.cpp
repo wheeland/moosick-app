@@ -11,10 +11,11 @@ using NetCommon::DownloadRequest;
 
 namespace Database {
 
-DbItem::DbItem(Database *db, DbItem::Type tp)
+DbItem::DbItem(Database *db, DbItem::Type tp, quint32 id)
     : QObject(db)
     , m_database(db)
     , m_type(tp)
+    , m_id(id)
 {
 }
 
@@ -24,14 +25,14 @@ const Moosick::Library &DbItem::library() const
 }
 
 DbTag::DbTag(Database *db, Moosick::TagId tag)
-    : DbItem(db, DbItem::Tag)
+    : DbItem(db, DbItem::Tag, tag)
     , m_tag(tag)
 {
     m_childTags.addValueAccessor("tag");
 }
 
-DbTaggedItem::DbTaggedItem(Database *db, DbItem::Type tp, const Moosick::TagIdList &tags)
-    : DbItem(db, tp)
+DbTaggedItem::DbTaggedItem(Database *db, DbItem::Type tp, quint32 id, const Moosick::TagIdList &tags)
+    : DbItem(db, tp, id)
 {
     m_tags.addValueAccessor("tag");
     for (Moosick::TagId tagId : tags) {
@@ -42,7 +43,7 @@ DbTaggedItem::DbTaggedItem(Database *db, DbItem::Type tp, const Moosick::TagIdLi
 }
 
 DbArtist::DbArtist(Database *db, Moosick::ArtistId artist)
-    : DbTaggedItem(db, DbItem::Artist, artist.tags(db->library()))
+    : DbTaggedItem(db, DbItem::Artist, artist, artist.tags(db->library()))
     , m_artist(artist)
 {
     m_albums.addValueAccessor("album");
@@ -54,7 +55,7 @@ DbArtist::~DbArtist()
 }
 
 DbAlbum::DbAlbum(Database *db, Moosick::AlbumId album)
-    : DbTaggedItem(db, DbItem::Album, album.tags(db->library()))
+    : DbTaggedItem(db, DbItem::Album, album, album.tags(db->library()))
     , m_album(album)
 {
     m_songs.addValueAccessor("song");
@@ -87,7 +88,7 @@ void DbAlbum::removeSong(DbSong *song)
 }
 
 DbSong::DbSong(Database *db, Moosick::SongId song)
-    : DbTaggedItem(db, DbItem::Song, song.tags(db->library()))
+    : DbTaggedItem(db, DbItem::Song, song, song.tags(db->library()))
     , m_song(song)
 {
 }
@@ -325,6 +326,7 @@ void Database::editItem(DbItem *item)
 
     m_editItemType = artist ? EditArtist : album ? EditAlbum : song ? EditSong : EditNone;
     m_editItemSource = (m_editItemType != EditNone) ? SourceLibrary : SourceNone;
+    m_editedItemId = (item && (m_editItemType != EditNone)) ? item->id() : 0;
     emit stateChanged();
 }
 

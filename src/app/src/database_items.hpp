@@ -25,18 +25,20 @@ public:
         Song
     };
 
-    DbItem(Database *db, Type tp);
+    DbItem(Database *db, Type tp, quint32 id);
     ~DbItem() override = default;
 
     Type getType() const { return m_type; }
+    quint32 id() const { return m_id; }
 
 protected:
     Database *database() const { return m_database; }
     const Moosick::Library &library() const;
 
 private:
-    Database *m_database;
+    Database * const m_database;
     const Type m_type;
+    const quint32 m_id;
 };
 
 class DbTag : public DbItem
@@ -72,7 +74,7 @@ class DbTaggedItem : public DbItem
     Q_PROPERTY(ModelAdapter::Model *tags READ tagsModel CONSTANT)
 
 public:
-    DbTaggedItem(Database *db, DbItem::Type tp, const Moosick::TagIdList &tags);
+    DbTaggedItem(Database *db, DbItem::Type tp, quint32 id, const Moosick::TagIdList &tags);
     ~DbTaggedItem() = default;
 
     void addTag(DbTag *tag) { m_tags.addExclusive(tag); }
