@@ -11,6 +11,7 @@ Item {
     readonly property real choiceRadius: 30
 
     Repeater {
+        id: repeater
         model: _multiChoiceController.options
 
         delegate: Rectangle {
@@ -18,8 +19,9 @@ Item {
 
             readonly property real angle: index * 2.0 * 3.141592 / _multiChoiceController.options.length
 
-            x: _multiChoiceController.centerX + root.radius * Math.sin(angle) - width/2
-            y: _multiChoiceController.centerY + root.radius * Math.cos(angle) - height/2
+            readonly property real rad: repeater.count > 1 ? root.radius : 0
+            x: _multiChoiceController.centerX + rad * Math.sin(angle) - width/2
+            y: _multiChoiceController.centerY - rad * Math.cos(angle) - height/2
 
             width: optionText.width + 40
             height: optionText.height + 20
