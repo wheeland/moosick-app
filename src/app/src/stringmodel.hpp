@@ -36,6 +36,9 @@ private slots:
     void endEditing();
     void updateFilter();
 
+signals:
+    void selected(int id);
+
 private:
     void doSelect(int idx);
 

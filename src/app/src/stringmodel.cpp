@@ -126,6 +126,8 @@ void StringModel::doSelect(int idx)
     if (m_selection != idx) {
         m_selection = idx;
         Q_EMIT dataChanged(index(0), index(m_filteredEntries.size() - 1), QVector<int>{ /*SelectedRole*/ });
+
+        emit selected(selectedId());
     }
 }
 
