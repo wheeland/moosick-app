@@ -13,6 +13,9 @@ Item {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
+        pressAndHoldInterval: 400
+
+        property bool longPressed: false
 
         onClicked: {
             root.clicked();
@@ -22,17 +25,18 @@ Item {
             if (root.options.length === 0)
                 return;
 
+            longPressed = true;
             preventStealing = true;
             _multiChoiceController.show(root, root.options, mouse.x, mouse.y);
         }
 
         onReleased: {
-            if (root.options.length === 0)
-                return;
-
             preventStealing = false;
-            if (_multiChoiceController.selected >= 0)
-                root.selected(_multiChoiceController.selected);
+
+            if (root.options.length > 0 && mouseArea.longPressed) {
+                if (_multiChoiceController.selected >= 0)
+                    root.selected(_multiChoiceController.selected);
+            }
             _multiChoiceController.hide();
         }
 
