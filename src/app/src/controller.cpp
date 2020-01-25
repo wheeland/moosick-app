@@ -82,7 +82,7 @@ void Controller::download(Search::Result *result)
         return;
     }
 
-    m_database->startDownload(request, result);
+    m_database->requestDownload(request, result);
 }
 
 bool Controller::queueBandcampAlbum(Search::BandcampAlbumResult *album, bool append)

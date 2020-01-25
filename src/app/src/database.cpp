@@ -331,7 +331,7 @@ void Database::editItem(DbItem *item)
     emit stateChanged();
 }
 
-void Database::startDownload(const DownloadRequest &request, Search::Result *result)
+void Database::requestDownload(const DownloadRequest &request, Search::Result *result)
 {
     Q_ASSERT(m_requestedDownload.isNull());
     Q_ASSERT(m_editItemType == EditNone);

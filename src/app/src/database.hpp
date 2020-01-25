@@ -92,7 +92,7 @@ public:
     Q_INVOKABLE void editItem(DbItem *item);
     Q_INVOKABLE void editOkClicked();
     Q_INVOKABLE void editCancelClicked();
-    Q_INVOKABLE void startDownload(const NetCommon::DownloadRequest &request, Search::Result *result);
+    Q_INVOKABLE void requestDownload(const NetCommon::DownloadRequest &request, Search::Result *result);
 
 private slots:
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
