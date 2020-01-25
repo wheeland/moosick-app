@@ -96,6 +96,7 @@ public:
 
 private slots:
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
+    void onStringSelected(int id);
 
 signals:
     void hasLibraryChanged();

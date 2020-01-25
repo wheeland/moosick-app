@@ -92,7 +92,7 @@ DbSong::DbSong(Database *db, Moosick::SongId song)
 
 QString DbSong::durationString() const
 {
-    const int secs = m_song.secs(library());
+    const uint secs = m_song.secs(library());
     return QString::asprintf("%d:%02d", secs/60, secs%60);
 }
 
@@ -107,6 +107,8 @@ Database::Database(HttpClient *httpClient, QObject *parent)
     m_searchResults.addAccessor("artist", [&](const SearchResultArtist &artist) {
         return QVariant::fromValue(artist.artist);
     });
+
+    connect(m_editStringList, &StringModel::selected, this, &Database::onStringSelected);
 }
 
 Database::~Database()
@@ -308,9 +310,19 @@ void Database::startBandcampDownload(Search::BandcampAlbumResult *bc)
     emit stateChanged();
 }
 
-void Database::startYoutubeDownload(Search::YoutubeVideoResult *yt)
+void Database::onStringSelected(int id)
 {
+    if (id < 0)
+        return;
 
+    switch (m_editItemType) {
+    case EditArtist:
+        m_tagsModel->setSelectedTagIds(Moosick::ArtistId(id).tags(m_library));
+        break;
+    case EditNone:
+    default:
+        break;
+    }
 }
 
 void Database::editOkClicked()
