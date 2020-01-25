@@ -7,7 +7,7 @@
 #include "controller.hpp"
 #include "search.hpp"
 #include "playlist.hpp"
-#include "database.hpp"
+#include "database/database.hpp"
 #include "stringmodel.hpp"
 #include "selecttagsmodel.hpp"
 #include "multichoicecontroller.hpp"

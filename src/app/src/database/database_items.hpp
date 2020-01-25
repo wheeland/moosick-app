@@ -1,7 +1,7 @@
 #pragma once
 
 #include "library.hpp"
-#include "util/modeladapter.hpp"
+#include "../util/modeladapter.hpp"
 
 namespace Database {
 

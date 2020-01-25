@@ -1,14 +1,17 @@
 #pragma once
 
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QPointer>
 
-#include "httpclient.hpp"
 #include "library.hpp"
-#include "util/modeladapter.hpp"
-#include "stringmodel.hpp"
-#include "selecttagsmodel.hpp"
-#include "database_items.hpp"
+#include "../util/modeladapter.hpp"
 #include "requests.hpp"
+
+class HttpClient;
+class HttpRequester;
+class SelectTagsModel;
+class StringModel;
 
 namespace Search {
 class Result;
@@ -17,6 +20,12 @@ class YoutubeVideoResult;
 }
 
 namespace Database {
+
+class DbItem;
+class DbTag;
+class DbArtist;
+class DbAlbum;
+class DbSong;
 
 /*
 

@@ -15,7 +15,8 @@ SOURCES += \
     src/playlist.cpp \
     src/controller.cpp \
     src/audio.cpp \
-    src/database.cpp \
+    src/database/database.cpp \
+    src/database/database_items.cpp \
     src/stringmodel.cpp \
     src/selecttagsmodel.cpp \
     src/multichoicecontroller.cpp \
@@ -29,8 +30,8 @@ HEADERS += \
     src/playlist.hpp \
     src/controller.hpp \
     src/audio.hpp \
-    src/database.hpp \
-    src/database_items.hpp \
+    src/database/database.hpp \
+    src/database/database_items.hpp \
     src/stringmodel.hpp \
     src/selecttagsmodel.hpp \
     src/multichoicecontroller.hpp \

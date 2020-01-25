@@ -1,7 +1,15 @@
 #pragma once
 
 #include "util/modeladapter.hpp"
-#include "database_items.hpp"
+#include "library.hpp"
+
+namespace Database {
+class DbItem;
+class DbTag;
+class DbArtist;
+class DbAlbum;
+class DbSong;
+}
 
 class SelectTagsModel : public QObject
 {

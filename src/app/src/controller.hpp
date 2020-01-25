@@ -4,7 +4,8 @@
 #include "playlist.hpp"
 #include "audio.hpp"
 #include "httpclient.hpp"
-#include "database.hpp"
+#include "database/database.hpp"
+#include "database/database_items.hpp"
 
 class Controller : public QObject
 {
