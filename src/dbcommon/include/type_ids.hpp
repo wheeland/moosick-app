@@ -47,6 +47,7 @@ struct SongId : public detail::FromU32
 {
     using detail::FromU32::FromU32;
 
+    bool exists(const Library &library) const;
     AlbumId album(const Library &library) const;
     ArtistId artist(const Library &library) const;
     TagIdList tags(const Library &library) const;
@@ -61,6 +62,7 @@ struct AlbumId : public detail::FromU32
 {
     using detail::FromU32::FromU32;
 
+    bool exists(const Library &library) const;
     ArtistId artist(const Library &library) const;
     SongIdList songs(const Library &library) const;
     TagIdList tags(const Library &library) const;
@@ -72,6 +74,7 @@ struct ArtistId : public detail::FromU32
 {
     using detail::FromU32::FromU32;
 
+    bool exists(const Library &library) const;
     AlbumIdList albums(const Library &library) const;
     TagIdList tags(const Library &library) const;
 
@@ -82,6 +85,7 @@ struct TagId : public detail::FromU32
 {
     using detail::FromU32::FromU32;
 
+    bool exists(const Library &library) const;
     TagId parent(const Library &library) const;
     TagIdList children(const Library &library) const;
 

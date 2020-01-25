@@ -397,6 +397,11 @@ QVector<CommittedLibraryChange> Library::committedChangesSince(quint32 revision)
     auto name = library.Collection.findItem(id); \
     if (!name) return {};
 
+bool SongId::exists(const Library &library) const
+{
+    return library.m_songs.contains(m_value);
+}
+
 AlbumId SongId::album(const Library &library) const
 {
     FETCH(song, m_songs, m_value);
@@ -441,6 +446,11 @@ QString SongId::filePath(const Library &library) const
     return QString::number(m_value) + ending;
 }
 
+bool AlbumId::exists(const Library &library) const
+{
+    return library.m_albums.contains(m_value);
+}
+
 ArtistId AlbumId::artist(const Library &library) const
 {
     FETCH(album, m_albums, m_value);
@@ -465,6 +475,11 @@ QString AlbumId::name(const Library &library) const
     return album->name;
 }
 
+bool ArtistId::exists(const Library &library) const
+{
+    return library.m_artists.contains(m_value);
+}
+
 AlbumIdList ArtistId::albums(const Library &library) const
 {
     FETCH(artist, m_artists, m_value);
@@ -481,6 +496,11 @@ QString ArtistId::name(const Library &library) const
 {
     FETCH(artist, m_artists, m_value);
     return artist->name;
+}
+
+bool TagId::exists(const Library &library) const
+{
+    return library.m_tags.contains(m_value);
 }
 
 TagId TagId::parent(const Library &library) const
