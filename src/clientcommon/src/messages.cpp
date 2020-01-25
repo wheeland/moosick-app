@@ -92,7 +92,7 @@ QString Message::format()
         return QString::asprintf("Invalid(%d)", idx);
     }
 
-    return QString::asprintf("%s(%d)", qPrintable(msgNames[idx]), data.size());
+    return QString::asprintf("%s(%d bytes)", qPrintable(msgNames[idx]), data.size());
 }
 
 bool sendRecv(const ServerConfig &server, const Message &message, Message &answer)

@@ -177,7 +177,7 @@ void Server::onNewDataReady(QTcpSocket *socket)
         response.tp = ClientCommon::ChangeListReponse;
         response.data = QJsonDocument(toJson(changes).toArray()).toJson();
 
-        qDebug().nospace() << "Sending ChangeListRequest(" << rev << "), " << changes.size() << "items, to" << socket->peerAddress();
+        qDebug().nospace() << "Sending ChangeListReponse(revision=" << rev << "), " << changes.size() << " items, to" << socket->peerAddress();
         ClientCommon::send(socket, response);
         break;
     }
