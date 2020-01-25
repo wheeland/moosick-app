@@ -214,6 +214,14 @@ void DatabaseInterface::editOkClicked()
 
     if (m_editItemSource == SourceLibrary) {
         Q_ASSERT(m_editedItemId > 0);
+
+        QNetworkReply *reply =
+                (m_editItemType == EditArtist) ? m_db->setArtistDetails(m_editedItemId, enteredName, selectedTags) :
+                (m_editItemType == EditAlbum) ? m_db->setAlbumDetails(m_editedItemId, enteredName, selectedTags) :
+                (m_editItemType == EditSong) ? m_db->setSongDetails(m_editedItemId, enteredName, selectedTags) : nullptr;
+
+        m_editItemType = EditNone;
+        m_editItemSource = SourceNone;
     }
 
     emit stateChanged();
@@ -227,7 +235,6 @@ void DatabaseInterface::editCancelClicked()
     m_editItemSource = SourceNone;
     emit stateChanged();
 }
-
 
 void DatabaseInterface::repopulateSearchResults()
 {

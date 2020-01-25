@@ -4,7 +4,8 @@
 #include "jsonconv.hpp"
 #include "../httpclient.hpp"
 
-using NetCommon::DownloadRequest;
+using Moosick::LibraryChange;
+using Moosick::CommittedLibraryChange;
 
 namespace Database {
 
@@ -50,6 +51,65 @@ QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moos
     return reply;
 }
 
+QNetworkReply *Database::setArtistDetails(Moosick::ArtistId id, const QString &name, const Moosick::TagIdList &tags)
+{
+    return setItemDetails(
+        id, id.name(m_library), id.tags(m_library), name, tags,
+        LibraryChange::ArtistSetName, LibraryChange::ArtistAddTag, LibraryChange::ArtistRemoveTag
+    );
+}
+
+QNetworkReply *Database::setAlbumDetails(Moosick::AlbumId id, const QString &name, const Moosick::TagIdList &tags)
+{
+    return setItemDetails(
+        id, id.name(m_library), id.tags(m_library), name, tags,
+        LibraryChange::AlbumSetName, LibraryChange::AlbumAddTag, LibraryChange::AlbumRemoveTag
+    );
+}
+
+QNetworkReply *Database::setSongDetails(Moosick::SongId id, const QString &name, const Moosick::TagIdList &tags)
+{
+    return setItemDetails(
+        id, id.name(m_library), id.tags(m_library), name, tags,
+        LibraryChange::SongSetName, LibraryChange::SongAddTag, LibraryChange::SongRemoveTag
+    );
+}
+
+QNetworkReply *Database::setItemDetails(
+        quint32 id,
+        const QString &oldName, const Moosick::TagIdList &oldTags,
+        const QString &newName, const Moosick::TagIdList &newTags,
+        LibraryChange::Type setName, LibraryChange::Type addTag, LibraryChange::Type removeTag)
+{
+    QVector<LibraryChange> changes;
+
+    if (oldName != newName)
+        changes << LibraryChange{ setName, id, 0, newName };
+
+    for (Moosick::TagId oldTag : oldTags) {
+        if (!newTags.contains(oldTag))
+            changes << LibraryChange{ removeTag, oldTag, 0, QString() };
+    }
+
+    for (Moosick::TagId newTag : newTags) {
+        if (!oldTags.contains(newTag))
+            changes << LibraryChange{ addTag, newTag, 0, QString() };
+    }
+
+    if (changes.isEmpty())
+        return nullptr;
+
+    QByteArray data;
+    QDataStream writer(&data, QIODevice::WriteOnly);
+    writer << changes;
+
+    const QString query = QString("v=") + data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
+    QNetworkReply *reply = m_http->requestFromServer("/request-changes.do", query);
+    m_requests[reply] = LibraryChanges;
+
+    return reply;
+}
+
 void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error)
 {
     const RequestType requestType = m_requests.take(reply);
@@ -80,6 +140,12 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
             m_runningDownloads.erase(downloadIt);
         }
 
+        break;
+    }
+    case LibraryChanges: {
+        if (!hasError) {
+            applyLibraryChanges(data);
+        }
         break;
     }
     default:

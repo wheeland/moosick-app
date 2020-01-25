@@ -21,6 +21,13 @@ QByteArray toBase64(const T& value)
     return data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
 }
 
+static QByteArray getCommand(QByteArray request)
+{
+    while (!request.isEmpty() && request[0] == '/')
+        request.remove(0, 1);
+    return request;
+}
+
 int main(int argc, char **argv)
 {
     const QByteArray request = qgetenv("REQUEST_URI");
@@ -29,12 +36,12 @@ int main(int argc, char **argv)
 
     // extract command and key/value pairs
     const QList<QByteArray> parts = request.mid(1).split('?');
-    const QByteArray command = parts[0];
+    const QByteArray command = getCommand(parts[0]);
     QHash<QByteArray, QByteArray> values;
     for (const QByteArray &keyValue : parts.value(1).split('&')) {
-        const QList<QByteArray> parts = keyValue.split('=');
-        if (parts.size() == 2)
-            values[parts[0]] = parts[1];
+        const QList<QByteArray> kvPair = keyValue.split('=');
+        if (kvPair.size() == 2)
+            values[kvPair[0]] = kvPair[1];
     }
 
     const QString rootDir = qgetenv("DOCUMENT_ROOT");
@@ -55,9 +62,31 @@ int main(int argc, char **argv)
 
         return 0;
     }
-    else if (command == "change-list.do") {
+    else if (command == "get-change-list.do") {
         if (values.contains("v") && !values["v"].isEmpty()) {
             const ClientCommon::Message request{ ClientCommon::ChangeListRequest, values["v"] };
+            ClientCommon::Message answer;
+            sendRecv(s_server, request, answer);
+
+            std::cout << answer.data.constData() << "\n";
+        } else {
+            std::cout << "[]" << std::endl;
+        }
+
+        return 0;
+    }
+    else if (command == "request-changes.do") {
+        if (values.contains("v") && !values["v"].isEmpty()) {
+            QVector<Moosick::LibraryChange> changes;
+
+            // parse changes
+            QDataStream reader(QByteArray::fromBase64(values["v"], QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals));
+            reader >> changes;
+
+            ClientCommon::Message request{ ClientCommon::ChangesRequest };
+            QDataStream writer(&request.data, QIODevice::WriteOnly);
+            writer << changes;
+
             ClientCommon::Message answer;
             sendRecv(s_server, request, answer);
 

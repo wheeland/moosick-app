@@ -27,6 +27,12 @@ public:
     QNetworkReply *sync();
     QNetworkReply *download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags);
 
+    QNetworkReply *setArtistDetails(Moosick::ArtistId id, const QString &name, const Moosick::TagIdList &tags);
+    QNetworkReply *setAlbumDetails(Moosick::AlbumId id, const QString &name, const Moosick::TagIdList &tags);
+    QNetworkReply *setSongDetails(Moosick::SongId id, const QString &name, const Moosick::TagIdList &tags);
+
+    QNetworkReply *setTagName(Moosick::TagId id, const QString &name);
+
 private slots:
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
 
@@ -37,9 +43,17 @@ private:
     void onNewLibrary(const QJsonObject &json);
     bool applyLibraryChanges(const QByteArray &changesJsonData);
 
+    QNetworkReply *setItemDetails(quint32 id,
+                                  const QString &oldName, const Moosick::TagIdList &oldTags,
+                                  const QString &newName, const Moosick::TagIdList &newTags,
+                                  Moosick::LibraryChange::Type setName,
+                                  Moosick::LibraryChange::Type addTag,
+                                  Moosick::LibraryChange::Type removeTag);
+
     enum RequestType {
         None,
         LibrarySync,
+        LibraryChanges,
         BandcampDownload,
     };
 
