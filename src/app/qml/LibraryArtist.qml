@@ -21,14 +21,14 @@ Rectangle {
         x: 10
         anchors.verticalCenter: tagSpace.verticalCenter
         color: root.textColor
-        text: root.artist.name
+        text: root.artist ? root.artist.name : ""
         font.pixelSize: textSize
         font.bold: true
     }
 
     LibraryTagSpace {
         id: tagSpace
-        model: root.artist.tags
+        model: root.artist ? root.artist.tags : undefined
         anchors {
             left: artistNameText.right
             leftMargin: 50
