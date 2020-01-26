@@ -208,6 +208,26 @@ void Playlist::addFromInternet(
         emit currentSongChanged();
 }
 
+void Playlist::addFromLibrary(const QString &fileName, const QString &artist, const QString &album, const QString &title, int duration, bool append)
+{
+    QString url = "http://";
+    url += m_http->host();
+    url += ":";
+    url += QString::number(m_http->port());
+    url += "/";
+    url += fileName;
+
+    Entry *entry = createEntry(Entry::Library, artist, album, title, url, duration, "");
+
+    if (append)
+        m_entries.add(entry);
+    else
+        m_entries.insert(0, entry);
+
+    if (m_entries.size() == 1)
+        emit currentSongChanged();
+}
+
 Entry *Playlist::createEntry(Entry::Source source,
                              const QString &artist, const QString &album, const QString &title,
                              const QString &url, int duration, const QString &iconUrl)

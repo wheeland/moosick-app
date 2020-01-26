@@ -1,5 +1,10 @@
 #include "controller.hpp"
 
+using Database::DbItem;
+using Database::DbArtist;
+using Database::DbAlbum;
+using Database::DbSong;
+
 Controller::Controller(QObject *parent)
     : QObject(parent)
     , m_httpClient(new HttpClient("localhost", 8080, this))
@@ -54,9 +59,27 @@ void Controller::addSearchResultToPlaylist(Search::Result *result, bool append)
     }
 }
 
-void Controller::addLibraryItemToPlaylist(Database::DbItem *item, bool append)
+void Controller::addLibraryItemToPlaylist(DbItem *item, bool append)
 {
+    QVector<DbSong*> songs;
+    const auto addAlbum = [&](DbAlbum *album) { songs << album->songs(); };
+    const auto addArtist = [&](DbArtist *artist) {
+        for (DbAlbum *album : artist->albums())
+            addAlbum(album);
+    };
 
+    if (DbArtist *artist = qobject_cast<DbArtist*>(item))
+        addArtist(artist);
+    else if (DbAlbum *album = qobject_cast<DbAlbum*>(item))
+        addAlbum(album);
+    else if (DbSong *song = qobject_cast<DbSong*>(item))
+        songs << song;
+
+    for (DbSong *song : songs) {
+        m_playlist->addFromLibrary(
+            song->filePath(), song->artistName(), song->albumName(), song->name(), song->secs(), append
+        );
+    }
 }
 
 void Controller::download(Search::Result *result)

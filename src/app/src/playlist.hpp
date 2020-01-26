@@ -84,6 +84,11 @@ public:
         int duration, const QString &iconUrl, bool append
     );
 
+    void addFromLibrary(
+        const QString &fileName, const QString &artist, const QString &album, const QString &title,
+        int duration, bool append
+    );
+
 signals:
     void currentSongChanged();
     void hasSelectedSongsChanged(bool hasSelectedSongs);
