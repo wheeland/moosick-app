@@ -94,6 +94,18 @@ DbSong::DbSong(DatabaseInterface *db, Moosick::SongId song)
 {
 }
 
+QString DbSong::artistName() const
+{
+    const Moosick::Library &lib = library();
+    return m_song.album(lib).artist(lib).name(lib);
+}
+
+QString DbSong::albumName() const
+{
+    const Moosick::Library &lib = library();
+    return m_song.album(lib).name(lib);
+}
+
 QString DbSong::durationString() const
 {
     const uint secs = m_song.secs(library());
