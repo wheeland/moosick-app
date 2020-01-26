@@ -40,7 +40,7 @@ Rectangle {
     }
 
     MultiChoice {
-        options: ["Edit"]
+        options: ["Play", "Edit"]
         anchors.fill: parent
         anchors.bottomMargin: albumsColumn.height
 
@@ -50,7 +50,8 @@ Rectangle {
         }
 
         onSelected: {
-            if (index === 0) _app.database.editItem(root.artist)
+            if (index === 0) _app.addLibraryItemToPlaylist(root.artist, true);
+            if (index === 1) _app.database.editItem(root.artist);
         }
     }
 

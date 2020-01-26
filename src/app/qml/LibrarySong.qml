@@ -67,7 +67,7 @@ Rectangle {
         onClicked: _app.addLibraryItemToPlaylist(root.song, false);
 
         onSelected: {
-            if (index === 0) _app.addLibraryItemToPlaylist(root.song, false);
+            if (index === 0) _app.addLibraryItemToPlaylist(root.song, true);
             if (index === 1) _app.database.editItem(root.song);
         }
     }

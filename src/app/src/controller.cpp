@@ -68,8 +68,10 @@ void Controller::addLibraryItemToPlaylist(DbItem *item, bool append)
             addAlbum(album);
     };
 
-    if (DbArtist *artist = qobject_cast<DbArtist*>(item))
+    if (DbArtist *artist = qobject_cast<DbArtist*>(item)) {
+        m_database->fillArtistInfo(artist);
         addArtist(artist);
+    }
     else if (DbAlbum *album = qobject_cast<DbAlbum*>(item))
         addAlbum(album);
     else if (DbSong *song = qobject_cast<DbSong*>(item))
