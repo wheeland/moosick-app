@@ -107,11 +107,14 @@ public:
     {
         if (index < 0)
             index = 0;
-        if (index >= m_data.size())
+
+        if (index >= m_data.size()) {
             add(val);
-        beginAdd(index, index);
-        m_data.insert(index, val);
-        endAdd();
+        } else {
+            beginAdd(index, index);
+            m_data.insert(index, val);
+            endAdd();
+        }
     }
 
     void remove(const T &val)
