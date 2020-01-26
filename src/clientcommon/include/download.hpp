@@ -16,4 +16,11 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
         const QString &toolDir,
         const QString &tempDir);
 
+QVector<Moosick::CommittedLibraryChange> youtubeDownload(
+        const ServerConfig &server,
+        const NetCommon::DownloadRequest &request,
+        const QString &mediaDir,
+        const QString &toolDir,
+        const QString &tempDir);
+
 } //namespace ClientCommon

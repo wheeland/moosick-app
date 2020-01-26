@@ -39,7 +39,7 @@ QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moos
     switch (request.tp) {
     case NetCommon::DownloadRequest::BandcampAlbum: {
         const QString query = QString("v=") + request.toBase64();
-        reply = m_http->requestFromServer("/bandcamp-download.do", query);
+        reply = m_http->requestFromServer("/download.do", query);
         m_requests[reply] = BandcampDownload;
         break;
     }

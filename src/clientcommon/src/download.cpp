@@ -10,9 +10,46 @@
 
 static QString createTempDir(const QString &dir)
 {
+    QProcess::execute("mkdir -p " + dir);
     QByteArray out;
     ClientCommon::runProcess("mktemp", {"-d", "-p", dir}, &out, nullptr, 1000);
     return QString(out).trimmed();
+}
+
+static QString createTempFile(const QString &dir, const QString &suffix = QString())
+{
+    QProcess::execute("mkdir -p " + dir);
+    QByteArray out;
+    ClientCommon::runProcess("tempfile", {"-d", dir, "-s", suffix}, &out, nullptr, 1000);
+    return QString(out).trimmed();
+}
+
+struct YoutubeChapter
+{
+    QString title;
+    int startTime;
+    int endTime;
+};
+
+struct YoutubeInfo
+{
+    QString title;
+    int duration;
+    QVector<YoutubeChapter> chapters;
+};
+
+YoutubeInfo parseInfo(const QString &url, const QString &toolDir)
+{
+    QByteArray out, err;
+    int status = ClientCommon::runProcess(toolDir + "/node", {toolDir + "/get-youtube-info.js", url}, &out, &err, 60000);
+
+    const QJsonDocument doc = QJsonDocument::fromJson(out);
+    const QJsonObject root = doc.object();
+
+    YoutubeInfo ret;
+    ret.title = root.value("title").toString();
+    ret.duration = root.value("duration").toInt();
+    return ret;
 }
 
 namespace ClientCommon {
@@ -58,8 +95,8 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
     const int numSongs = albumInfo.tracks.size();
 
     // download album into temp. directory
-    QProcess::execute("mkdir -p " + tempDir);
     const QString dstDir = createTempDir(tempDir) + "/";
+    REQUIRE(!dstDir.isEmpty());
     status = runProcess(toolDir + "/bandcamp-dl", {
                    QString("--base-dir=") + dstDir,
                    "--template=%{track}",
@@ -134,6 +171,97 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetLength, id, albumInfo.tracks[i].secs, "");
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetPosition, id, i+1, "");
     }
+    REQUIRE(sendChanges(server, songDetails, resultChanges));
+    REQUIRE(resultChanges.size() == songDetails.size());
+    ret << resultChanges;
+
+    // get whole change-list from beginning from server
+    const ClientCommon::Message changeListRequest{ ClientCommon::ChangeListRequest, QByteArray::number(request.currentRevision) };
+    ClientCommon::Message answer;
+    REQUIRE(sendRecv(server, changeListRequest, answer));
+
+    QVector<Moosick::CommittedLibraryChange> appliedChanges;
+    REQUIRE(fromJson(parseJsonArray(answer.data, ""), appliedChanges));
+
+    return appliedChanges;
+
+#undef REQUIRE
+}
+
+QVector<Moosick::CommittedLibraryChange> youtubeDownload(
+        const ServerConfig &server,
+        const NetCommon::DownloadRequest &request,
+        const QString &mediaDir,
+        const QString &toolDir,
+        const QString &tempDir)
+{
+    QByteArray out, err;
+    QVector<Moosick::CommittedLibraryChange> ret;
+
+#define REQUIRE(condition) do { if (!(condition)) { qWarning() << "Failed:" << #condition; return {}; } } while (0)
+
+    REQUIRE(request.tp == NetCommon::DownloadRequest::YoutubeVideo);
+
+    // download video into temp. file
+    QByteArray dstFileName;
+    int status = runProcess(toolDir + "/youtube-dl",
+                        {"--quiet", "--ignore-errors", "--extract-audio", "--exec", "echo {}", request.url},
+                        &dstFileName, &err, 120000);
+    dstFileName = dstFileName.split('\n').first().trimmed();
+    if (status != 0) {
+        qWarning() << "youtube-dl failed, status =" << status;
+        qWarning() << "stdout:";
+        qWarning().noquote() << out;
+        qWarning() << "stderr:";
+        qWarning().noquote() << err;
+        return {};
+    }
+    REQUIRE(QFile::exists(dstFileName));
+
+    // add artist, if not yet existing
+    Moosick::ArtistId artistId = request.artistId;
+    QVector<Moosick::CommittedLibraryChange> resultChanges;
+    if (!artistId.isValid()) {
+        const Moosick::LibraryChange addArtist(Moosick::LibraryChange::ArtistAdd, 0, 0, request.artistName);
+        REQUIRE(sendChanges(server, {addArtist}, resultChanges));
+        REQUIRE(!resultChanges.isEmpty());
+        REQUIRE(resultChanges.first().change.changeType == Moosick::LibraryChange::ArtistAdd);
+        REQUIRE(resultChanges.first().change.detail != 0);
+        artistId = resultChanges.first().change.detail;
+        ret << resultChanges;
+    }
+
+    // add album to database
+    const Moosick::LibraryChange addAlbum(Moosick::LibraryChange::AlbumAdd, artistId, 0, request.albumName);
+    REQUIRE(sendChanges(server, {addAlbum}, resultChanges));
+    REQUIRE(!resultChanges.isEmpty());
+    REQUIRE(resultChanges.first().change.changeType == Moosick::LibraryChange::AlbumAdd);
+    REQUIRE(resultChanges.first().change.detail != 0);
+    ret << resultChanges;
+    const Moosick::AlbumId albumId = resultChanges.first().change.detail;
+
+    // get meta-info
+    const YoutubeInfo videoInfo = parseInfo(request.url, toolDir);
+
+    // add song to database
+    const Moosick::LibraryChange addSong(Moosick::LibraryChange::SongAdd, albumId, 0, videoInfo.title);
+    REQUIRE(sendChanges(server, {addSong}, resultChanges));
+    REQUIRE(resultChanges.size() == 1);
+    REQUIRE(resultChanges[0].change.changeType == Moosick::LibraryChange::SongAdd);
+    REQUIRE(resultChanges[0].change.detail != 0);
+    ret << resultChanges;
+
+    // move songs to media directory
+    const QString ending = dstFileName.split('.').last();
+    REQUIRE(!ending.isEmpty());
+    const quint32 songId = resultChanges[0].change.detail;
+    const QString newFilePath = mediaDir + QString::number(songId) + "." + ending;
+    QFile(dstFileName).rename(newFilePath);
+
+    // set library information for new song
+    QVector<Moosick::LibraryChange> songDetails;
+    songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetFileEnding, songId, 0, QString(".") + ending);
+    songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetLength, songId, videoInfo.duration, "");
     REQUIRE(sendChanges(server, songDetails, resultChanges));
     REQUIRE(resultChanges.size() == songDetails.size());
     ret << resultChanges;

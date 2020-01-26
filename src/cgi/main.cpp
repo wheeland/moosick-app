@@ -105,7 +105,7 @@ int main(int argc, char **argv)
             std::cout << "[]" << std::endl;
         return 0;
     }
-    else if (command == "bandcamp-download.do") {
+    else if (command == "download.do") {
         if (!values.contains("v") || values["v"].isEmpty())
             return 0;
 
