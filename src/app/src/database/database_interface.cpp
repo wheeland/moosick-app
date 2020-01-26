@@ -173,9 +173,8 @@ void DatabaseInterface::editItem(DbItem *item)
 
 void DatabaseInterface::requestDownload(const NetCommon::DownloadRequest &request, Search::Result *result)
 {
-    Q_ASSERT(m_requestedDownload.isNull());
-    Q_ASSERT(m_editItemType == EditNone);
-    Q_ASSERT(m_editItemSource == SourceNone);
+    if (!m_requestedDownload.isNull() || (m_editItemType != EditNone) || (m_editItemSource != SourceNone))
+        return;
 
     m_requestedDownload.reset(new DownloadRequest { request, Moosick::TagIdList(), result });
 
