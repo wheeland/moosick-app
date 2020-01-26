@@ -29,6 +29,7 @@ void MultiChoiceController::move(qreal x, qreal y)
 void MultiChoiceController::hide()
 {
     m_visible = false;
+    m_options.clear();
     emit popupChanged();
 }
 

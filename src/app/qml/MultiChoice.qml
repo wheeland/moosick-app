@@ -28,6 +28,7 @@ Item {
             longPressed = true;
             preventStealing = true;
             _multiChoiceController.show(root, root.options, mouse.x, mouse.y);
+            _multiChoiceController.move(mouse.x, mouse.y);
         }
 
         onReleased: {

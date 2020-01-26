@@ -45,6 +45,7 @@ Item {
                 (_multiChoiceController.mouseY <= y + height)
 
             onSelectedChanged: _multiChoiceController.setSelected(index, selected)
+            Component.onCompleted: _multiChoiceController.setSelected(index, selected)
         }
     }
 }
