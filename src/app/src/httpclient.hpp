@@ -15,6 +15,9 @@ public:
     HttpRequester(HttpClient *client, QObject *parent = nullptr);
     ~HttpRequester();
 
+    QString host() const;
+    quint16 port() const;
+
     QNetworkReply *request(const QNetworkRequest &request);
     QNetworkReply *requestFromServer(const QString &path, const QString &query);
 
@@ -45,6 +48,9 @@ public:
 
     void setHost(const QString &name);
     void setPort(quint16 port);
+
+    QString host() const { return m_host; }
+    quint16 port() const { return m_port; }
 
 private:
     QNetworkReply *request(HttpRequester *requester, const QNetworkRequest &request);

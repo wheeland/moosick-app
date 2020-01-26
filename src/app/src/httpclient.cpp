@@ -10,6 +10,16 @@ HttpRequester::~HttpRequester()
 {
 }
 
+QString HttpRequester::host() const
+{
+    return m_httpClient->m_host;
+}
+
+quint16 HttpRequester::port() const
+{
+    return m_httpClient->m_port;
+}
+
 QNetworkReply *HttpRequester::request(const QNetworkRequest &request)
 {
     m_runningQueries << m_httpClient->request(this, request);
