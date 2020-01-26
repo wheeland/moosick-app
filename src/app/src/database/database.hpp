@@ -55,6 +55,7 @@ private:
         LibrarySync,
         LibraryChanges,
         BandcampDownload,
+        YoutubeDownload,
     };
 
     bool m_hasLibrary = false;

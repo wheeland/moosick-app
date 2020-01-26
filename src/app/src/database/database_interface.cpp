@@ -182,7 +182,7 @@ void DatabaseInterface::requestDownload(const NetCommon::DownloadRequest &reques
     m_editItemSource = (request.tp == NetCommon::DownloadRequest::BandcampAlbum) ? SourceBandcamp : SourceYoutube;
     m_editedItemId = 0;
 
-    m_editStringList->popup("");
+    m_editStringList->popup(request.artistName);
     m_tagsModel->setSelectedTagIds({});
 
     emit stateChanged();
@@ -227,6 +227,30 @@ void DatabaseInterface::editOkClicked()
         QNetworkReply *reply = m_db->download(m_requestedDownload->request, m_requestedDownload->albumTags);
         m_downloads[reply] = m_requestedDownload->searchResult;
         m_requestedDownload.reset();
+    }
+
+    if (m_editItemSource == SourceYoutube) {
+        Q_ASSERT(!m_requestedDownload.isNull());
+
+        if (m_editItemType == EditArtist) {
+            if (selectedId > 0) {
+                m_requestedDownload->request.artistId = selectedId;
+            } else {
+                m_requestedDownload->request.artistName = enteredName;
+                m_requestedDownload->albumTags = selectedTags;
+            }
+            m_editItemType = EditAlbum;
+            m_editStringList->popup("");
+        }
+        else if (m_editItemType == EditAlbum) {
+            m_editItemType = EditNone;
+            m_editItemSource = SourceNone;
+
+            m_requestedDownload->request.albumName = m_editStringList->enteredString();
+            QNetworkReply *reply = m_db->download(m_requestedDownload->request, m_requestedDownload->albumTags);
+            m_downloads[reply] = m_requestedDownload->searchResult;
+            m_requestedDownload.reset();
+        }
     }
 
     if (m_editItemSource == SourceLibrary) {

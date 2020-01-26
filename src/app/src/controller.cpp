@@ -98,6 +98,15 @@ void Controller::download(Search::Result *result)
         };
         break;
     }
+    case Search::Result::YoutubeVideo: {
+        Search::YoutubeVideoResult *yt = qobject_cast<Search::YoutubeVideoResult*>(result);
+        Q_ASSERT(yt);
+        request = NetCommon::DownloadRequest {
+            NetCommon::DownloadRequest::YoutubeVideo,
+            yt->videoUrl(), 0, "", yt->title(), 0
+        };
+        break;
+    }
     default:
         qWarning() << "Not supported";
         return;

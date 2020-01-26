@@ -115,7 +115,7 @@ int main(int argc, char **argv)
             return 0;
         }
 
-        const QVector<Moosick::CommittedLibraryChange> changes = ClientCommon::bandcampDownload(
+        const QVector<Moosick::CommittedLibraryChange> changes = ClientCommon::download(
                     s_server, request, mediaDir, toolDir, tmpDir);
 
         std::cout << QJsonDocument(toJson(changes).toArray()).toJson().constData() << std::endl;

@@ -70,6 +70,37 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
         const NetCommon::DownloadRequest &request,
         const QString &mediaDir,
         const QString &toolDir,
+        const QString &tempDir);
+
+QVector<Moosick::CommittedLibraryChange> youtubeDownload(
+        const ServerConfig &server,
+        const NetCommon::DownloadRequest &request,
+        const QString &mediaDir,
+        const QString &toolDir,
+        const QString &tempDir);
+
+QVector<Moosick::CommittedLibraryChange> download(
+        const ServerConfig &server,
+        const NetCommon::DownloadRequest &request,
+        const QString &mediaDir,
+        const QString &toolDir,
+        const QString &tempDir)
+{
+    switch (request.tp) {
+    case NetCommon::DownloadRequest::BandcampAlbum:
+        return bandcampDownload(server, request, mediaDir, toolDir, tempDir);
+    case NetCommon::DownloadRequest::YoutubeVideo:
+        return youtubeDownload(server, request, mediaDir, toolDir, tempDir);
+    default:
+        return {};
+    }
+}
+
+QVector<Moosick::CommittedLibraryChange> bandcampDownload(
+        const ServerConfig &server,
+        const NetCommon::DownloadRequest &request,
+        const QString &mediaDir,
+        const QString &toolDir,
         const QString &tempDir)
 {
     QVector<Moosick::CommittedLibraryChange> ret;
@@ -296,7 +327,7 @@ QVector<Moosick::CommittedLibraryChange> youtubeDownload(
     REQUIRE(!ending.isEmpty());
     for (int i = 0; i < resultChanges.size(); ++i) {
         const quint32 songId = resultChanges[i].change.detail;
-        const QString newFilePath = mediaDir + QString::number(songId) + "." + ending;
+        const QString newFilePath = mediaDir + "/" + QString::number(songId) + "." + ending;
         QFile(resultSongs[i].file).rename(newFilePath);
     }
 

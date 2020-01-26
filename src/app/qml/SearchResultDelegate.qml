@@ -47,12 +47,11 @@ Item {
         anchors { right: parent.right; top: parent.top; margins: 10 }
         color: root.textColor
         text: {
-            switch (root.result.status) {
-            case SearchResult.InfoOnly: return "InfoOnly";
-            case SearchResult.Querying: return "Querying";
-            case SearchResult.Error: return "Error";
-            case SearchResult.Done: return "Done";
-            default: return "null";
+            switch (root.result.downloadStatus) {
+            case SearchResult.DownloadNotStarted: return "";
+            case SearchResult.DownloadStarted: return "Downloading..";
+            case SearchResult.DownloadDone: return "Downloaded!";
+            default: return "";
             }
         }
         font.italic: true
@@ -78,7 +77,7 @@ Item {
             case SearchResult.BandcampArtist: return [];
             case SearchResult.BandcampAlbum: return ["Prepend", "Append", "Download"];
             case SearchResult.BandcampTrack: return ["Prepend", "Append"];
-            case SearchResult.YoutubeVideo: return ["Prepend", "Append"];
+            case SearchResult.YoutubeVideo: return ["Prepend", "Append", "Download"];
             case SearchResult.YoutubePlaylist: return ["Prepend", "Append"];
             default: return [];
             }

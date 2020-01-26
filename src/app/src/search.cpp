@@ -96,9 +96,10 @@ BandcampTrackResult::BandcampTrackResult(BandcampAlbumResult *album, const QStri
 {
 }
 
-YoutubeVideoResult::YoutubeVideoResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent)
+YoutubeVideoResult::YoutubeVideoResult(const QString &title, const QString &url, const QString &original, const QString &icon, int secs, QObject *parent)
     : Result(YoutubeVideo, title, url, icon, parent)
     , m_secs(secs)
+    , m_originalUrl(original)
 {
 }
 
@@ -212,7 +213,7 @@ bool Query::populateRootResults(const QByteArray &json)
         else if (type == "video") {
             const QString audioUrl = entry["audioUrl"].toString();
             const int secs = entry["duration"].toInt();
-            newResults << createYoutubeVideoResult(artist, name, audioUrl, icon, secs);
+            newResults << createYoutubeVideoResult(artist, name, audioUrl, url, icon, secs);
         }
         else if (type == "playlist") {
             qWarning() << "playlist not implemented";
@@ -365,9 +366,9 @@ BandcampArtistResult *Query::createArtistResult(const QString &name, const QStri
     return artist;
 }
 
-YoutubeVideoResult *Query::createYoutubeVideoResult(const QString &artist, const QString &name, const QString &url, const QString &icon, int secs)
+YoutubeVideoResult *Query::createYoutubeVideoResult(const QString &artist, const QString &name, const QString &audioUrl, const QString &url, const QString &icon, int secs)
 {
-    YoutubeVideoResult *video = new YoutubeVideoResult(name, url, icon, secs, this);
+    YoutubeVideoResult *video = new YoutubeVideoResult(name, audioUrl, url, icon, secs, this);
     requestIcon(video);
     return video;
 }

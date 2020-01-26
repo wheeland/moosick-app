@@ -232,7 +232,7 @@ int main(int argc, char **argv)
                 parts[0], parts[1].toUInt(), parts[1], parts[2], parts[3].toUInt()
             };
 
-            const QVector<Moosick::CommittedLibraryChange> ret = ClientCommon::bandcampDownload(s_serverConfig, download, mediaDir, toolsDir, tempDir);
+            const QVector<Moosick::CommittedLibraryChange> ret = ClientCommon::download(s_serverConfig, download, mediaDir, toolsDir, tempDir);
             for (const Moosick::CommittedLibraryChange &ch : ret)
                 qWarning().noquote() << ch.revision << ":" << answerToString(ch.change);
         }
@@ -248,7 +248,7 @@ int main(int argc, char **argv)
                 parts[0], parts[1].toUInt(), parts[1], parts[2], parts[3].toUInt()
             };
 
-            const QVector<Moosick::CommittedLibraryChange> ret = ClientCommon::youtubeDownload(s_serverConfig, download, mediaDir, toolsDir, tempDir);
+            const QVector<Moosick::CommittedLibraryChange> ret = ClientCommon::download(s_serverConfig, download, mediaDir, toolsDir, tempDir);
             for (const Moosick::CommittedLibraryChange &ch : ret)
                 qWarning().noquote() << ch.revision << ":" << answerToString(ch.change);
         }

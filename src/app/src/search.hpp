@@ -147,14 +147,17 @@ class YoutubeVideoResult : public Result
 {
     Q_OBJECT
     Q_PROPERTY(int secs READ secs CONSTANT)
+    Q_PROPERTY(QString videoUrl READ videoUrl CONSTANT)
 
 public:
-    YoutubeVideoResult(const QString &title, const QString &url, const QString &icon, int secs, QObject *parent = nullptr);
+    YoutubeVideoResult(const QString &title, const QString &url, const QString &original, const QString &icon, int secs, QObject *parent = nullptr);
     ~YoutubeVideoResult() = default;
     int secs() const { return m_secs; }
+    QString videoUrl() const { return m_originalUrl; }
 
 private:
     int m_secs;
+    QString m_originalUrl;
 };
 
 /**
@@ -201,7 +204,7 @@ private:
 
     BandcampAlbumResult *createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon);
     BandcampArtistResult *createArtistResult(const QString &name, const QString &url, const QString &icon);
-    YoutubeVideoResult *createYoutubeVideoResult(const QString &artist, const QString &name, const QString &url, const QString &icon, int secs);
+    YoutubeVideoResult *createYoutubeVideoResult(const QString &artist, const QString &name, const QString &audioUrl, const QString &url, const QString &icon, int secs);
 
     bool populateRootResults(const QByteArray &json);
     void populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);

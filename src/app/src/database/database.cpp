@@ -43,8 +43,15 @@ QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moos
         m_requests[reply] = BandcampDownload;
         break;
     }
+    case NetCommon::DownloadRequest::YoutubeVideo: {
+        const QString query = QString("v=") + request.toBase64();
+        reply = m_http->requestFromServer("/download.do", query);
+        m_requests[reply] = YoutubeDownload;
+        break;
+    }
     default:
-        qFatal("No Such download request supported");
+        qFatal("no such download");
+        return nullptr;
     }
 
     m_runningDownloads << Download { request, albumTags, reply };
@@ -126,7 +133,8 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
             onNewLibrary(parseJsonObject(data, "Library"));
         break;
     }
-    case BandcampDownload: {
+    case BandcampDownload:
+    case YoutubeDownload: {
         const auto downloadIt = std::find_if(m_runningDownloads.begin(), m_runningDownloads.end(), [&](const Download &download) {
             return download.networkReply == reply;
         });
