@@ -49,6 +49,17 @@ YoutubeInfo parseInfo(const QString &url, const QString &toolDir)
     YoutubeInfo ret;
     ret.title = root.value("title").toString();
     ret.duration = root.value("duration").toInt();
+    for (const QJsonValue &chapterVal : root.value("chapters").toArray()) {
+        const QJsonObject obj = chapterVal.toObject();
+        const YoutubeChapter chapter {
+            obj.value("title").toString(),
+            obj.value("start_time").toInt(),
+            obj.value("end_time").toInt(),
+        };
+        if (!chapter.title.isEmpty() && chapter.startTime >= 0 && chapter.endTime > 0) {
+            ret.chapters << chapter;
+        }
+    }
     return ret;
 }
 
@@ -217,6 +228,35 @@ QVector<Moosick::CommittedLibraryChange> youtubeDownload(
         return {};
     }
     REQUIRE(QFile::exists(dstFileName));
+    const QString ending = dstFileName.split('.').last();
+
+    struct ResultSong {
+        QString title;
+        QString file;
+        int duration;
+    };
+    QVector<ResultSong> resultSongs;
+
+    // get meta-info, and maybe split file into multiple chapters
+    const YoutubeInfo videoInfo = parseInfo(request.url, toolDir);
+    bool hasChapters = !videoInfo.chapters.isEmpty();
+    for (const YoutubeChapter &chapter : videoInfo.chapters) {
+        const QString chapterFile = createTempFile(tempDir, QString(".") + ending);
+        REQUIRE(QFile::exists(chapterFile));
+        const int ffmpegStatus = runProcess(toolDir + "/ffmpeg", QStringList{
+            "-ss", QString::number(chapter.startTime), "-t", QString::number(chapter.endTime),
+            "-i", dstFileName, "-y", "-c", "copy", chapterFile}, &out, &err, 120000);
+
+        // TODO: force overwrite for ffmpeg
+        if (ffmpegStatus != 0) {
+            qWarning() << "Couldn't split file into chapters";
+            hasChapters = false;
+            break;
+        }
+        resultSongs << ResultSong{chapter.title, chapterFile, chapter.endTime - chapter.startTime};
+    }
+    if (resultSongs.isEmpty())
+        resultSongs << ResultSong{videoInfo.title, dstFileName, videoInfo.duration};
 
     // add artist, if not yet existing
     Moosick::ArtistId artistId = request.artistId;
@@ -240,28 +280,34 @@ QVector<Moosick::CommittedLibraryChange> youtubeDownload(
     ret << resultChanges;
     const Moosick::AlbumId albumId = resultChanges.first().change.detail;
 
-    // get meta-info
-    const YoutubeInfo videoInfo = parseInfo(request.url, toolDir);
-
-    // add song to database
-    const Moosick::LibraryChange addSong(Moosick::LibraryChange::SongAdd, albumId, 0, videoInfo.title);
-    REQUIRE(sendChanges(server, {addSong}, resultChanges));
-    REQUIRE(resultChanges.size() == 1);
-    REQUIRE(resultChanges[0].change.changeType == Moosick::LibraryChange::SongAdd);
-    REQUIRE(resultChanges[0].change.detail != 0);
+    // add song(s) to database
+    QVector<Moosick::LibraryChange> songChanges;
+    for (const ResultSong &song : resultSongs)
+        songChanges << Moosick::LibraryChange(Moosick::LibraryChange::SongAdd, albumId, 0, song.title);
+    REQUIRE(sendChanges(server, songChanges, resultChanges));
+    REQUIRE(resultChanges.size() == songChanges.size());
+    for (const Moosick::CommittedLibraryChange &result : resultChanges) {
+        REQUIRE(result.change.changeType == Moosick::LibraryChange::SongAdd);
+        REQUIRE(result.change.detail != 0);
+    }
     ret << resultChanges;
 
     // move songs to media directory
-    const QString ending = dstFileName.split('.').last();
     REQUIRE(!ending.isEmpty());
-    const quint32 songId = resultChanges[0].change.detail;
-    const QString newFilePath = mediaDir + QString::number(songId) + "." + ending;
-    QFile(dstFileName).rename(newFilePath);
+    for (int i = 0; i < resultChanges.size(); ++i) {
+        const quint32 songId = resultChanges[i].change.detail;
+        const QString newFilePath = mediaDir + QString::number(songId) + "." + ending;
+        QFile(resultSongs[i].file).rename(newFilePath);
+    }
 
     // set library information for new song
     QVector<Moosick::LibraryChange> songDetails;
-    songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetFileEnding, songId, 0, QString(".") + ending);
-    songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetLength, songId, videoInfo.duration, "");
+    for (int i = 0; i < resultChanges.size(); ++i) {
+        const quint32 songId = resultChanges[i].change.detail;
+        songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetFileEnding, songId, 0, QString(".") + ending);
+        songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetLength, songId, resultSongs[i].duration, "");
+        songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetPosition, songId, i + 1    , "");
+    }
     REQUIRE(sendChanges(server, songDetails, resultChanges));
     REQUIRE(resultChanges.size() == songDetails.size());
     ret << resultChanges;
@@ -273,6 +319,9 @@ QVector<Moosick::CommittedLibraryChange> youtubeDownload(
 
     QVector<Moosick::CommittedLibraryChange> appliedChanges;
     REQUIRE(fromJson(parseJsonArray(answer.data, ""), appliedChanges));
+
+    if (hasChapters)
+        QFile(dstFileName).remove();
 
     return appliedChanges;
 
