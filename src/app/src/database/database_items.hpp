@@ -78,6 +78,7 @@ public:
     ~DbTaggedItem() = default;
 
     QVector<DbTag*> tags() const { return m_tags.data(); }
+    Moosick::TagIdList tagIds() const;
     ModelAdapter::Model *tagsModel() const { return m_tags.model(); }
 
 protected:

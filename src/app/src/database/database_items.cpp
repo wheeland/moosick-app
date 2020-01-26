@@ -35,6 +35,14 @@ DbTaggedItem::DbTaggedItem(DatabaseInterface *db, DbItem::Type tp, quint32 id, c
     }
 }
 
+Moosick::TagIdList DbTaggedItem::tagIds() const
+{
+    Moosick::TagIdList ret;
+    for (DbTag *tag : m_tags.data())
+        ret << tag->id();
+    return ret;
+}
+
 DbArtist::DbArtist(DatabaseInterface *db, Moosick::ArtistId artist)
     : DbTaggedItem(db, DbItem::Artist, artist, artist.tags(db->library()))
     , m_artist(artist)

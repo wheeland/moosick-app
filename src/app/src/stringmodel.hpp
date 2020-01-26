@@ -29,7 +29,6 @@ public:
     int selectedId() const;
     QString enteredString() const;
 
-    Q_INVOKABLE void select(int id);
     Q_INVOKABLE void entered(const QString &string);
 
 private slots:
@@ -37,6 +36,7 @@ private slots:
     void updateFilter();
 
 signals:
+    void popup(const QString &initialString);
     void selected(int id);
 
 private:

@@ -145,11 +145,6 @@ QString StringModel::enteredString() const
             : m_manualString;
 }
 
-void StringModel::select(int id)
-{
-    doSelect(qBound(0, id, m_entries.size() - 1));
-}
-
 void StringModel::entered(const QString &string)
 {
     m_manualString = string;

@@ -147,13 +147,27 @@ void DatabaseInterface::editItem(DbItem *item)
     Q_ASSERT(m_editItemType == EditNone);
     Q_ASSERT(m_editItemSource == SourceNone);
 
-    DbArtist *artist = qobject_cast<DbArtist*>(item);
-    DbAlbum *album = qobject_cast<DbAlbum*>(item);
-    DbSong *song = qobject_cast<DbSong*>(item);
+    if (DbArtist *artist = qobject_cast<DbArtist*>(item)) {
+        m_editItemType = EditArtist;
+        m_editStringList->popup(artist->name());
+        m_tagsModel->setSelectedTagIds(artist->tagIds());
+    }
+    else if (DbAlbum *album = qobject_cast<DbAlbum*>(item)) {
+        m_editItemType = EditAlbum;
+        m_editStringList->popup(album->name());
+        m_tagsModel->setSelectedTagIds(album->tagIds());
+    }
+    else if (DbSong *song = qobject_cast<DbSong*>(item)) {
+        m_editItemType = EditSong;
+        m_editStringList->popup(song->name());
+        m_tagsModel->setSelectedTagIds(song->tagIds());
+    } else {
+        m_editItemType = EditNone;
+    }
 
-    m_editItemType = artist ? EditArtist : album ? EditAlbum : song ? EditSong : EditNone;
     m_editItemSource = (m_editItemType != EditNone) ? SourceLibrary : SourceNone;
     m_editedItemId = (item && (m_editItemType != EditNone)) ? item->id() : 0;
+
     emit stateChanged();
 }
 
@@ -168,6 +182,10 @@ void DatabaseInterface::requestDownload(const NetCommon::DownloadRequest &reques
     m_editItemType = EditArtist;
     m_editItemSource = (request.tp == NetCommon::DownloadRequest::BandcampAlbum) ? SourceBandcamp : SourceYoutube;
     m_editedItemId = 0;
+
+    m_editStringList->popup("");
+    m_tagsModel->setSelectedTagIds({});
+
     emit stateChanged();
 }
 

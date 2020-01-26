@@ -20,6 +20,14 @@ Rectangle {
 
     property bool showTags: false
 
+    Connections {
+        target: root.stringsModel
+        onPopup: {
+            textInput.text = initialString
+            root.showTags = false;
+        }
+    }
+
     SimpleButton {
         id: cancelButton
         label: "Cancel"
