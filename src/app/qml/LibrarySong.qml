@@ -18,7 +18,7 @@ Rectangle {
         x: 5
         width: 1.5 * textSize
         color: root.textColor
-        text: root.song.position
+        text: root.song ? root.song.position : ""
         font.pixelSize: textSize
         horizontalAlignment: Text.AlignRight
     }
@@ -28,14 +28,14 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         x: 50
         color: root.textColor
-        text: root.song.name
+        text: root.song ? root.song.name : ""
         font.bold: true
         font.pixelSize: textSize
     }
 
     LibraryTagSpace {
         id: tagSpace
-        model: root.song.tags
+        model: root.song ? root.song.tags : null
         anchors {
             left: songNameText.right
             leftMargin: 10
@@ -55,7 +55,7 @@ Rectangle {
             verticalCenter: parent.verticalCenter
         }
         color: root.textColor
-        text: root.song.durationString
+        text: root.song ? root.song.durationString : ""
         font.italic: true
         font.pixelSize: textSize
     }

@@ -28,7 +28,7 @@ Rectangle {
 
     LibraryTagSpace {
         id: tagSpace
-        model: root.artist ? root.artist.tags : undefined
+        model: root.artist ? root.artist.tags : null
         anchors {
             left: artistNameText.right
             leftMargin: 50
@@ -71,7 +71,7 @@ Rectangle {
         spacing: 5
 
         Repeater {
-            model: root.expanded ? root.artist.albums : null
+            model: (root.expanded && root.artist) ? root.artist.albums : null
 
             delegate: LibraryAlbum {
                 album: model.album

@@ -27,14 +27,14 @@ Rectangle {
         x: 10
         anchors.verticalCenter: tagSpace.verticalCenter
         color: root.textColor
-        text: root.album.name
+        text: root.album ? root.album.name : ""
         font.bold: true
         font.pixelSize: textSize
     }
 
     LibraryTagSpace {
         id: tagSpace
-        model: root.album.tags
+        model: root.album ? root.album.tags : null
         anchors {
             left: albumNameText.right
             leftMargin: 50
@@ -54,7 +54,7 @@ Rectangle {
         }
 
         color: root.textColor
-        text: root.album.durationString
+        text: root.album ? root.album.durationString : ""
         font.italic: true
         font.pixelSize: textSize
     }
@@ -88,7 +88,7 @@ Rectangle {
         spacing: 5
 
         Repeater {
-            model: root.expanded ? root.album.songs : null
+            model: (root.expanded && root.album) ? root.album.songs : null
 
             delegate: LibrarySong {
                 width: parent.width
