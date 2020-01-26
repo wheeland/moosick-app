@@ -78,11 +78,11 @@ public:
     Q_INVOKABLE void play(Entry *entry);
     Q_INVOKABLE void remove(Entry *entry);
 
-    void append(Entry::Source source, const QString &artist, const QString &album, const QString &title,
-                const QString &url, int duration, const QString &iconUrl);
-
-    void prepend(Entry::Source source, const QString &artist, const QString &album, const QString &title,
-                 const QString &url, int duration, const QString &iconUrl);
+    void addFromInternet(
+        Entry::Source source, const QString &url,
+        const QString &artist, const QString &album, const QString &title,
+        int duration, const QString &iconUrl, bool append
+    );
 
 signals:
     void currentSongChanged();

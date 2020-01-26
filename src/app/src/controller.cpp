@@ -100,21 +100,17 @@ bool Controller::queueBandcampAlbum(Search::BandcampAlbumResult *album, bool app
 
 void Controller::queueBandcampTrack(Search::BandcampTrackResult *track, bool append)
 {
-    if (append) {
-        m_playlist->append(Playlist::Entry::Bandcamp,
-                           track->album()->artist(), track->album()->title(), track->title(),
-                           track->url(), track->secs(), track->iconUrl());
-    } else {
-        m_playlist->prepend(Playlist::Entry::Bandcamp,
-                           track->album()->artist(), track->album()->title(), track->title(),
-                           track->url(), track->secs(), track->iconUrl());
-    }
+    m_playlist->addFromInternet(
+        Playlist::Entry::Bandcamp, track->url(),
+        track->album()->artist(), track->album()->title(), track->title(),
+        track->secs(), track->iconUrl(), append
+    );
 }
 
 void Controller::queueYoutubeVideo(Search::YoutubeVideoResult *video, bool append)
 {
-    if (append)
-        m_playlist->append(Playlist::Entry::Youtube, "", "", video->title(), video->url(), video->secs(), video->iconUrl());
-    else
-        m_playlist->prepend(Playlist::Entry::Youtube, "", "", video->title(), video->url(), video->secs(), video->iconUrl());
+    m_playlist->addFromInternet(
+        Playlist::Entry::Youtube, video->url(),
+        "", "", video->title(), video->secs(), video->iconUrl(), append
+    );
 }

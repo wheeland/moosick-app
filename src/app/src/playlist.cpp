@@ -189,20 +189,18 @@ void Playlist::remove(Entry *entry)
     }
 }
 
-void Playlist::append(Entry::Source source,
-                      const QString &artist, const QString &album, const QString &title,
-                      const QString &url, int duration, const QString &iconUrl)
+void Playlist::addFromInternet(
+    Entry::Source source, const QString &url,
+    const QString &artist, const QString &album, const QString &title,
+    int duration, const QString &iconUrl, bool append)
 {
-    m_entries.add(createEntry(source, artist, album, title, url, duration, iconUrl));
-    if (m_entries.size() == 1)
-        emit currentSongChanged();
-}
+    Entry *entry = createEntry(source, artist, album, title, url, duration, iconUrl);
 
-void Playlist::prepend(Entry::Source source,
-                       const QString &artist, const QString &album, const QString &title,
-                       const QString &url, int duration, const QString &iconUrl)
-{
-    m_entries.insert(0, createEntry(source, artist, album, title, url, duration, iconUrl));
+    if (append)
+        m_entries.add(entry);
+    else
+        m_entries.insert(0, entry);
+
     if (m_entries.size() == 1)
         emit currentSongChanged();
 }
