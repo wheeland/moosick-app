@@ -159,7 +159,6 @@ Rectangle {
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
-                                root.stringsModel.select(index);
                                 textInput.text = model.text;
                             }
                         }
