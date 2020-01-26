@@ -98,6 +98,9 @@ void Playlist::advance(int delta)
 
 void Playlist::requestIcon(Entry *entry)
 {
+    if (entry->iconUrl().isEmpty())
+        return;
+
     const auto it = m_iconUrlToDataString.find(entry->iconUrl());
     if (it != m_iconUrlToDataString.end()) {
         entry->setIconData(it.value());
