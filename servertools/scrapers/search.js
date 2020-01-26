@@ -1,6 +1,7 @@
 var bandcamp = require('bandcamp-scraper');
 var youtube = require('scrape-youtube');
 var spawn = require('child_process');
+var fs = require('fs');
 
 // check search pattern
 if (process.argv.length < 3) {
@@ -101,12 +102,17 @@ function youtubeResults(searchResults) {
             });
         }
     });
-
+    
     for (var i = 0; i < videos.length; ++i) {
         let video = videos[i];
+        let ytId = video.url.split("=")[1];
+        let filename = "tmp_ytdl_" + ytId + ".out";
+        let command = 'sh -c \'youtube-dl -j "' + videos[i].url + '" > ' + filename + '\'';
         
-        spawn.exec('youtube-dl -j "' + videos[i].url + '"', function(error, stdout, stderr) {
-            var result = JSON.parse(stdout);
+        spawn.exec(command, function(error, stdout, stderr) {
+            let resultJson = fs.readFileSync(filename, 'utf8');
+            fs.unlinkSync(filename);
+            let result = JSON.parse(resultJson);
             video.audioUrl = findBestFormat(result.formats);
             results.push(video);
             done();
