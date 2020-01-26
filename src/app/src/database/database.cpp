@@ -88,12 +88,12 @@ QNetworkReply *Database::setItemDetails(
 
     for (Moosick::TagId oldTag : oldTags) {
         if (!newTags.contains(oldTag))
-            changes << LibraryChange{ removeTag, oldTag, 0, QString() };
+            changes << LibraryChange{ removeTag, id, oldTag, QString() };
     }
 
     for (Moosick::TagId newTag : newTags) {
         if (!oldTags.contains(newTag))
-            changes << LibraryChange{ addTag, newTag, 0, QString() };
+            changes << LibraryChange{ addTag, id, newTag, QString() };
     }
 
     if (changes.isEmpty())
