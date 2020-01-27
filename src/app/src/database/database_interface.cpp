@@ -332,4 +332,9 @@ bool DatabaseInterface::editItemVisible() const
     return (m_editItemType != EditNone) && (m_editItemSource != SourceNone);
 }
 
+bool DatabaseInterface::editItemStringsChoiceActive() const
+{
+    return (m_editItemType == EditArtist) && (m_editItemSource != SourceNone);
+}
+
 } // namespace Database

@@ -8,6 +8,8 @@ Rectangle {
     property alias text : input.text
     property real pixelSize: 11
 
+    property alias hasInputFocus : input.focus
+
     border.color: foreground
     border.width: 1
 

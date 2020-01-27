@@ -38,21 +38,17 @@ Rectangle {
     }
 
     SimpleButton {
-        id: tagsButton
-        label: root.showTags ? "Name" : "Tags"
-        width: parent.width * 0.22
-        x: 0.5 * parent.width - 0.5 * width
-        y: parent.width / 16
-        onClicked: root.showTags = !root.showTags
-    }
-
-    SimpleButton {
         id: okButton
         label: "OK"
         width: parent.width * 0.22
         x: 0.8 * parent.width - 0.5 * width
         y: parent.width / 16
-        onClicked: root.okClicked()
+        onClicked: {
+            if (textInput.hasInputFocus)
+                textInput.hasInputFocus = false;
+            else
+                root.okClicked();
+        }
     }
 
     Text {
@@ -81,145 +77,126 @@ Rectangle {
             margins: 20
         }
 
-        Item {
-            id: nameItem
-            anchors.fill: parent
-            visible: !root.showTags
-
-            SimpleButton {
-                id: clearButton
-                anchors {
-                    right: parent.right
-                    top: parent.top
-                }
-                label: "X"
-                width: height
-                onClicked: textInput.text = ""
+        SimpleButton {
+            id: clearButton
+            anchors {
+                right: parent.right
+                top: textInput.top
+                bottom: textInput.bottom
             }
+            label: "X"
+            width: height
+            onClicked: textInput.text = ""
+        }
 
-            LineEdit {
-                id: textInput
-                anchors {
-                    left: parent.left
-                    rightMargin: 20
-                    right: clearButton.left
-                    top: parent.top
-                }
-                background: "black"
-                foreground: "white"
-                pixelSize: root.fontSize
-
-                onTextChanged: root.stringsModel.entered(text)
+        LineEdit {
+            id: textInput
+            anchors {
+                left: parent.left
+                rightMargin: 20
+                right: clearButton.left
+                top: parent.top
             }
+            background: hasInputFocus ? "#333333" : "black"
+            foreground: "white"
+            pixelSize: root.fontSize
 
-            Rectangle {
-                id: entriesRect
-                anchors {
-                    left: parent.left
-                    right: parent.right
-                    top: textInput.bottom
-                    topMargin: 20
-                    bottom: parent.bottom
-                }
+            onTextChanged: root.stringsModel.entered(text)
+        }
 
-                color: "black"
-                border.color: "white"
-                border.width: 1
+        Rectangle {
+            id: additionalContentItem
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: textInput.bottom
+                topMargin: 20
+                bottom: parent.bottom
+            }
+            color: "black"
+            border.color: "white"
+            border.width: 1
 
-                ListView {
-                    id: entriesListView
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    clip: true
+            ListView {
+                id: entriesListView
+                visible: textInput.hasInputFocus && _app.database.editItemStringsChoiceActive
+                anchors.fill: parent
+                anchors.margins: 8
+                clip: true
 
-                    model: root.stringsModel
+                model: root.stringsModel
 
-                    delegate: Item {
-                        width: parent.width
-                        height: entryText.height + 8
+                delegate: Item {
+                    width: parent.width
+                    height: entryText.height + 8
 
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: 2
-                            radius: height / 2
-                            color: "#333333"
-                            border.color: "#cccccc"
-                            border.width: model.selected ? 2 : 0
-                        }
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        radius: height / 2
+                        color: "#333333"
+                        border.color: "#cccccc"
+                        border.width: model.selected ? 2 : 0
+                    }
 
-                        Text {
-                            id: entryText
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: height / 2
-                            text: model.text
-                            color: "white"
-                            font.pixelSize: root.fontSize
-                        }
+                    Text {
+                        id: entryText
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: height / 2
+                        text: model.text
+                        color: "white"
+                        font.pixelSize: root.fontSize
+                    }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                textInput.text = model.text;
-                            }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            textInput.text = model.text;
                         }
                     }
                 }
             }
-        }
 
-        Item {
-            id: tagsItem
-            anchors.fill: parent
-            visible: root.showTags
-
-            Rectangle {
-                id: tagsRect
+            ListView {
+                id: tagsListView
+                visible: !entriesListView.visible
                 anchors.fill: parent
+                anchors.margins: 8
+                clip: true
 
-                color: "black"
-                border.color: "white"
-                border.width: 1
+                model: root.tagsModel.tags
 
-                ListView {
-                    id: tagsListView
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    clip: true
+                delegate: Item {
+                    width: parent.width
+                    height: tagBubble.height + 4
 
-                    model: root.tagsModel.tags
-
-                    delegate: Item {
-                        width: parent.width
-                        height: tagBubble.height + 4
-
-                        Rectangle {
-                            id: tagBubble
-                            anchors {
-                                fill: tagText
-                                margins: -3
-                                leftMargin: -10
-                                rightMargin: -10
-                            }
-                            radius: height / 2
-                            color: "#333333"
-                            border.color: "#cccccc"
-                            border.width: model.selected ? 2 : 0
+                    Rectangle {
+                        id: tagBubble
+                        anchors {
+                            fill: tagText
+                            margins: -3
+                            leftMargin: -10
+                            rightMargin: -10
                         }
+                        radius: height / 2
+                        color: "#333333"
+                        border.color: "#cccccc"
+                        border.width: model.selected ? 2 : 0
+                    }
 
-                        Text {
-                            id: tagText
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: 20 + 40 * model.offset
-                            text: model.tag.name
-                            color: "white"
-                            font.pixelSize: root.fontSize
-                        }
+                    Text {
+                        id: tagText
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: 20 + 40 * model.offset
+                        text: model.tag.name
+                        color: "white"
+                        font.pixelSize: root.fontSize
+                    }
 
-                        MouseArea {
-                            anchors.fill: tagBubble
-                            onClicked: {
-                                root.tagsModel.setSelected(model.tag, !model.selected);
-                            }
+                    MouseArea {
+                        anchors.fill: tagBubble
+                        onClicked: {
+                            root.tagsModel.setSelected(model.tag, !model.selected);
                         }
                     }
                 }

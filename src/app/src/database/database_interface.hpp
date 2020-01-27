@@ -50,6 +50,7 @@ class DatabaseInterface : public QObject
     Q_PROPERTY(EditItemSource editItemSource READ editItemSource NOTIFY stateChanged)
     Q_PROPERTY(StringModel *editStringList READ editStringList CONSTANT)
     Q_PROPERTY(bool editItemVisible READ editItemVisible NOTIFY stateChanged)
+    Q_PROPERTY(bool editItemStringsChoiceActive READ editItemStringsChoiceActive NOTIFY stateChanged)
 
 public:
 
@@ -83,6 +84,7 @@ public:
     EditItemType editItemType() const { return m_editItemType; }
     EditItemSource editItemSource() const { return m_editItemSource; }
     bool editItemVisible() const;
+    bool editItemStringsChoiceActive() const;
 
     Q_INVOKABLE void search(const QString &searchString);
     Q_INVOKABLE void fillArtistInfo(DbArtist *artist);
