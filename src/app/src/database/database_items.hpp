@@ -35,6 +35,9 @@ protected:
     DatabaseInterface *database() const { return m_database; }
     const Moosick::Library &library() const;
 
+signals:
+    void libraryChanged();
+
 private:
     DatabaseInterface * const m_database;
     const Type m_type;
@@ -92,7 +95,7 @@ private:
 class DbArtist : public DbTaggedItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString name READ name CONSTANT)
+    Q_PROPERTY(QString name READ name NOTIFY libraryChanged)
     Q_PROPERTY(ModelAdapter::Model *albums READ albumsModel NOTIFY albumsChanged)
 
 public:
@@ -102,23 +105,27 @@ public:
     QString name() const { return m_artist.name(library()); }
 
     void addAlbum(DbAlbum *album) { m_albums.addExclusive(album); }
-    void removeAlbum(DbAlbum *album) { m_albums.remove(album); }
+    void removeAlbum(DbAlbum *album);
 
     QVector<DbAlbum*> albums() const { return m_albums.data(); }
     ModelAdapter::Model *albumsModel() const { return m_albums.model(); }
+
+    bool hasData() const { return m_hasData; }
+    void dataSet() { m_hasData = true; }
 
 signals:
     void albumsChanged(ModelAdapter::Model * albums);
 
 private:
     Moosick::ArtistId m_artist;
+    bool m_hasData = false;
     ModelAdapter::Adapter<DbAlbum*> m_albums;
 };
 
 class DbAlbum : public DbTaggedItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString name READ name CONSTANT)
+    Q_PROPERTY(QString name READ name NOTIFY libraryChanged)
     Q_PROPERTY(QString durationString READ durationString NOTIFY songsChanged)
     Q_PROPERTY(ModelAdapter::Model *songs READ songsModel NOTIFY songsChanged)
 
@@ -129,6 +136,7 @@ public:
     QString name() const { return m_album.name(library()); }
     QString durationString() const;
 
+    void setSongs(const Moosick::SongIdList &songs);
     void addSong(DbSong *song);
     void removeSong(DbSong *song);
 
@@ -146,9 +154,9 @@ private:
 class DbSong : public DbTaggedItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString name READ name CONSTANT)
-    Q_PROPERTY(QString durationString READ durationString CONSTANT)
-    Q_PROPERTY(int position READ position CONSTANT)
+    Q_PROPERTY(QString name READ name NOTIFY libraryChanged)
+    Q_PROPERTY(QString durationString READ durationString NOTIFY libraryChanged)
+    Q_PROPERTY(int position READ position NOTIFY libraryChanged)
 
 public:
     DbSong(DatabaseInterface *db, Moosick::SongId song);

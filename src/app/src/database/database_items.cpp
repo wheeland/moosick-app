@@ -55,11 +55,18 @@ DbArtist::~DbArtist()
     qDeleteAll(m_albums.data());
 }
 
+void DbArtist::removeAlbum(DbAlbum *album)
+{
+    m_albums.remove(album);
+    album->deleteLater();
+}
+
 DbAlbum::DbAlbum(DatabaseInterface *db, Moosick::AlbumId album)
     : DbTaggedItem(db, DbItem::Album, album, album.tags(db->library()))
     , m_album(album)
 {
     m_songs.addValueAccessor("song");
+    connect(this, &DbAlbum::libraryChanged, this, &DbAlbum::songsChanged);
 }
 
 DbAlbum::~DbAlbum()
@@ -74,6 +81,24 @@ QString DbAlbum::durationString() const
         return sum + song->secs();
     });
     return QString::asprintf("%d:%02d", secs/60, secs%60);
+}
+
+void DbAlbum::setSongs(const Moosick::SongIdList &songs)
+{
+    for (DbSong *song : m_songs.data())
+        song->deleteLater();
+    m_songs.clear();
+
+    QVector<DbSong*> newSongs;
+    for (const Moosick::SongId &songId : songs)
+        newSongs << new DbSong(database(), songId);
+    qSort(newSongs.begin(), newSongs.end(), [=](DbSong *lhs, DbSong *rhs) {
+        return lhs->position() < rhs->position();
+    });
+    for (DbSong *song : newSongs)
+        m_songs.addExclusive(song);
+
+    emit songsChanged();
 }
 
 void DbAlbum::addSong(DbSong *song)
