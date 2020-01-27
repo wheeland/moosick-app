@@ -30,6 +30,8 @@ void MultiChoiceController::hide()
 {
     m_visible = false;
     m_options.clear();
+    m_selected.clear();
+    m_selectedIndex = -1;
     emit popupChanged();
 }
 

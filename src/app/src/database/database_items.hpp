@@ -84,9 +84,8 @@ public:
     Moosick::TagIdList tagIds() const;
     ModelAdapter::Model *tagsModel() const { return m_tags.model(); }
 
-protected:
-    void addTag(DbTag *tag) { m_tags.addExclusive(tag); }
-    void removeTag(DbTag *tag) { m_tags.remove(tag); }
+protected slots:
+    void updateTags(const Moosick::TagIdList &tags);
 
 private:
     ModelAdapter::Adapter<DbTag*> m_tags;

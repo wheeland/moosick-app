@@ -28,10 +28,16 @@ DbTaggedItem::DbTaggedItem(DatabaseInterface *db, DbItem::Type tp, quint32 id, c
     : DbItem(db, tp, id)
 {
     m_tags.addValueAccessor("tag");
+    updateTags(tags);
+}
+
+void DbTaggedItem::updateTags(const Moosick::TagIdList &tags)
+{
+    m_tags.clear();
     for (Moosick::TagId tagId : tags) {
-        DbTag *tag = db->tagForTagId(tagId);
+        DbTag *tag = database()->tagForTagId(tagId);
         m_tags.add(tag);
-        connect(tag, &QObject::destroyed, this, [=]() { removeTag(tag); });
+        connect(tag, &QObject::destroyed, this, [=]() { m_tags.remove(tag); });
     }
 }
 
@@ -48,6 +54,9 @@ DbArtist::DbArtist(DatabaseInterface *db, Moosick::ArtistId artist)
     , m_artist(artist)
 {
     m_albums.addValueAccessor("album");
+    connect(this, &DbTaggedItem::libraryChanged, this, [=]() {
+        updateTags(m_artist.tags(library()));
+    });
 }
 
 DbArtist::~DbArtist()
@@ -66,7 +75,10 @@ DbAlbum::DbAlbum(DatabaseInterface *db, Moosick::AlbumId album)
     , m_album(album)
 {
     m_songs.addValueAccessor("song");
-    connect(this, &DbAlbum::libraryChanged, this, &DbAlbum::songsChanged);
+    connect(this, &DbTaggedItem::libraryChanged, this, [=]() {
+        updateTags(m_album.tags(library()));
+        emit songsChanged();
+    });
 }
 
 DbAlbum::~DbAlbum()
@@ -117,6 +129,9 @@ DbSong::DbSong(DatabaseInterface *db, Moosick::SongId song)
     : DbTaggedItem(db, DbItem::Song, song, song.tags(db->library()))
     , m_song(song)
 {
+    connect(this, &DbTaggedItem::libraryChanged, this, [=]() {
+        updateTags(m_song.tags(library()));
+    });
 }
 
 QString DbSong::artistName() const

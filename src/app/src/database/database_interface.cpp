@@ -32,7 +32,7 @@ DatabaseInterface::~DatabaseInterface()
 {
 }
 
-const Moosick::Library &DatabaseInterface::library()
+const Moosick::Library &DatabaseInterface::library() const
 {
     return m_db->library();
 }
@@ -40,7 +40,7 @@ const Moosick::Library &DatabaseInterface::library()
 void DatabaseInterface::onLibraryChanged()
 {
     repopulateTagsModel();
-    repopulateSearchResults();
+    updateSearchResults();
     repopulateEditStringList();
 }
 
@@ -105,7 +105,7 @@ void DatabaseInterface::search(const QString &searchString)
     if (m_searchString == searchString)
         return;
 
-    repopulateSearchResults();
+    updateSearchResults();
 
     m_searchString = searchString;
     m_searchKeywords = searchString.split(" ");
@@ -128,18 +128,11 @@ void DatabaseInterface::fillArtistInfo(DbArtist *artist)
     // populate artist with album/songs objects
     for (const SearchResultAlbum &albumResult : it->albums) {
         DbAlbum *album = new DbAlbum(this, albumResult.albumId);
-
-        QVector<DbSong*> songs;
-        for (const Moosick::SongId &songId : albumResult.songs)
-            songs << new DbSong(this, songId);
-        qSort(songs.begin(), songs.end(), [=](DbSong *lhs, DbSong *rhs) {
-            return lhs->position() < rhs->position();
-        });
-        for (DbSong *song : songs)
-            album->addSong(song);
-
+        album->setSongs(albumResult.songs);
         artist->addAlbum(album);
     }
+
+    artist->dataSet();
 }
 
 void DatabaseInterface::editItem(DbItem *item)
@@ -277,37 +270,127 @@ void DatabaseInterface::editCancelClicked()
     emit stateChanged();
 }
 
-void DatabaseInterface::repopulateSearchResults()
+QVector<DatabaseInterface::SearchResultArtist> DatabaseInterface::computeSearchResults() const
 {
-    QVector<Moosick::ArtistId> newSearchResults;
+    const Moosick::Library &lib = library();
+    QVector<SearchResultArtist> ret;
+
+    const auto matchesTags = [=](const Moosick::TagIdList &tags) {
+        return true;    // for now..
+    };
+
+    const auto matchesSearch = [=](const QString &name) {
+        const QString lowerName = name.toLower();
+        return std::all_of(m_searchKeywords.cbegin(), m_searchKeywords.cend(), [&](const QString &keyword) {
+            return lowerName.contains(keyword);
+        });
+    };
 
     // get all results for new search keywords
-    if (m_searchString.isEmpty()) {
-        newSearchResults = m_db->library().artistsByName();
-    } else {
-        for (const Moosick::ArtistId &artistId : m_db->library().artistsByName()) {
-            const QString lowerName = artistId.name(m_db->library()).toLower();
-            const bool matches = std::all_of(m_searchKeywords.cbegin(), m_searchKeywords.cend(), [&](const QString &keyword) {
-                return lowerName.contains(keyword);
-            });
-            if (matches)
-                newSearchResults << artistId;
-        }
-    }
+    for (const Moosick::ArtistId artistId : m_db->library().artistsByName()) {
+        const bool artistHasTag = matchesTags(artistId.tags(lib));
+        const bool artistHasString = matchesSearch(artistId.name(lib));
 
-    // TODO: we could do smarter than this
-    for (const SearchResultArtist &artist : m_searchResults.data()) {
-        if (artist.artist)
-            artist.artist->deleteLater();
-    }
-    m_searchResults.clear();
-
-    for (const Moosick::ArtistId &artistId : newSearchResults) {
         SearchResultArtist artist;
-        artist.artist = new DbArtist(this, artistId);
-        for (const Moosick::AlbumId &albumId : artistId.albums(m_db->library()))
-            artist.albums << SearchResultAlbum { albumId, albumId.songs(m_db->library()) };
-        m_searchResults.add(artist);
+        artist.id = artistId;
+
+        for (const Moosick::AlbumId albumId : artistId.albums(lib)) {
+            const bool albumHasTag = artistHasTag || matchesTags(albumId.tags(lib));
+            const bool albumHasString = artistHasString || matchesSearch(albumId.name(lib));
+
+            SearchResultAlbum album;
+            album.albumId = albumId;
+
+            for (const Moosick::SongId songId : albumId.songs(lib)) {
+                const bool songHasTag = albumHasTag || matchesTags(songId.tags(lib));
+                const bool songHasString = albumHasString || matchesSearch(songId.name(lib));
+                if (songHasTag && songHasString)
+                    album.songs << songId;
+            }
+
+            if (albumHasTag || albumHasString || !album.songs.isEmpty())
+                artist.albums << album;
+        }
+
+        if (artistHasTag || artistHasString || !artist.albums.isEmpty())
+            ret << artist;
+    }
+
+    return ret;
+}
+
+void DatabaseInterface::updateSearchResults()
+{
+    const QVector<SearchResultArtist> newSearchResults = computeSearchResults();
+
+    const auto updateSearchResultArtist = [=](SearchResultArtist &dst, const SearchResultArtist &src) {
+        Q_ASSERT(dst.artist);
+        dst.albums = src.albums;
+
+        emit dst.artist->libraryChanged();
+
+        // if this artist wasn't yet filled with details for the overview, ignore it
+        if (!dst.artist->hasData())
+            return;
+
+        // add new albums
+        QVector<DbAlbum*> existingAlbums = dst.artist->albums();
+        for (const SearchResultAlbum &newAlbum : src.albums) {
+            const bool exists = (0 < std::count_if(existingAlbums.begin(), existingAlbums.end(), [=](const DbAlbum *album) {
+                return album->id() == newAlbum.albumId;
+            }));
+            if (!exists)
+                dst.artist->addAlbum(new DbAlbum(this, newAlbum.albumId));
+        }
+
+        // remove stale albums, and set song info for the valid ones
+        existingAlbums = dst.artist->albums();
+        for (DbAlbum *existingAlbum : qAsConst(existingAlbums)) {
+            const auto dstAlbum = std::find_if(src.albums.begin(), src.albums.end(), [=](const SearchResultAlbum &album) {
+                return album.albumId == existingAlbum->id();
+            });
+            if (dstAlbum == src.albums.end()) {
+                dst.artist->removeAlbum(existingAlbum);
+            } else {
+                existingAlbum->setSongs(dstAlbum->songs);
+            }
+            emit existingAlbum->libraryChanged();
+        }
+    };
+
+    const auto getArtistIndex = [=](Moosick::ArtistId artistId) {
+        for (int i = 0; i < m_searchResults.size(); ++i) {
+            if (m_searchResults[i].artist->id() == artistId)
+                return i;
+        }
+        return -1;
+    };
+
+    // one-by-one move the existing results into place, or create new ones
+    for (int i = 0; i < newSearchResults.size(); ++i) {
+        const Moosick::ArtistId artistId = newSearchResults[i].id;
+
+        if (i >= m_searchResults.size()) {
+            m_searchResults.add(SearchResultArtist{ artistId, new DbArtist(this, artistId), {} });
+        }
+        else {
+            const int existingIdx = getArtistIndex(newSearchResults[i].id);
+            if (existingIdx != i) {
+                if (existingIdx >= 0)
+                    // if we already have that result, just move it into the correct place
+                    m_searchResults.move(existingIdx, i);
+                else
+                    // we don't have that artist yet, so create it now
+                    m_searchResults.insert(i, SearchResultArtist{ artistId, new DbArtist(this, artistId), {} });
+            }
+        }
+
+        updateSearchResultArtist(m_searchResults[i], newSearchResults[i]);
+    }
+
+    // 2. remove all excess artists
+    for (int i = newSearchResults.size(); i < m_searchResults.size(); ++i) {
+        m_searchResults[i].artist->deleteLater();
     }
 }
 

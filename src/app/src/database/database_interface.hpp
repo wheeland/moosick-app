@@ -75,7 +75,7 @@ public:
     DatabaseInterface(HttpClient *httpClient, QObject *parent = nullptr);
     ~DatabaseInterface() override;
 
-    const Moosick::Library &library();
+    const Moosick::Library &library() const;
 
     SelectTagsModel *tagsModel() const { return m_tagsModel; }
     ModelAdapter::Model *searchResults() const { return m_searchResults.model(); }
@@ -117,10 +117,6 @@ private:
     DbTag *getOrCreateDbTag(Moosick::TagId tagId);
     void removeTag(Moosick::TagId tagId);
 
-    void repopulateSearchResults();
-    void repopulateEditStringList();
-    void repopulateTagsModel();
-
     QHash<Moosick::TagId::IntType, DbTag*> m_tags;  // instantiations for all tag IDs
     SelectTagsModel *m_tagsModel;
 
@@ -132,12 +128,19 @@ private:
         Moosick::SongIdList songs;
     };
     struct SearchResultArtist {
+        Moosick::ArtistId id;
         DbArtist *artist;
         QVector<SearchResultAlbum> albums;
     };
     QString m_searchString;
     QStringList m_searchKeywords;
     ModelAdapter::Adapter<SearchResultArtist> m_searchResults;
+
+    QVector<SearchResultArtist> computeSearchResults() const;
+
+    void updateSearchResults();
+    void repopulateEditStringList();
+    void repopulateTagsModel();
 
     /**
      * Currently edited thing
