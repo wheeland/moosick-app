@@ -59,6 +59,17 @@ void AdapterBase::endRemove()
     m_model->endRemoveRows();
 }
 
+void AdapterBase::beginMove(int from, int to)
+{
+    const bool success = m_model->beginMoveRows(QModelIndex(), from, from, QModelIndex(), to);
+    Q_ASSERT(success);
+}
+
+void AdapterBase::endMove()
+{
+    m_model->endMoveRows();
+}
+
 QHash<int, QByteArray> AdapterBase::roleNames()
 {
     QHash<int, QByteArray> ret;

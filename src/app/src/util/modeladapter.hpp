@@ -46,6 +46,9 @@ protected:
     void beginRemove(int start, int end);
     void endRemove();
 
+    void beginMove(int from, int to);
+    void endMove();
+
     QHash<int, QByteArray> roleNames();
 
     virtual QVariant getData(int index, int role) const = 0;
@@ -129,6 +132,20 @@ public:
         beginRemove(idx, idx);
         m_data.remove(idx);
         endRemove();
+    }
+
+    void move(int from, int to) {
+        Q_ASSERT(from >= 0 && to >= 0 && from < m_data.size() && to < m_data.size());
+        if (from == to)
+            return;
+
+        if (from > to)
+            beginMove(from, to);
+        else
+            beginMove(from, to+1);
+
+        m_data.move(from, to);
+        endMove();
     }
 
     void clear()
