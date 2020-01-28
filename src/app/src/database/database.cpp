@@ -82,6 +82,68 @@ QNetworkReply *Database::setSongDetails(Moosick::SongId id, const QString &name,
     );
 }
 
+void Database::addRemoveArtist(QVector<LibraryChange> &changes, Moosick::ArtistId id)
+{
+    for (Moosick::AlbumId albumId : id.albums(m_library))
+        addRemoveAlbum(changes, albumId);
+    for (Moosick::TagId tagId : id.tags(m_library))
+        changes << LibraryChange{ LibraryChange::ArtistRemoveTag, id, tagId, QString() };
+    changes << LibraryChange{ LibraryChange::ArtistRemove, id, 0, QString() };
+}
+
+void Database::addRemoveAlbum(QVector<LibraryChange> &changes, Moosick::AlbumId id)
+{
+    for (Moosick::SongId songId : id.songs(m_library))
+        addRemoveSong(changes, songId);
+    for (Moosick::TagId tagId : id.tags(m_library))
+        changes << LibraryChange{ LibraryChange::AlbumRemoveTag, id, tagId, QString() };
+    changes << LibraryChange{ LibraryChange::AlbumRemove, id, 0, QString() };
+}
+
+void Database::addRemoveSong(QVector<LibraryChange> &changes, Moosick::SongId id)
+{
+    for (Moosick::TagId tagId : id.tags(m_library))
+        changes << LibraryChange{ LibraryChange::SongRemoveTag, id, tagId, QString() };
+    changes << LibraryChange{ LibraryChange::SongRemove, id, 0, QString() };
+}
+
+QNetworkReply *Database::removeArtist(Moosick::ArtistId artistId)
+{
+    QVector<LibraryChange> changes;
+    addRemoveArtist(changes, artistId);
+    return sendChangeRequests(changes);
+}
+
+QNetworkReply *Database::removeAlbum(Moosick::AlbumId albumId)
+{
+    QVector<LibraryChange> changes;
+    addRemoveAlbum(changes, albumId);
+    return sendChangeRequests(changes);
+}
+
+QNetworkReply *Database::removeSong(Moosick::SongId songId)
+{
+    QVector<LibraryChange> changes;
+    addRemoveSong(changes, songId);
+    return sendChangeRequests(changes);
+}
+
+QNetworkReply *Database::sendChangeRequests(const QVector<LibraryChange> &changes)
+{
+    if (changes.isEmpty())
+        return nullptr;
+
+    QByteArray data;
+    QDataStream writer(&data, QIODevice::WriteOnly);
+    writer << changes;
+
+    const QString query = QString("v=") + data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
+    QNetworkReply *reply = m_http->requestFromServer("/request-changes.do", query);
+    m_requests[reply] = LibraryChanges;
+
+    return reply;
+}
+
 QNetworkReply *Database::setItemDetails(
         quint32 id,
         const QString &oldName, const Moosick::TagIdList &oldTags,
@@ -103,18 +165,7 @@ QNetworkReply *Database::setItemDetails(
             changes << LibraryChange{ addTag, id, newTag, QString() };
     }
 
-    if (changes.isEmpty())
-        return nullptr;
-
-    QByteArray data;
-    QDataStream writer(&data, QIODevice::WriteOnly);
-    writer << changes;
-
-    const QString query = QString("v=") + data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-    QNetworkReply *reply = m_http->requestFromServer("/request-changes.do", query);
-    m_requests[reply] = LibraryChanges;
-
-    return reply;
+    return sendChangeRequests(changes);
 }
 
 void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error)

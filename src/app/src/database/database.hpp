@@ -33,6 +33,10 @@ public:
 
     QNetworkReply *setTagName(Moosick::TagId id, const QString &name);
 
+    QNetworkReply *removeArtist(Moosick::ArtistId artistId);
+    QNetworkReply *removeAlbum(Moosick::AlbumId albumId);
+    QNetworkReply *removeSong(Moosick::SongId songId);
+
 private slots:
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
 
@@ -43,12 +47,18 @@ private:
     void onNewLibrary(const QJsonObject &json);
     bool applyLibraryChanges(const QByteArray &changesJsonData);
 
+    QNetworkReply *sendChangeRequests(const QVector<Moosick::LibraryChange> &changes);
+
     QNetworkReply *setItemDetails(quint32 id,
                                   const QString &oldName, const Moosick::TagIdList &oldTags,
                                   const QString &newName, const Moosick::TagIdList &newTags,
                                   Moosick::LibraryChange::Type setName,
                                   Moosick::LibraryChange::Type addTag,
                                   Moosick::LibraryChange::Type removeTag);
+
+    void addRemoveArtist(QVector<Moosick::LibraryChange> &changes, Moosick::ArtistId id);
+    void addRemoveAlbum(QVector<Moosick::LibraryChange> &changes, Moosick::AlbumId id);
+    void addRemoveSong(QVector<Moosick::LibraryChange> &changes, Moosick::SongId id);
 
     enum RequestType {
         None,
