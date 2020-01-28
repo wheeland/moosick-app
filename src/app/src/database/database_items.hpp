@@ -15,6 +15,7 @@ class DbSong;
 class DbItem : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QString name READ name NOTIFY libraryChanged)
     Q_PROPERTY(Type type READ getType CONSTANT)
 
 public:
@@ -27,6 +28,8 @@ public:
 
     DbItem(DatabaseInterface *db, Type tp, quint32 id);
     ~DbItem() override = default;
+
+    virtual QString name() const = 0;
 
     Type getType() const { return m_type; }
     quint32 id() const { return m_id; }
@@ -47,7 +50,6 @@ private:
 class DbTag : public DbItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString name READ name CONSTANT)
     Q_PROPERTY(ModelAdapter::Model *childTags READ childTagsModel CONSTANT)
 
 public:
@@ -58,7 +60,7 @@ public:
     void removeChildTag(DbTag *child) { m_childTags.remove(child); }
 
     Moosick::TagId id() const { return m_tag; }
-    QString name() const { return m_tag.name(library()); }
+    QString name() const override { return m_tag.name(library()); }
     DbTag *parentTag() const { return m_parentTag; }
     QVector<DbTag*> childTags() const { return m_childTags.data(); }
     ModelAdapter::Model *childTagsModel() const { return m_childTags.model(); }
@@ -94,14 +96,13 @@ private:
 class DbArtist : public DbTaggedItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString name READ name NOTIFY libraryChanged)
     Q_PROPERTY(ModelAdapter::Model *albums READ albumsModel NOTIFY albumsChanged)
 
 public:
     DbArtist(DatabaseInterface *db, Moosick::ArtistId artist);
     ~DbArtist();
 
-    QString name() const { return m_artist.name(library()); }
+    QString name() const override { return m_artist.name(library()); }
 
     void addAlbum(DbAlbum *album) { m_albums.addExclusive(album); }
     void removeAlbum(DbAlbum *album);
@@ -124,7 +125,6 @@ private:
 class DbAlbum : public DbTaggedItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString name READ name NOTIFY libraryChanged)
     Q_PROPERTY(QString durationString READ durationString NOTIFY songsChanged)
     Q_PROPERTY(ModelAdapter::Model *songs READ songsModel NOTIFY songsChanged)
 
@@ -132,7 +132,7 @@ public:
     DbAlbum(DatabaseInterface *db, Moosick::AlbumId album);
     ~DbAlbum();
 
-    QString name() const { return m_album.name(library()); }
+    QString name() const override { return m_album.name(library()); }
     QString durationString() const;
 
     void setSongs(const Moosick::SongIdList &songs);
@@ -153,7 +153,6 @@ private:
 class DbSong : public DbTaggedItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString name READ name NOTIFY libraryChanged)
     Q_PROPERTY(QString durationString READ durationString NOTIFY libraryChanged)
     Q_PROPERTY(int position READ position NOTIFY libraryChanged)
 
@@ -161,7 +160,7 @@ public:
     DbSong(DatabaseInterface *db, Moosick::SongId song);
     ~DbSong() = default;
 
-    QString name() const { return m_song.name(library()); }
+    QString name() const override { return m_song.name(library()); }
     QString artistName() const;
     QString albumName() const;
     QString durationString() const;
