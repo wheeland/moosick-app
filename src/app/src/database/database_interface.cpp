@@ -389,8 +389,9 @@ void DatabaseInterface::updateSearchResults()
     }
 
     // 2. remove all excess artists
-    for (int i = newSearchResults.size(); i < m_searchResults.size(); ++i) {
+    for (int i = m_searchResults.size() - 1; i >= newSearchResults.size(); --i) {
         m_searchResults[i].artist->deleteLater();
+        m_searchResults.remove(i);
     }
 }
 
