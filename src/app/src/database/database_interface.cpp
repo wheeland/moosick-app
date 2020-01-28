@@ -140,22 +140,18 @@ void DatabaseInterface::editItem(DbItem *item)
     Q_ASSERT(m_editItemType == EditNone);
     Q_ASSERT(m_editItemSource == SourceNone);
 
-    if (DbArtist *artist = qobject_cast<DbArtist*>(item)) {
+    if (DbArtist *artist = qobject_cast<DbArtist*>(item))
         m_editItemType = EditArtist;
-        m_editStringList->popup(artist->name());
-        m_tagsModel->setSelectedTagIds(artist->tagIds());
-    }
-    else if (DbAlbum *album = qobject_cast<DbAlbum*>(item)) {
+    else if (DbAlbum *album = qobject_cast<DbAlbum*>(item))
         m_editItemType = EditAlbum;
-        m_editStringList->popup(album->name());
-        m_tagsModel->setSelectedTagIds(album->tagIds());
-    }
-    else if (DbSong *song = qobject_cast<DbSong*>(item)) {
+    else if (DbSong *song = qobject_cast<DbSong*>(item))
         m_editItemType = EditSong;
-        m_editStringList->popup(song->name());
-        m_tagsModel->setSelectedTagIds(song->tagIds());
-    } else {
+    else
         m_editItemType = EditNone;
+
+    if (m_editItemType != EditNone) {
+        m_editStringList->popup(item->name());
+        m_tagsModel->setSelectedTagIds(qobject_cast<DbTaggedItem*>(item)->tagIds());
     }
 
     m_editItemSource = (m_editItemType != EditNone) ? SourceLibrary : SourceNone;
