@@ -61,7 +61,7 @@ Rectangle {
     }
 
     MultiChoice {
-        options: ["Play", "Edit"]
+        options: ["Play", "Edit", "Remove"]
         anchors.fill: parent
 
         onClicked: _app.addLibraryItemToPlaylist(root.song, false);
@@ -69,6 +69,7 @@ Rectangle {
         onSelected: {
             if (index === 0) _app.addLibraryItemToPlaylist(root.song, true);
             if (index === 1) _app.database.editItem(root.song);
+            if (index === 2) _app.database.removeItem(root.song);
         }
     }
 }

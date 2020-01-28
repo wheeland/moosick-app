@@ -50,14 +50,17 @@ Rectangle {
     }
 
     MultiChoicePopup {
+        id: multiChoicePopup
         anchors.fill: parent
     }
 
-    PlayerBar {
-        id: player
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
+    InputBlocker {
+        visible: stringChoice.visible || confirmationDialog.visible
+    }
+
+    ConfirmationDialog {
+        id: confirmationDialog
+        anchors.centerIn: parent
     }
 
     LibraryItemEditPopup {
@@ -70,6 +73,13 @@ Rectangle {
         height: parent.height * 0.4
         onOkClicked: _app.database.editOkClicked()
         onCancelClicked: _app.database.editCancelClicked()
+    }
+
+    PlayerBar {
+        id: player
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
     }
 
     KeyboardItem {
