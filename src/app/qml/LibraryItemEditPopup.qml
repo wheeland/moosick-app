@@ -18,13 +18,10 @@ Rectangle {
     border.color: "white"
     border.width: 3
 
-    property bool showTags: false
-
     Connections {
         target: root.stringsModel
         onPopup: {
             textInput.text = initialString
-            root.showTags = false;
         }
     }
 
@@ -151,6 +148,7 @@ Rectangle {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
+                            textInput.hasInputFocus = false;
                             textInput.text = model.text;
                         }
                     }
