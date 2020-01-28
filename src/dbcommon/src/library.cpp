@@ -120,6 +120,7 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
     case Moosick::LibraryChange::SongRemove: {
         fetchItem(m_songs, song, change.subject);
         fetchItem(m_albums, album, song->album);
+        requireThat(song->tags.isEmpty(), "Song still has tags");
         Q_ASSERT(album->songs.contains(change.subject));
 
         album->songs.removeAll(change.subject);
@@ -196,10 +197,11 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
         fetchItem(m_albums, album, change.subject);
         fetchItem(m_artists, artist, album->artist);
         requireThat(album->songs.isEmpty(), "Album still contains songs");
+        requireThat(album->tags.isEmpty(), "Album still has tags");
         Q_ASSERT(artist->albums.contains(change.subject));
 
         artist->albums.removeAll(change.subject);
-        m_songs.remove(change.subject);
+        m_albums.remove(change.subject);
         break;
     }
     case Moosick::LibraryChange::AlbumSetName: {
@@ -250,6 +252,7 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
     case Moosick::LibraryChange::ArtistRemove: {
         fetchItem(m_artists, artist, change.subject);
         requireThat(artist->albums.isEmpty(), "Artist still has albums");
+        requireThat(artist->tags.isEmpty(), "Artist still has tags");
 
         m_artists.remove(change.subject);
         break;
