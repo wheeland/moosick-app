@@ -52,6 +52,10 @@ class DatabaseInterface : public QObject
     Q_PROPERTY(bool editItemVisible READ editItemVisible NOTIFY stateChanged)
     Q_PROPERTY(bool editItemStringsChoiceActive READ editItemStringsChoiceActive NOTIFY stateChanged)
 
+    /** OK/cancel popup */
+    Q_PROPERTY(bool confirmationVisible READ confirmationVisible NOTIFY confirmationChanged)
+    Q_PROPERTY(QString confirmationText READ confirmationText NOTIFY confirmationChanged)
+
 public:
 
     /** Is an edit dialog being displayed, and for what library item type? */
@@ -94,6 +98,12 @@ public:
     Q_INVOKABLE void editCancelClicked();
     Q_INVOKABLE void requestDownload(const NetCommon::DownloadRequest &request, Search::Result *result);
 
+    Q_INVOKABLE void removeItem(DbItem *item);
+
+    QString confirmationText() const;
+    bool confirmationVisible() const;
+    Q_INVOKABLE void confirm(bool ok);
+
 private slots:
     void onStringSelected(int id);
     void onLibraryChanged();
@@ -101,6 +111,7 @@ private slots:
 signals:
     void searchStringChanged(QString searchString);
     void stateChanged();
+    void confirmationChanged();
 
 private:
     friend class DbTaggedItem;
@@ -149,6 +160,11 @@ private:
     EditItemType m_editItemType = EditNone;
     EditItemSource m_editItemSource = SourceNone;
     StringModel *m_editStringList;
+
+    /**
+     * Confirmation dialog
+     */
+    QPointer<DbItem> m_itemToBeRemoved;
 
     /**
      * Runnning Downloads

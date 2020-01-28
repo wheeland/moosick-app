@@ -177,6 +177,42 @@ void DatabaseInterface::requestDownload(const NetCommon::DownloadRequest &reques
     emit stateChanged();
 }
 
+void DatabaseInterface::removeItem(DbItem *item)
+{
+    if (!m_itemToBeRemoved.isNull() || editItemVisible())
+        return;
+
+    m_itemToBeRemoved = item;
+    emit confirmationChanged();
+}
+
+QString DatabaseInterface::confirmationText() const
+{
+    if (m_itemToBeRemoved.isNull())
+        return "";
+    return QString("Really remove ") + m_itemToBeRemoved->name() + "?";
+}
+
+bool DatabaseInterface::confirmationVisible() const
+{
+    return !m_itemToBeRemoved.isNull();
+}
+
+void DatabaseInterface::confirm(bool ok)
+{
+    if (ok) {
+        if (DbArtist *artist = qobject_cast<DbArtist*>(m_itemToBeRemoved))
+            m_db->removeArtist(artist->id());
+        else if (DbAlbum *album = qobject_cast<DbAlbum*>(m_itemToBeRemoved))
+            m_db->removeAlbum(album->id());
+        else if (DbSong *song = qobject_cast<DbSong*>(m_itemToBeRemoved))
+            m_db->removeSong(song->id());
+    }
+
+    m_itemToBeRemoved.clear();
+    emit confirmationChanged();
+}
+
 void DatabaseInterface::onStringSelected(int id)
 {
     if (id < 0)
