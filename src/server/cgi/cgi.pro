@@ -1,11 +1,11 @@
-TARGET = testclient
+TARGET = cgi
 CONFIG += c++11
 TEMPLATE = app
 
 QT += core network
 
 SOURCES += \
-    main.cpp \
+    main.cpp
 
 HEADERS += \
 
@@ -13,6 +13,6 @@ INCLUDEPATH += \
     ../../common/include/
 
 LIBS += \
-    -L../bin/ -lcommon
+    -L../../bin/ -lcommon
 
 DESTDIR = ../bin/

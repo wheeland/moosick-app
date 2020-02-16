@@ -3,13 +3,10 @@ TEMPLATE = subdirs
 CONFIG += ordered
 
 SUBDIRS = \
-    dbcommon \
-    netcommon \
-    clientcommon \
-    dbserver \
-    testclient \
+    common \
+    server \
     app \
-    cgi \
+    testclient \
 
 contains(ANDROID_TARGET_ARCH, armeabi-v7a) {
     DISTFILES += \

@@ -14,10 +14,9 @@ HEADERS += \
     signalhandler.hpp \
 
 INCLUDEPATH += \
-    ../dbcommon/include/ \
-    ../clientcommon/include/ \
+    ../../common/include/
 
 LIBS += \
-    -L../bin/ -ldbcommon -lclientcommon
+    -L../../bin/ -lcommon
 
 DESTDIR = ../bin/

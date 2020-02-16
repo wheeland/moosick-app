@@ -46,10 +46,9 @@ RESOURCES += \
     data.qrc \
 
 INCLUDEPATH += \
-    ../dbcommon/include/ \
-    ../netcommon/ \
+    ../common/include/
 
 LIBS += \
-    -L../bin/ -ldbcommon -lnetcommon
+    -L../bin/ -lcommon
 
 DESTDIR = ../bin/
