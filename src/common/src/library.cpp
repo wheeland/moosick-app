@@ -328,11 +328,22 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
         requireThat(change.detail != tag->parent, "Parent is the same");
         requireThat(change.subject != change.detail, "Can't be your own parent");
 
-        auto oldParent = m_tags.findItem(tag->parent);
-        auto newParent = m_tags.findItem(change.detail);
+        Tag *oldParent = m_tags.findItem(tag->parent);
+        Tag *newParent = m_tags.findItem(change.detail);
 
         Q_ASSERT(oldParent || (tag->parent == 0));
         Q_ASSERT(newParent || (change.detail == 0));
+
+        // make sure we don't introduce circularity
+        TagId parentsId = change.detail;
+        while (parentsId) {
+            if (parentsId == change.subject) {
+                qWarning() << "Detected circular tag parenting";
+                return 0;
+            }
+            Tag *parent = m_tags.findItem(parentsId);
+            parentsId = parent ? parent->parent : TagId();
+        }
 
         if (tag->parent == 0) {
             Q_ASSERT(!oldParent);
