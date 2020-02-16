@@ -4,6 +4,9 @@
 #include "jsonconv.hpp"
 #include "../httpclient.hpp"
 
+#include <QTimer>
+#include <QJsonDocument>
+
 using Moosick::LibraryChange;
 using Moosick::CommittedLibraryChange;
 
@@ -14,6 +17,10 @@ Database::Database(HttpClient *httpClient, QObject *parent)
     , m_http(new HttpRequester(httpClient, this))
 {
     connect(m_http, &HttpRequester::receivedReply, this, &Database::onNetworkReplyFinished);
+
+    connect(&m_downloadQueryTimer, &QTimer::timeout, this, &Database::onDownloadQueryTimer);
+    m_downloadQueryTimer.setSingleShot(true);
+    m_downloadQueryTimer.start(5000);
 }
 
 Database::~Database()
@@ -33,7 +40,7 @@ QNetworkReply *Database::sync()
     // do a partial update if we already have a library
     else {
         const int lastRev = m_library.revision();
-        QNetworkReply *reply = m_http->requestFromServer("get-change-list.do", QString::number(lastRev));
+        QNetworkReply *reply = m_http->requestFromServer("/get-change-list.do", QString::asprintf("v=%d", lastRev));
         m_requests[reply] = LibraryUpdate;
         return reply;
     }
@@ -193,21 +200,29 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
             onNewLibrary(parseJsonObject(data, "Library"));
         break;
     }
+    case LibraryUpdate: {
+        if (!hasError)
+            applyLibraryChanges(data);
+        break;
+    }
     case BandcampDownload:
     case YoutubeDownload: {
         const auto downloadIt = std::find_if(m_runningDownloads.begin(), m_runningDownloads.end(), [&](const Download &download) {
             return download.networkReply == reply;
         });
 
-        if (!hasError) {
-            applyLibraryChanges(data);
-        }
-
         if (downloadIt != m_runningDownloads.end()) {
-            // TODO: add downloadIt->artistTags to downloadIt->query.artistId
-            m_runningDownloads.erase(downloadIt);
+            downloadIt->id = data.toInt();
+            downloadIt->networkReply = nullptr;
         }
 
+        if (!m_downloadQueryTimer.isActive() && !m_downloadQuery)
+            m_downloadQueryTimer.start(10000);
+
+        break;
+    }
+    case DownloadQuery: {
+        onDownloadQueryResult(data);
         break;
     }
     case LibraryChanges: {
@@ -219,6 +234,52 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
     default:
         break;
     }
+}
+
+void Database::onDownloadQueryTimer()
+{
+    Q_ASSERT(!m_downloadQuery);
+
+    // start a new query for the currently running downloads at the server
+    m_downloadQuery = m_http->requestFromServer("/running-downloads.do", "");
+    m_requests[m_downloadQuery] = DownloadQuery;
+}
+
+void Database::onDownloadQueryResult(const QByteArray &data)
+{
+    Q_ASSERT(m_downloadQuery);
+    m_downloadQuery = nullptr;
+
+    const QJsonArray jsonArray = QJsonDocument::fromJson(data).array();
+
+    // get download IDs from JSON data
+    QVector<int> runningDownloadIds;
+    for (const QJsonValue &entry : jsonArray) {
+        const QJsonObject obj = entry.toObject();
+        runningDownloadIds << obj.value("id").toInt(-1);
+        // TODO: populate some QML-exportable list of current downloads, to be viewed after program start
+    }
+
+    // check if any of our running downloads has finished running on the server
+    bool needsSync = false;
+    for (auto it = m_runningDownloads.begin(); it != m_runningDownloads.end(); /* empty */) {
+        if (!it->networkReply && !runningDownloadIds.contains(it->id)) {
+            // download has finished
+            // TODO: add downloadIt->artistTags to downloadIt->query.artistId
+            needsSync = true;
+            it = m_runningDownloads.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    // get library changes for finished downloads
+    if (needsSync)
+        sync();
+
+    // if there are downloads still running, we'll need to check back later for the results
+    if (!jsonArray.isEmpty())
+        m_downloadQueryTimer.start(5000);
 }
 
 void Database::onNewLibrary(const QJsonObject &json)

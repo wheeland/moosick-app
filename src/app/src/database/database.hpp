@@ -3,6 +3,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPointer>
+#include <QTimer>
 
 #include "library.hpp"
 #include "requests.hpp"
@@ -42,6 +43,7 @@ public:
 
 private slots:
     void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
+    void onDownloadQueryTimer();
 
 signals:
     void libraryChanged();
@@ -63,6 +65,8 @@ private:
     void addRemoveAlbum(QVector<Moosick::LibraryChange> &changes, Moosick::AlbumId id);
     void addRemoveSong(QVector<Moosick::LibraryChange> &changes, Moosick::SongId id);
 
+    void onDownloadQueryResult(const QByteArray &data);
+
     enum RequestType {
         None,
         LibraryGet,
@@ -70,6 +74,7 @@ private:
         LibraryChanges,
         BandcampDownload,
         YoutubeDownload,
+        DownloadQuery,
     };
 
     bool m_hasLibrary = false;
@@ -98,8 +103,13 @@ private:
         NetCommon::DownloadRequest request;
         Moosick::TagIdList albumTags;
         QNetworkReply *networkReply;
+        quint32 id;
     };
     QVector<Download> m_runningDownloads;
+
+    /** regularly query the state of the downloads */
+    QNetworkReply *m_downloadQuery = nullptr;
+    QTimer m_downloadQueryTimer;
 };
 
 } // namespace Database

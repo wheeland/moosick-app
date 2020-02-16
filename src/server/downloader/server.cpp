@@ -30,12 +30,11 @@ bool Server::handleMessage(const ClientCommon::Message &message, ClientCommon::M
         }
         else {
             const quint32 id = startDownload(request);
-            response = { ClientCommon::DownloadResponse, QJsonDocument(getRunningDownloadsInfo()).toJson() };
+            response = { ClientCommon::DownloadResponse, QByteArray::number(id) };
         }
         return true;
     }
     case ClientCommon::DownloadQuery: {
-        const QVector<quint32> ids = m_downloads.keys().toVector();
         response = { ClientCommon::DownloadResponse, QJsonDocument(getRunningDownloadsInfo()).toJson() };
         return true;
     }
@@ -79,7 +78,10 @@ QJsonArray Server::getRunningDownloadsInfo() const
 {
     QJsonArray ret;
     for (auto it = m_downloads.begin(); it != m_downloads.end(); ++it) {
-        ret.append(QJsonValue(QString(it.value().request.toBase64())));
+        QJsonObject obj;
+        obj["id"] = QJsonValue((int) it.key());
+        obj["request"] = QJsonValue(QString(it.value().request.toBase64()));
+        ret.append(obj);
     }
     return ret;
 }
