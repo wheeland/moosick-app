@@ -80,11 +80,11 @@ QString Message::format()
         "Ping",
         "Pong",
         "LibraryRequest",
-        "LibraryReponse",
+        "LibraryResponse",
         "ChangesRequest",
         "ChangesResponse",
         "ChangeListRequest",
-        "ChangeListReponse",
+        "ChangeListResponse",
     };
 
     const quint32 idx = (quint32) tp;

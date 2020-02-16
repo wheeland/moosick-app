@@ -12,11 +12,11 @@ enum MessageType : quint32
     Ping,
     Pong,
     LibraryRequest,
-    LibraryReponse,
+    LibraryResponse,
     ChangesRequest,
     ChangesResponse,
     ChangeListRequest,
-    ChangeListReponse,
+    ChangeListResponse,
 };
 
 struct Message

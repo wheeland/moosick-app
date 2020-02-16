@@ -97,7 +97,7 @@ bool Server::handleMessage(const ClientCommon::Message &message, ClientCommon::M
     }
     case ClientCommon::LibraryRequest: {
         // send back whole library
-        response.tp = ClientCommon::LibraryReponse;
+        response.tp = ClientCommon::LibraryResponse;
         response.data = QJsonDocument(m_library.serializeToJson()).toJson();
         return true;
     }
@@ -105,7 +105,7 @@ bool Server::handleMessage(const ClientCommon::Message &message, ClientCommon::M
         const quint32 rev = message.data.toUInt();
         const QVector<Moosick::CommittedLibraryChange> changes = m_library.committedChangesSince(rev);
 
-        response.tp = ClientCommon::ChangeListReponse;
+        response.tp = ClientCommon::ChangeListResponse;
         response.data = QJsonDocument(toJson(changes).toArray()).toJson();
         return true;
     }
