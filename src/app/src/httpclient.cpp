@@ -29,7 +29,8 @@ QNetworkReply *HttpRequester::request(const QNetworkRequest &request)
 
 QNetworkReply *HttpRequester::requestFromServer(const QString &path, const QString &query)
 {
-    m_runningQueries << m_httpClient->requestFromServer(this, path, query);
+    const QString p = path.startsWith("/") ? path : QString("/") + path;
+    m_runningQueries << m_httpClient->requestFromServer(this, p, query);
     emit runningRequestsChanged(runningRequests());
     return m_runningQueries.last();
 }
