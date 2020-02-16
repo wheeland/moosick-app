@@ -85,6 +85,9 @@ QString Message::format()
         "ChangesResponse",
         "ChangeListRequest",
         "ChangeListResponse",
+        "DownloadRequest",
+        "DownloadResponse",
+        "DownloadQuery",
     };
 
     const quint32 idx = (quint32) tp;

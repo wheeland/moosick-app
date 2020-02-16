@@ -10,7 +10,8 @@
 #include "json.hpp"
 #include "jsonconv.hpp"
 
-static ClientCommon::ServerConfig s_server;
+static const char *LIB_SERVER_PORT = "LIB_SERVER_PORT";
+static const char *DOWNLOAD_SERVER_PORT = "DOWNLOAD_SERVER_PORT";
 
 static QByteArray getCommand(QByteArray request)
 {
@@ -41,13 +42,17 @@ int main(int argc, char **argv)
     const QString tmpDir = "/tmp/";
     const QString mediaDir = rootDir;
 
-    s_server.hostName = "localhost";
-    s_server.port = 12345;
-    s_server.timeout = 1000;
+    ClientCommon::ServerConfig libraryServer{ "localhost", 12345, 1000 };
+    ClientCommon::ServerConfig downloadServer{ "localhost", 54321, 1000 };
+
+    if (qEnvironmentVariableIsEmpty(LIB_SERVER_PORT))
+        libraryServer.port = qEnvironmentVariable(LIB_SERVER_PORT).toUShort();
+    if (qEnvironmentVariableIsEmpty(DOWNLOAD_SERVER_PORT))
+        downloadServer.port = qEnvironmentVariable(DOWNLOAD_SERVER_PORT).toUShort();
 
     if (command == "lib.do") {
         ClientCommon::Message answer;
-        sendRecv(s_server, ClientCommon::Message{ ClientCommon::LibraryRequest }, answer);
+        sendRecv(libraryServer, ClientCommon::Message{ ClientCommon::LibraryRequest }, answer);
 
         std::cout << answer.data.constData() << "\n";
 
@@ -57,7 +62,7 @@ int main(int argc, char **argv)
         if (values.contains("v") && !values["v"].isEmpty()) {
             const ClientCommon::Message request{ ClientCommon::ChangeListRequest, values["v"] };
             ClientCommon::Message answer;
-            sendRecv(s_server, request, answer);
+            sendRecv(libraryServer, request, answer);
 
             std::cout << answer.data.constData() << "\n";
         } else {
@@ -79,7 +84,7 @@ int main(int argc, char **argv)
             writer << changes;
 
             ClientCommon::Message answer;
-            sendRecv(s_server, request, answer);
+            sendRecv(libraryServer, request, answer);
 
             std::cout << answer.data.constData() << "\n";
         } else {
@@ -100,16 +105,9 @@ int main(int argc, char **argv)
         if (!values.contains("v") || values["v"].isEmpty())
             return 0;
 
-        NetCommon::DownloadRequest request;
-        if (!request.fromBase64(values["v"])) {
-            qWarning() << "Failed parsing the base64 download request";
-            return 0;
-        }
-
-        const QVector<Moosick::CommittedLibraryChange> changes = ClientCommon::download(
-                    s_server, request, mediaDir, toolDir, tmpDir);
-
-        std::cout << QJsonDocument(toJson(changes).toArray()).toJson().constData() << std::endl;
+        ClientCommon::Message answer, request{ ClientCommon::DownloadRequest, values["v"] };
+        sendRecv(downloadServer, request, answer);
+        std::cout << answer.data.constData() << "\n";
         return 0;
     }
     else if (command == "bandcamp-artist-info.do") {

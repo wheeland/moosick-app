@@ -17,6 +17,10 @@ enum MessageType : quint32
     ChangesResponse,
     ChangeListRequest,
     ChangeListResponse,
+
+    DownloadRequest,
+    DownloadResponse,
+    DownloadQuery,
 };
 
 struct Message
