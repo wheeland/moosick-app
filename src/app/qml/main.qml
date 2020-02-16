@@ -108,11 +108,31 @@ Rectangle {
         anchors.bottom: parent.bottom
     }
 
+    LogOutput {
+        id: logger
+        property int state: 0
+        enabled: (state == 2)
+        visible: (state > 0)
+        width: parent.width
+        height: parent.height / 2
+    }
+
     KeyboardItem {
         id: keyboard
         width: parent.width
         y: Qt.inputMethod.visible ? parent.height - height : parent.height
         visible: (y < parent.height)
         Behavior on y { NumberAnimation { duration: 100 } }
+    }
+
+    SimpleButton {
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.margins: 10
+        width: 20
+        height: 20
+        property var colors: [ "black", "#333333", "#666666" ]
+        color: colors[logger.state]
+        onClicked: logger.state = (logger.state + 1) % 3
     }
 }

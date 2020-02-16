@@ -47,23 +47,29 @@ void Logger::setLineCount(int lineCount)
 
     beginResetModel();
     m_lineCount = lineCount;
+    while (m_lines.size() > m_lineCount)
+        m_lines.removeFirst();
     endResetModel();
     emit lineCountChanged(m_lineCount);
 }
 
 void Logger::add(const QString &line)
 {
-    beginResetModel();
-    m_lines << line;
-    while (m_lines.size() > m_lineCount)
-        m_lines.removeFirst();
-    endResetModel();
+    beginInsertRows(QModelIndex(), 0, 0);
+    m_lines.prepend(line);
+    endInsertRows();
+
+    if (m_lines.size() > m_lineCount) {
+        beginRemoveRows(QModelIndex(), m_lineCount, m_lines.size() - 1);
+        m_lines.resize(m_lineCount);
+        endRemoveRows();
+    }
 }
 
 int Logger::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent)
-    return qMin(m_lines.size(), m_lineCount);
+    return m_lines.size();
 }
 
 QVariant Logger::data(const QModelIndex &index, int role) const
@@ -74,11 +80,9 @@ QVariant Logger::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    const int linesIdx = m_lines.size() - 1 - idx;
-
     switch (role) {
     case TextRole:
-        return QVariant::fromValue(m_lines[linesIdx]);
+        return QVariant::fromValue(m_lines[idx]);
     default:
         return QVariant();
     }

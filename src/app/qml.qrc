@@ -12,6 +12,7 @@
         <file>qml/MultiChoicePopup.qml</file>
         <file>qml/InputBlocker.qml</file>
         <file>qml/ConfirmationDialog.qml</file>
+        <file>qml/LogOutput.qml</file>
 
         <file>qml/PlayerBar.qml</file>
         <file>qml/PlayerBarButton.qml</file>

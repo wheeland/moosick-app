@@ -11,6 +11,7 @@
 #include "stringmodel.hpp"
 #include "selecttagsmodel.hpp"
 #include "multichoicecontroller.hpp"
+#include "util/androidutil.hpp"
 
 int main(int argc, char **argv)
 {
@@ -19,9 +20,9 @@ int main(int argc, char **argv)
 
     QGuiApplication app(argc, argv);
 
-#ifdef Q_OS_ANDROID
-    Logger logger;
+    AndroidUtil::Logger logger;
     logger.install();
+#ifdef Q_OS_ANDROID
     const QSize screenSize = app.primaryScreen()->size();
 #else
     const QSize screenSize = QSize(540, 920);
@@ -55,6 +56,7 @@ int main(int argc, char **argv)
     view.rootContext()->setContextProperty("_logger", &logger);
 #endif
     view.rootContext()->setContextProperty("_app", &controller);
+    view.rootContext()->setContextProperty("_logger", &logger);
     view.rootContext()->setContextProperty("_multiChoiceController", &multiChoiceController);
     view.setSource(QUrl("qrc:/qml/main.qml"));
     view.show();

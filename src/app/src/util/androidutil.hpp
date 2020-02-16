@@ -56,7 +56,7 @@ signals:
     void lineCountChanged(int lineCount);
 
 private:
-    QStringList m_lines;
+    QVector<QString> m_lines;
     int m_lineCount = 256;
 };
 
