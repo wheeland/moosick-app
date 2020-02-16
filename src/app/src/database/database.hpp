@@ -12,6 +12,9 @@ class HttpRequester;
 
 namespace Database {
 
+/**
+ * A frontend for the library on the server
+ */
 class Database : public QObject
 {
     Q_OBJECT
@@ -62,7 +65,8 @@ private:
 
     enum RequestType {
         None,
-        LibrarySync,
+        LibraryGet,
+        LibraryUpdate,
         LibraryChanges,
         BandcampDownload,
         YoutubeDownload,

@@ -22,12 +22,21 @@ Database::~Database()
 
 QNetworkReply *Database::sync()
 {
-    if (hasRunningRequestType(LibrarySync) || m_hasLibrary)
+    if (hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryUpdate))
         return nullptr;
 
-    QNetworkReply *reply = m_http->requestFromServer("/lib.do", "");
-    m_requests[reply] = LibrarySync;
-    return reply;
+    if (!m_hasLibrary) {
+        QNetworkReply *reply = m_http->requestFromServer("/lib.do", "");
+        m_requests[reply] = LibraryGet;
+        return reply;
+    }
+    // do a partial update if we already have a library
+    else {
+        const int lastRev = m_library.revision();
+        QNetworkReply *reply = m_http->requestFromServer("get-change-list.do", QString::number(lastRev));
+        m_requests[reply] = LibraryUpdate;
+        return reply;
+    }
 }
 
 QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags)
@@ -179,7 +188,7 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
     }
 
     switch (requestType) {
-    case LibrarySync: {
+    case LibraryGet: {
         if (!hasError)
             onNewLibrary(parseJsonObject(data, "Library"));
         break;
