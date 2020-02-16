@@ -110,6 +110,12 @@ int main(int argc, char **argv)
         std::cout << answer.data.constData() << "\n";
         return 0;
     }
+    else if (command == "running-downloads.do") {
+        ClientCommon::Message answer, request{ ClientCommon::DownloadQuery, "" };
+        sendRecv(downloadServer, request, answer);
+        std::cout << answer.data.constData() << "\n";
+        return 0;
+    }
     else if (command == "bandcamp-artist-info.do") {
         if (values.contains("v") && !values["v"].isEmpty()) {
             const QString url = values["v"];

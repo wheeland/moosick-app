@@ -19,6 +19,7 @@ protected:
 
 private:
     quint32 startDownload(const NetCommon::DownloadRequest &request);
+    QJsonArray getRunningDownloadsInfo() const;
 
 private:
     const QString m_program;
@@ -26,6 +27,11 @@ private:
     const QString m_tool;
     const QString m_temp;
 
-    QHash<quint32, QProcess*> m_downloads;
+    struct RunningDownload {
+        NetCommon::DownloadRequest request;
+        QProcess *process;
+    };
+
+    QHash<quint32, RunningDownload> m_downloads;
     quint32 m_nextDownloadId = 1;
 };

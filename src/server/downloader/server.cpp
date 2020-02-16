@@ -30,14 +30,13 @@ bool Server::handleMessage(const ClientCommon::Message &message, ClientCommon::M
         }
         else {
             const quint32 id = startDownload(request);
-            const QVector<quint32> ids = m_downloads.keys().toVector();
-            response = { ClientCommon::DownloadResponse, QJsonDocument(toJson(ids).toArray()).toJson() };
+            response = { ClientCommon::DownloadResponse, QJsonDocument(getRunningDownloadsInfo()).toJson() };
         }
         return true;
     }
     case ClientCommon::DownloadQuery: {
         const QVector<quint32> ids = m_downloads.keys().toVector();
-        response = { ClientCommon::DownloadResponse, QJsonDocument(toJson(ids).toArray()).toJson() };
+        response = { ClientCommon::DownloadResponse, QJsonDocument(getRunningDownloadsInfo()).toJson() };
         return true;
     }
     default: {
@@ -57,7 +56,7 @@ quint32 Server::startDownload(const NetCommon::DownloadRequest &request)
     proc->setProgram(m_program);
     proc->setArguments({ "--download", request.toBase64(), "--media", m_media, "--tool", m_tool, "--temp", m_temp });
     proc->start();
-    m_downloads[id] = proc;
+    m_downloads[id] = RunningDownload { request, proc };
 
     const auto handler = [=](int exitCode, QProcess::ExitStatus status) {
         if (exitCode != 0 || status == QProcess::CrashExit) {
@@ -74,4 +73,13 @@ quint32 Server::startDownload(const NetCommon::DownloadRequest &request)
     connect(proc, QOverload<int,QProcess::ExitStatus>::of(&QProcess::finished), this, handler);
 
     return id;
+}
+
+QJsonArray Server::getRunningDownloadsInfo() const
+{
+    QJsonArray ret;
+    for (auto it = m_downloads.begin(); it != m_downloads.end(); ++it) {
+        ret.append(QJsonValue(QString(it.value().request.toBase64())));
+    }
+    return ret;
 }
