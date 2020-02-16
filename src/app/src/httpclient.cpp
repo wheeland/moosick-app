@@ -42,16 +42,6 @@ void HttpRequester::abortAll()
     emit runningRequestsChanged(runningRequests());
 }
 
-void HttpRequester::requestDone(QNetworkReply *reply, QNetworkReply::NetworkError error)
-{
-    if (!m_runningQueries.contains(reply))
-        return;
-
-    m_runningQueries.removeAll(reply);
-    receivedReply(reply, error);
-    emit runningRequestsChanged(runningRequests());
-}
-
 HttpClient::HttpClient(const QString &host, quint16 port, QObject *parent)
     : QObject(parent)
     , m_manager(new QNetworkAccessManager(this))

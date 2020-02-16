@@ -210,8 +210,6 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
     default:
         break;
     }
-
-    reply->deleteLater();
 }
 
 void Database::onNewLibrary(const QJsonObject &json)

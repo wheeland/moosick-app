@@ -30,8 +30,6 @@ signals:
     void runningRequestsChanged(int runningRequests);
 
 private:
-    void requestDone(QNetworkReply *receivedReply, QNetworkReply::NetworkError error);
-
     friend class HttpClient;
 
     HttpClient *m_httpClient;
