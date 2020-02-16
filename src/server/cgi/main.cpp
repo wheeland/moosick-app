@@ -12,15 +12,6 @@
 
 static ClientCommon::ServerConfig s_server;
 
-template <class T>
-QByteArray toBase64(const T& value)
-{
-    QByteArray data;
-    QDataStream out(&data, QIODevice::WriteOnly);
-    out << value;
-    return data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-}
-
 static QByteArray getCommand(QByteArray request)
 {
     while (!request.isEmpty() && request[0] == '/')
