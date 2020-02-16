@@ -12,7 +12,7 @@ Server::Server(const QString &libraryPath,
                const QString &logPath,
                const QString &dataPath,
                const QString &backupBasePath)
-    : QObject ()
+    : NetCommon::TcpServer()
     , m_libraryPath(libraryPath)
     , m_logPath(logPath)
     , m_dataPath(dataPath)
@@ -34,8 +34,6 @@ Server::Server(const QString &libraryPath,
     if (!QFile(logPath).open(QIODevice::Append)) {
         qWarning() << "Can't write to log file" << logPath;
     }
-
-    QObject::connect(&m_tcpServer, &QTcpServer::newConnection, this, &Server::onNewConnection);
 }
 
 Server::~Server()
@@ -43,70 +41,12 @@ Server::~Server()
     saveLibrary();
 }
 
-bool Server::listen(quint16 port)
+bool Server::handleMessage(const ClientCommon::Message &message, ClientCommon::Message &response)
 {
-    if (!m_tcpServer.listen(QHostAddress::Any, port)) {
-        qWarning() << "Failed to listen on port" << port;
-        return false;
-    }
-    qDebug() << "Listening on port" << port;
-    return true;
-}
-
-void Server::onNewConnection()
-{
-    while (true) {
-        QTcpSocket *conn = m_tcpServer.nextPendingConnection();
-        if (!conn)
-            return;
-
-        handleConnection(conn);
-    }
-}
-
-void Server::handleConnection(QTcpSocket *socket)
-{
-    connect(socket, &QTcpSocket::readyRead, this, [=]() {
-        Server::onNewDataReady(socket);
-    });
-
-    if (socket->bytesAvailable())
-        onNewDataReady(socket);
-}
-
-void Server::onNewDataReady(QTcpSocket *socket)
-{
-    auto headerIt = m_connections.find(socket);
-    const bool hasHeader = (headerIt != m_connections.end());
-
-    // first receive message header
-    if (!hasHeader) {
-        ClientCommon::MessageHeader header;
-
-        // wait until we can receive the header
-        if (!ClientCommon::receiveHeader(socket, header))
-            return;
-
-        headerIt = m_connections.insert(socket, header);
-    }
-
-    // see if we can download the data already
-    if (socket->bytesAvailable() < headerIt->dataSize)
-        return;
-
-    // download data
-    const QByteArray data = socket->read(headerIt->dataSize);
-
-    // parse message
-    ClientCommon::Message message{ headerIt->tp, data };
-
-    qDebug() << "Received" << message.format() << "from" << socket->peerAddress();
-
     switch (message.tp) {
     case ClientCommon::Ping: {
-        qDebug() << "Sending Pong to" << socket->peerAddress();
-        ClientCommon::send(socket, {ClientCommon::Pong, {}});
-        break;
+        response = {ClientCommon::Pong, {}};
+        return true;
     }
     case ClientCommon::ChangesRequest: {
         // read changes from TCP stream
@@ -131,14 +71,11 @@ void Server::onNewDataReady(QTcpSocket *socket)
             }
         }
 
-        qDebug() << "Applied" << appliedChanges.size() << "changes to Library. Sending ChangesResponse to" << socket->peerAddress();
+        qDebug() << "Applied" << appliedChanges.size() << "changes to Library";
 
         // send back all successful changes
-        ClientCommon::Message response;
         response.tp = ClientCommon::ChangesResponse;
         response.data = QJsonDocument(toJson(appliedChanges).toArray()).toJson();
-
-        ClientCommon::send(socket, response);
 
         // append library log
         QFile logFile(m_logPath);
@@ -156,41 +93,27 @@ void Server::onNewDataReady(QTcpSocket *socket)
 
         saveLibrary();
 
-        break;
+        return true;
     }
     case ClientCommon::LibraryRequest: {
         // send back whole library
-        ClientCommon::Message response;
         response.tp = ClientCommon::LibraryReponse;
         response.data = QJsonDocument(m_library.serializeToJson()).toJson();
-
-        qDebug() << "Sending LibraryResponse to" << socket->peerAddress();
-
-        ClientCommon::send(socket, response);
-        break;
+        return true;
     }
     case ClientCommon::ChangeListRequest: {
         const quint32 rev = message.data.toUInt();
         const QVector<Moosick::CommittedLibraryChange> changes = m_library.committedChangesSince(rev);
 
-        ClientCommon::Message response;
         response.tp = ClientCommon::ChangeListReponse;
         response.data = QJsonDocument(toJson(changes).toArray()).toJson();
-
-        qDebug().nospace() << "Sending ChangeListReponse(revision=" << rev << "), " << changes.size() << " items, to" << socket->peerAddress();
-        ClientCommon::send(socket, response);
-        break;
+        return true;
     }
     default: {
-        qDebug() << "Sending Error to" << socket->peerAddress();
-        ClientCommon::send(socket, {ClientCommon::Error, {}});
-        break;
+        response = {ClientCommon::Error, {}};
+        return true;
     }
     }
-
-    // clean up
-    m_connections.erase(headerIt);
-    socket->deleteLater();
 }
 
 void Server::saveLibrary() const

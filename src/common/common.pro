@@ -11,6 +11,7 @@ SOURCES += \
     src/library.cpp \
     src/library_serialize.cpp \
     src/messages.cpp \
+    src/tcpserver.cpp \
     src/requests.cpp \
     src/util.cpp \
 
@@ -21,6 +22,7 @@ HEADERS += \
     include/json.hpp \
     include/library.hpp \
     include/messages.hpp \
+    include/tcpserver.hpp \
     include/requests.hpp \
     include/type_ids.hpp \
     src/library_priv.hpp \

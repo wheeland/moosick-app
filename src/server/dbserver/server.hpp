@@ -2,10 +2,11 @@
 
 #include <QTcpServer>
 
+#include "tcpserver.hpp"
 #include "library.hpp"
 #include "messages.hpp"
 
-class Server : public QObject
+class Server : public NetCommon::TcpServer
 {
 public:
     Server(const QString &libraryPath,
@@ -14,23 +15,16 @@ public:
            const QString &m_backupBasePath);
     ~Server();
 
-    bool listen(quint16 port);
-
-private slots:
-    void onNewConnection();
+protected:
+    bool handleMessage(const ClientCommon::Message &message, ClientCommon::Message &response) override;
 
 private:
-    void handleConnection(QTcpSocket *socket);
-    void onNewDataReady(QTcpSocket *socket);
     void saveLibrary() const;
 
-    QTcpServer m_tcpServer;
     const QString m_libraryPath;
     const QString m_logPath;
     const QString m_dataPath;
     const QString m_backupBasePath;
 
     Moosick::Library m_library;
-
-    QHash<QTcpSocket *, ClientCommon::MessageHeader> m_connections;
 };
