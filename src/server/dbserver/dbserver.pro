@@ -19,4 +19,4 @@ INCLUDEPATH += \
 LIBS += \
     -L../../bin/ -lcommon
 
-DESTDIR = ../bin/
+DESTDIR = ../../bin/

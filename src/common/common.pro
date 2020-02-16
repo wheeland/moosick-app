@@ -1,5 +1,5 @@
 TARGET = common
-CONFIG += c++11 staticlib
+CONFIG += c++11
 TEMPLATE = lib
 
 QT += core network
