@@ -9,34 +9,34 @@ QTPLUGIN += qtvirtualkeyboardplugin
 CONFIG += disable-desktop
 
 SOURCES += \
-    src/main.cpp \
-    src/httpclient.cpp \
-    src/search.cpp \
-    src/playlist.cpp \
-    src/controller.cpp \
     src/audio.cpp \
+    src/controller.cpp \
+    src/httpclient.cpp \
+    src/main.cpp \
+    src/multichoicecontroller.cpp \
+    src/playlist.cpp \
+    src/search.cpp \
+    src/selecttagsmodel.cpp \
+    src/stringmodel.cpp \
     src/database/database.cpp \
     src/database/database_items.cpp \
     src/database/database_interface.cpp \
-    src/stringmodel.cpp \
-    src/selecttagsmodel.cpp \
-    src/multichoicecontroller.cpp \
     src/util/androidutil.cpp \
     src/util/qmlutil.cpp \
     src/util/modeladapter.cpp \
 
 HEADERS += \
-    src/search.hpp \
-    src/httpclient.hpp \
-    src/playlist.hpp \
-    src/controller.hpp \
     src/audio.hpp \
+    src/controller.hpp \
+    src/httpclient.hpp \
+    src/multichoicecontroller.hpp \
+    src/playlist.hpp \
+    src/search.hpp \
+    src/selecttagsmodel.hpp \
+    src/stringmodel.hpp \
     src/database/database.hpp \
     src/database/database_items.hpp \
     src/database/database_interface.hpp \
-    src/stringmodel.hpp \
-    src/selecttagsmodel.hpp \
-    src/multichoicecontroller.hpp \
     src/util/androidutil.hpp \
     src/util/qmlutil.hpp \
     src/util/modeladapter.hpp \
