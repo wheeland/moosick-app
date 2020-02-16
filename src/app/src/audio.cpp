@@ -126,7 +126,6 @@ Audio::Status Audio::computeStatus()
 void Audio::updateStatus()
 {
     Status status = computeStatus();
-    qWarning() << "UPDATE" << m_status << status;
 
     if (m_status != status) {
         m_status = status;
