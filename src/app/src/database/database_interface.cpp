@@ -249,8 +249,7 @@ void DatabaseInterface::editOkClicked()
         m_editItemType = EditNone;
         m_editItemSource = SourceNone;
 
-        QNetworkReply *reply = m_db->download(m_requestedDownload->request, m_requestedDownload->albumTags);
-        m_downloads[reply] = m_requestedDownload->searchResult;
+        m_db->download(m_requestedDownload->request, m_requestedDownload->albumTags);
         m_requestedDownload.reset();
     }
 
@@ -272,8 +271,7 @@ void DatabaseInterface::editOkClicked()
             m_editItemSource = SourceNone;
 
             m_requestedDownload->request.albumName = m_editStringList->enteredString();
-            QNetworkReply *reply = m_db->download(m_requestedDownload->request, m_requestedDownload->albumTags);
-            m_downloads[reply] = m_requestedDownload->searchResult;
+            m_db->download(m_requestedDownload->request, m_requestedDownload->albumTags);
             m_requestedDownload.reset();
         }
     }

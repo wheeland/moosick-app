@@ -175,7 +175,6 @@ private:
         QPointer<Search::Result> searchResult;
     };
     QScopedPointer<DownloadRequest> m_requestedDownload;
-    QHash<QNetworkReply*, QPointer<Search::Result>> m_downloads;
 };
 
 } // namespace Database
