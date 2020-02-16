@@ -11,13 +11,20 @@ enum MessageType : quint32
     Error,
     Ping,
     Pong,
+
+    /** Retrieve current state of the library */
     LibraryRequest,
     LibraryResponse,
+
+    /** Apply a set of changes to the library, return applied changes */
     ChangesRequest,
     ChangesResponse,
+
+    /** Request a list of changes made since revision N */
     ChangeListRequest,
     ChangeListResponse,
 
+    /** Download from YT/BC, return a list of running download IDs */
     DownloadRequest,
     DownloadResponse,
     DownloadQuery,
