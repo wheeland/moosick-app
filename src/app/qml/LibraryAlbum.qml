@@ -60,7 +60,7 @@ Rectangle {
     }
 
     MultiChoice {
-        options: ["Play", "Edit", "Remove"]
+        options: ["Play", "Edit", "Change Artist", "Remove"]
         anchors.fill: parent
         anchors.bottomMargin: column.height
 
@@ -69,7 +69,8 @@ Rectangle {
         onSelected: {
             if (index === 0) _app.addLibraryItemToPlaylist(root.album, true);
             if (index === 1) _app.database.editItem(root.album);
-            if (index === 2) _app.database.removeItem(root.album);
+            if (index === 2) _app.database.changeAlbumArtist(root.album);
+            if (index === 3) _app.database.removeItem(root.album);
         }
     }
 

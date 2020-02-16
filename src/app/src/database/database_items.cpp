@@ -70,9 +70,10 @@ void DbArtist::removeAlbum(DbAlbum *album)
     album->deleteLater();
 }
 
-DbAlbum::DbAlbum(DatabaseInterface *db, Moosick::AlbumId album)
+DbAlbum::DbAlbum(DatabaseInterface *db, Moosick::AlbumId album, DbArtist *artist)
     : DbTaggedItem(db, DbItem::Album, album, album.tags(db->library()))
     , m_album(album)
+    , m_artist(artist)
 {
     m_songs.addValueAccessor("song");
     connect(this, &DbTaggedItem::libraryChanged, this, [=]() {
@@ -103,7 +104,7 @@ void DbAlbum::setSongs(const Moosick::SongIdList &songs)
 
     QVector<DbSong*> newSongs;
     for (const Moosick::SongId &songId : songs)
-        newSongs << new DbSong(database(), songId);
+        newSongs << new DbSong(database(), songId, this);
     qSort(newSongs.begin(), newSongs.end(), [=](DbSong *lhs, DbSong *rhs) {
         return lhs->position() < rhs->position();
     });
@@ -125,9 +126,10 @@ void DbAlbum::removeSong(DbSong *song)
     emit songsChanged();
 }
 
-DbSong::DbSong(DatabaseInterface *db, Moosick::SongId song)
+DbSong::DbSong(DatabaseInterface *db, Moosick::SongId song, DbAlbum *album)
     : DbTaggedItem(db, DbItem::Song, song, song.tags(db->library()))
     , m_song(song)
+    , m_album(album)
 {
     connect(this, &DbTaggedItem::libraryChanged, this, [=]() {
         updateTags(m_song.tags(library()));

@@ -64,6 +64,7 @@ public:
         EditArtist,
         EditAlbum,
         EditSong,
+        ChangeAlbumArtist,
     };
     Q_ENUM(EditItemType)
 
@@ -84,7 +85,7 @@ public:
     SelectTagsModel *tagsModel() const { return m_tagsModel; }
     ModelAdapter::Model *searchResults() const { return m_searchResults.model(); }
     QString searchString() const { return m_searchString; }
-    StringModel *editStringList() const { return m_editStringList; }
+    StringModel *editStringList() const { return m_editArtistStringList; }
     EditItemType editItemType() const { return m_editItemType; }
     EditItemSource editItemSource() const { return m_editItemSource; }
     bool editItemVisible() const;
@@ -92,6 +93,8 @@ public:
 
     Q_INVOKABLE void search(const QString &searchString);
     Q_INVOKABLE void fillArtistInfo(DbArtist *artist);
+
+    Q_INVOKABLE void changeAlbumArtist(DbAlbum *album);
 
     Q_INVOKABLE void editItem(DbItem *item);
     Q_INVOKABLE void editOkClicked();
@@ -105,7 +108,7 @@ public:
     Q_INVOKABLE void confirm(bool ok);
 
 private slots:
-    void onStringSelected(int id);
+    void onArtistStringSelected(int id);
     void onLibraryChanged();
 
 signals:
@@ -159,7 +162,7 @@ private:
     quint32 m_editedItemId;
     EditItemType m_editItemType = EditNone;
     EditItemSource m_editItemSource = SourceNone;
-    StringModel *m_editStringList;
+    StringModel *m_editArtistStringList;
 
     /**
      * Confirmation dialog

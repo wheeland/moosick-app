@@ -129,8 +129,10 @@ class DbAlbum : public DbTaggedItem
     Q_PROPERTY(ModelAdapter::Model *songs READ songsModel NOTIFY songsChanged)
 
 public:
-    DbAlbum(DatabaseInterface *db, Moosick::AlbumId album);
+    DbAlbum(DatabaseInterface *db, Moosick::AlbumId album, DbArtist *artist);
     ~DbAlbum();
+
+    DbArtist *artist() const { return m_artist; }
 
     QString name() const override { return m_album.name(library()); }
     QString durationString() const;
@@ -148,6 +150,7 @@ signals:
 private:
     Moosick::AlbumId m_album;
     ModelAdapter::Adapter<DbSong*> m_songs;
+    DbArtist *m_artist;
 };
 
 class DbSong : public DbTaggedItem
@@ -157,8 +160,10 @@ class DbSong : public DbTaggedItem
     Q_PROPERTY(int position READ position NOTIFY libraryChanged)
 
 public:
-    DbSong(DatabaseInterface *db, Moosick::SongId song);
+    DbSong(DatabaseInterface *db, Moosick::SongId song, DbAlbum *album);
     ~DbSong() = default;
+
+    DbAlbum *album() const { return m_album; }
 
     QString name() const override { return m_song.name(library()); }
     QString artistName() const;
@@ -170,6 +175,7 @@ public:
 
 private:
     Moosick::SongId m_song;
+    DbAlbum *m_album;
 };
 
 } // namespace Database

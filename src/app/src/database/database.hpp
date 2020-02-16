@@ -37,6 +37,8 @@ public:
 
     QNetworkReply *setTagName(Moosick::TagId id, const QString &name);
 
+    QNetworkReply *setAlbumArtist(Moosick::AlbumId album, Moosick::ArtistId artist);
+
     QNetworkReply *removeArtist(Moosick::ArtistId artistId);
     QNetworkReply *removeAlbum(Moosick::AlbumId albumId);
     QNetworkReply *removeSong(Moosick::SongId songId);

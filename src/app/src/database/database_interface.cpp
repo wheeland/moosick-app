@@ -16,13 +16,13 @@ DatabaseInterface::DatabaseInterface(HttpClient *httpClient, QObject *parent)
     : QObject(parent)
     , m_db(new Database(httpClient, parent))
     , m_tagsModel(new SelectTagsModel(this))
-    , m_editStringList(new StringModel(this))
+    , m_editArtistStringList(new StringModel(this))
 {
     m_searchResults.addAccessor("artist", [&](const SearchResultArtist &artist) {
         return QVariant::fromValue(artist.artist);
     });
 
-    connect(m_editStringList, &StringModel::selected, this, &DatabaseInterface::onStringSelected);
+    connect(m_editArtistStringList, &StringModel::selected, this, &DatabaseInterface::onArtistStringSelected);
 
     connect(m_db, &Database::libraryChanged, this, &DatabaseInterface::onLibraryChanged);
     m_db->sync();
@@ -127,12 +127,25 @@ void DatabaseInterface::fillArtistInfo(DbArtist *artist)
 
     // populate artist with album/songs objects
     for (const SearchResultAlbum &albumResult : it->albums) {
-        DbAlbum *album = new DbAlbum(this, albumResult.albumId);
+        DbAlbum *album = new DbAlbum(this, albumResult.albumId, artist);
         album->setSongs(albumResult.songs);
         artist->addAlbum(album);
     }
 
     artist->dataSet();
+}
+
+void DatabaseInterface::changeAlbumArtist(DbAlbum *album)
+{
+    Q_ASSERT(m_editItemType == EditNone);
+    Q_ASSERT(m_editItemSource == SourceNone);
+
+    m_editItemType = ChangeAlbumArtist;
+    m_editItemSource = SourceLibrary;
+    m_editArtistStringList->popup(album->artist()->name());
+    m_editedItemId = album->id();
+
+    emit stateChanged();
 }
 
 void DatabaseInterface::editItem(DbItem *item)
@@ -150,7 +163,7 @@ void DatabaseInterface::editItem(DbItem *item)
         m_editItemType = EditNone;
 
     if (m_editItemType != EditNone) {
-        m_editStringList->popup(item->name());
+        m_editArtistStringList->popup(item->name());
         m_tagsModel->setSelectedTagIds(qobject_cast<DbTaggedItem*>(item)->tagIds());
     }
 
@@ -171,7 +184,7 @@ void DatabaseInterface::requestDownload(const NetCommon::DownloadRequest &reques
     m_editItemSource = (request.tp == NetCommon::DownloadRequest::BandcampAlbum) ? SourceBandcamp : SourceYoutube;
     m_editedItemId = 0;
 
-    m_editStringList->popup(request.artistName);
+    m_editArtistStringList->popup(request.artistName);
     m_tagsModel->setSelectedTagIds({});
 
     emit stateChanged();
@@ -213,7 +226,7 @@ void DatabaseInterface::confirm(bool ok)
     emit confirmationChanged();
 }
 
-void DatabaseInterface::onStringSelected(int id)
+void DatabaseInterface::onArtistStringSelected(int id)
 {
     if (id < 0)
         return;
@@ -230,8 +243,8 @@ void DatabaseInterface::onStringSelected(int id)
 
 void DatabaseInterface::editOkClicked()
 {
-    const int selectedId = m_editStringList->selectedId();
-    const QString enteredName = m_editStringList->enteredString();
+    const int selectedId = m_editArtistStringList->selectedId();
+    const QString enteredName = m_editArtistStringList->enteredString();
     const Moosick::TagIdList selectedTags = m_tagsModel->selectedTagsIds();
 
     if (m_editItemSource == SourceBandcamp) {
@@ -264,13 +277,13 @@ void DatabaseInterface::editOkClicked()
                 m_requestedDownload->albumTags = selectedTags;
             }
             m_editItemType = EditAlbum;
-            m_editStringList->popup("");
+            m_editArtistStringList->popup("");
         }
         else if (m_editItemType == EditAlbum) {
             m_editItemType = EditNone;
             m_editItemSource = SourceNone;
 
-            m_requestedDownload->request.albumName = m_editStringList->enteredString();
+            m_requestedDownload->request.albumName = m_editArtistStringList->enteredString();
             m_db->download(m_requestedDownload->request, m_requestedDownload->albumTags);
             m_requestedDownload.reset();
         }
@@ -279,10 +292,15 @@ void DatabaseInterface::editOkClicked()
     if (m_editItemSource == SourceLibrary) {
         Q_ASSERT(m_editedItemId > 0);
 
-        QNetworkReply *reply =
+        if ((m_editItemType == ChangeAlbumArtist) && (selectedId > 0)) {
+            m_db->setAlbumArtist(m_editedItemId, selectedId);
+        }
+        else {
+            QNetworkReply *reply =
                 (m_editItemType == EditArtist) ? m_db->setArtistDetails(m_editedItemId, enteredName, selectedTags) :
                 (m_editItemType == EditAlbum) ? m_db->setAlbumDetails(m_editedItemId, enteredName, selectedTags) :
                 (m_editItemType == EditSong) ? m_db->setSongDetails(m_editedItemId, enteredName, selectedTags) : nullptr;
+        }
 
         m_editItemType = EditNone;
         m_editItemSource = SourceNone;
@@ -370,7 +388,7 @@ void DatabaseInterface::updateSearchResults()
                 return album->id() == newAlbum.albumId;
             }));
             if (!exists)
-                dst.artist->addAlbum(new DbAlbum(this, newAlbum.albumId));
+                dst.artist->addAlbum(new DbAlbum(this, newAlbum.albumId, dst.artist));
         }
 
         // remove stale albums, and set song info for the valid ones
@@ -427,9 +445,9 @@ void DatabaseInterface::updateSearchResults()
 
 void DatabaseInterface::repopulateEditStringList()
 {
-    m_editStringList->clear();
+    m_editArtistStringList->clear();
     for (const Moosick::ArtistId &artistId : m_db->library().artistsByName()) {
-        m_editStringList->add((int) artistId, artistId.name(m_db->library()));
+        m_editArtistStringList->add((int) artistId, artistId.name(m_db->library()));
     }
 }
 
@@ -448,7 +466,7 @@ bool DatabaseInterface::editItemVisible() const
 
 bool DatabaseInterface::editItemStringsChoiceActive() const
 {
-    return (m_editItemType == EditArtist) && (m_editItemSource != SourceNone);
+    return (m_editItemType == EditArtist || m_editItemType == ChangeAlbumArtist) && (m_editItemSource != SourceNone);
 }
 
 } // namespace Database

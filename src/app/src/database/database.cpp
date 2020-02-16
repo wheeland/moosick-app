@@ -98,6 +98,11 @@ QNetworkReply *Database::setSongDetails(Moosick::SongId id, const QString &name,
     );
 }
 
+QNetworkReply *Database::setAlbumArtist(Moosick::AlbumId album, Moosick::ArtistId artist)
+{
+    return sendChangeRequests({ LibraryChange { LibraryChange::AlbumSetArtist, album, artist, "" } });
+}
+
 void Database::addRemoveArtist(QVector<LibraryChange> &changes, Moosick::ArtistId id)
 {
     for (Moosick::AlbumId albumId : id.albums(m_library))
