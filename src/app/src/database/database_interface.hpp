@@ -36,6 +36,11 @@ class DatabaseInterface : public QObject
 {
     Q_OBJECT
 
+    Q_PROPERTY(bool hasLibrary READ hasLibrary NOTIFY hasLibraryChanged)
+    Q_PROPERTY(bool isSyncing READ isSyncing NOTIFY isSyncingChanged)
+    Q_PROPERTY(bool downloadsPending READ downloadsPending NOTIFY downloadsPendingChanged)
+    Q_PROPERTY(bool changesPending READ changesPending NOTIFY changesPendingChanged)
+
     /** list of all available tags in the library */
     Q_PROPERTY(SelectTagsModel *tagsModel READ tagsModel CONSTANT)
 
@@ -82,6 +87,11 @@ public:
 
     const Moosick::Library &library() const;
 
+    bool hasLibrary() const { return m_db->hasLibrary(); }
+    bool isSyncing() const { return m_db->isSyncing(); }
+    bool downloadsPending() const { return m_db->downloadsPending(); }
+    bool changesPending() const { return m_db->changesPending(); }
+
     SelectTagsModel *tagsModel() const { return m_tagsModel; }
     ModelAdapter::Model *searchResults() const { return m_searchResults.model(); }
     QString searchString() const { return m_searchString; }
@@ -115,6 +125,10 @@ signals:
     void searchStringChanged(QString searchString);
     void stateChanged();
     void confirmationChanged();
+    void hasLibraryChanged();
+    void isSyncingChanged();
+    void downloadsPendingChanged();
+    void changesPendingChanged();
 
 private:
     friend class DbTaggedItem;

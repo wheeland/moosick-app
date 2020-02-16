@@ -20,12 +20,18 @@ class Database : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool hasLibrary READ hasLibrary NOTIFY libraryChanged)
+    Q_PROPERTY(bool isSyncing READ isSyncing NOTIFY isSyncingChanged)
+    Q_PROPERTY(bool downloadsPending READ downloadsPending NOTIFY downloadsPendingChanged)
+    Q_PROPERTY(bool changesPending READ changesPending NOTIFY changesPendingChanged)
 
 public:
     Database(HttpClient *httpClient, QObject *parent = nullptr);
     ~Database() override;
 
     bool hasLibrary() const { return m_hasLibrary; }
+    bool isSyncing() const { return hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryUpdate); }
+    bool downloadsPending() const { return m_downloadsPending; }
+    bool changesPending() const { return hasRunningRequestType(LibraryChanges); }
     const Moosick::Library &library() const { return m_library; }
 
     QNetworkReply *sync();
@@ -49,6 +55,9 @@ private slots:
 
 signals:
     void libraryChanged();
+    void downloadsPendingChanged(bool downloadsPending);
+    void changesPendingChanged(bool changesPending);
+    void isSyncingChanged();
 
 private:
     void onNewLibrary(const QJsonObject &json);
@@ -80,6 +89,8 @@ private:
     };
 
     bool m_hasLibrary = false;
+    bool m_downloadsPending = false;
+    bool m_changesPending = false;
     Moosick::Library m_library;
 
     HttpRequester *m_http;
@@ -112,6 +123,7 @@ private:
     /** regularly query the state of the downloads */
     QNetworkReply *m_downloadQuery = nullptr;
     QTimer m_downloadQueryTimer;
+    bool m_isSyncing;
 };
 
 } // namespace Database

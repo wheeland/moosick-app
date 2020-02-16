@@ -26,6 +26,11 @@ DatabaseInterface::DatabaseInterface(HttpClient *httpClient, QObject *parent)
 
     connect(m_db, &Database::libraryChanged, this, &DatabaseInterface::onLibraryChanged);
     m_db->sync();
+
+    connect(m_db, &Database::libraryChanged, this, &DatabaseInterface::hasLibraryChanged);
+    connect(m_db, &Database::changesPendingChanged, this, &DatabaseInterface::changesPendingChanged);
+    connect(m_db, &Database::downloadsPendingChanged, this, &DatabaseInterface::downloadsPendingChanged);
+    connect(m_db, &Database::isSyncingChanged, this, &DatabaseInterface::isSyncingChanged);
 }
 
 DatabaseInterface::~DatabaseInterface()

@@ -75,6 +75,32 @@ Rectangle {
         onCancelClicked: _app.database.editCancelClicked()
     }
 
+    Row {
+        height: childrenRect.height
+        anchors.left: parent.left
+        anchors.bottom: player.top
+        anchors.margins: 20
+        spacing: 20
+
+        SimpleButton {
+            visible: _app.database.changesPending
+            fontSize: 10
+            label: "Changing..."
+        }
+
+        SimpleButton {
+            visible: _app.database.isSyncing
+            fontSize: 10
+            label: "Syncing..."
+        }
+
+        SimpleButton {
+            visible: _app.database.downloadsPending
+            fontSize: 10
+            label: "Downloading..."
+        }
+    }
+
     PlayerBar {
         id: player
         anchors.left: parent.left

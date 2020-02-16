@@ -32,18 +32,20 @@ QNetworkReply *Database::sync()
     if (hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryUpdate))
         return nullptr;
 
+    QNetworkReply *reply;
     if (!m_hasLibrary) {
-        QNetworkReply *reply = m_http->requestFromServer("/lib.do", "");
+        reply = m_http->requestFromServer("/lib.do", "");
         m_requests[reply] = LibraryGet;
-        return reply;
     }
     // do a partial update if we already have a library
     else {
         const int lastRev = m_library.revision();
-        QNetworkReply *reply = m_http->requestFromServer("/get-change-list.do", QString::asprintf("v=%d", lastRev));
+        reply = m_http->requestFromServer("/get-change-list.do", QString::asprintf("v=%d", lastRev));
         m_requests[reply] = LibraryUpdate;
-        return reply;
     }
+
+    emit isSyncingChanged();
+    return reply;
 }
 
 QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags)
@@ -71,6 +73,10 @@ QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moos
     }
 
     m_runningDownloads << Download { request, albumTags, reply };
+
+    m_downloadsPending = true;
+    emit downloadsPendingChanged(m_downloadsPending);
+
     return reply;
 }
 
@@ -162,6 +168,9 @@ QNetworkReply *Database::sendChangeRequests(const QVector<LibraryChange> &change
     QNetworkReply *reply = m_http->requestFromServer("/request-changes.do", query);
     m_requests[reply] = LibraryChanges;
 
+    m_changesPending = true;
+    emit changesPendingChanged(m_changesPending);
+
     return reply;
 }
 
@@ -239,6 +248,10 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
     default:
         break;
     }
+
+    m_changesPending = hasRunningRequestType(LibraryChanges);
+    emit changesPendingChanged(m_changesPending);
+    emit isSyncingChanged();
 }
 
 void Database::onDownloadQueryTimer()
@@ -282,8 +295,11 @@ void Database::onDownloadQueryResult(const QByteArray &data)
     if (needsSync)
         sync();
 
+    m_downloadsPending = !jsonArray.isEmpty();
+    emit downloadsPendingChanged(m_downloadsPending);
+
     // if there are downloads still running, we'll need to check back later for the results
-    if (!jsonArray.isEmpty())
+    if (m_downloadsPending)
         m_downloadQueryTimer.start(5000);
 }
 
