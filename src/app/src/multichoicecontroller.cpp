@@ -1,12 +1,20 @@
 #include "multichoicecontroller.hpp"
 
+void MultiChoiceController::setUiScale(float uiScale)
+{
+    if (m_uiScale != uiScale) {
+        m_uiScale = uiScale;
+        emit uiScaleChanged(m_uiScale);
+    }
+}
+
 void MultiChoiceController::show(QQuickItem *parent, const QStringList &options, qreal x, qreal y)
 {
     Q_ASSERT(parent);
 
     const QPointF origin = parent->mapToScene(QPointF(0, 0));
-    m_originX = origin.x();
-    m_originY = origin.y();
+    m_originX = origin.x() / m_uiScale;
+    m_originY = origin.y() / m_uiScale;
     m_centerX = m_originX + x;
     m_centerY = m_originY + y;
     m_mouseX = m_centerX;

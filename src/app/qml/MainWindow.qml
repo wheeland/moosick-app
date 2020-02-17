@@ -23,7 +23,6 @@ Rectangle {
         }
 
         offset: 10
-        pixelSize: 20
         onChange: swipeView.currentIndex = toIndex
     }
 
@@ -84,19 +83,19 @@ Rectangle {
 
         SimpleButton {
             visible: _app.database.changesPending
-            fontSize: 10
+            fontSize: _style.fontSizeIndicator
             label: "Changing..."
         }
 
         SimpleButton {
             visible: _app.database.isSyncing
-            fontSize: 10
+            fontSize: _style.fontSizeIndicator
             label: "Syncing..."
         }
 
         SimpleButton {
             visible: _app.database.downloadsPending
-            fontSize: 10
+            fontSize: _style.fontSizeIndicator
             label: "Downloading..."
         }
     }

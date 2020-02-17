@@ -67,6 +67,11 @@ int main(int argc, char **argv)
     view.rootContext()->setContextProperty("_app", &controller);
     view.rootContext()->setContextProperty("_defaultWindowWidth", DEFAULT_WIDTH);
     view.rootContext()->setContextProperty("_multiChoiceController", &multiChoiceController);
+
+    QQmlComponent styleComponent(view.engine(), "qrc:/qml/Style.qml");
+    QObject *styleObject = styleComponent.create(view.rootContext());
+    view.rootContext()->setContextProperty("_style", styleObject);
+
     view.setSource(QUrl("qrc:/qml/main.qml"));
     view.show();
 

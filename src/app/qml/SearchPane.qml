@@ -22,7 +22,6 @@ Flickable {
                 id: retryButton
                 anchors.left: parent.left
                 anchors.margins: 20
-                fontSize: 18
                 label: "Retry"
                 background: _app.search.hasErrors ? "black" : "darkgray"
                 foreground: _app.search.hasErrors ? "white" : "lightgray"
@@ -41,16 +40,18 @@ Flickable {
                 height: retryButton.height - 10
                 background: "black"
                 foreground: "white"
-                pixelSize: 16
+                pixelSize: _style.fontSizeButtons * 0.8
             }
 
             SimpleButton {
                 id: searchButton
                 anchors.right: parent.right
                 anchors.margins: 20
-                fontSize: 18
                 label: "Search"
-                onClicked: _app.search.search(textInput.text)
+                onClicked: {
+                    textInput.hasInputFocus = false;
+                    _app.search.search(textInput.displayText);
+                }
             }
         }
 

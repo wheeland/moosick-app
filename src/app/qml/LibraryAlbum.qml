@@ -29,7 +29,7 @@ Rectangle {
         color: root.textColor
         text: root.album ? root.album.name : ""
         font.bold: true
-        font.pixelSize: textSize
+        font.pixelSize: _style.fontSizeEntries
     }
 
     LibraryTagSpace {
@@ -56,7 +56,7 @@ Rectangle {
         color: root.textColor
         text: root.album ? root.album.durationString : ""
         font.italic: true
-        font.pixelSize: textSize
+        font.pixelSize: _style.fontSizeEntries
     }
 
     MultiChoice {

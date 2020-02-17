@@ -33,12 +33,13 @@ Item {
             }
         }
         font.italic: true
+        font.pixelSize: _style.fontSizeEntries
     }
 
     Image {
-        anchors.verticalCenter: titleText.verticalCenter
+        anchors.top: titleText.top
+        anchors.bottom: titleText.bottom
         x: 100
-        height: 30
         source: root.result.iconData
         fillMode: Image.PreserveAspectFit
     }
@@ -55,6 +56,7 @@ Item {
             }
         }
         font.italic: true
+        font.pixelSize: _style.fontSizeEntries
     }
 
     Text {
@@ -69,6 +71,7 @@ Item {
             }
         }
         font.bold: true
+        font.pixelSize: _style.fontSizeEntries
     }
 
     MultiChoice {

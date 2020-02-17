@@ -6,6 +6,7 @@ Rectangle {
     property alias background : root.color
     property alias foreground : input.color
     property alias text : input.text
+    property alias displayText : input.displayText
     property real pixelSize: 11
 
     property alias hasInputFocus : input.focus

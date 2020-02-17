@@ -22,7 +22,7 @@ Rectangle {
     Text {
         id: text
         color: "white"
-        font.pixelSize: 20
+        font.pixelSize: _style.fontSizeButtons
         anchors.centerIn: parent
     }
 

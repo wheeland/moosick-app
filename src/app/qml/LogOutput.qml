@@ -32,7 +32,7 @@ Rectangle {
                 width: root.width
                 text: model.text
                 wrapMode: Text.Wrap
-                font.pixelSize: 10
+                font.pixelSize: _style.fontSizeLogOutput
                 color: "black"
             }
         }

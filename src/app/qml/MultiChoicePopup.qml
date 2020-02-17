@@ -36,6 +36,7 @@ Item {
                 anchors.centerIn: parent
                 text: _multiChoiceController.options[index]
                 color: "white"
+                font.pixelSize: _style.fontSizePopup
             }
 
             readonly property bool selected:

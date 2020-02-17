@@ -9,7 +9,6 @@ Rectangle {
     property DbArtist artist
     property bool expanded: false
     property color textColor: "#cccccc"
-    property real textSize: 18
     property real slideDuration: 100
 
     height: tagSpace.height + albumsColumn.height + 10
@@ -22,7 +21,7 @@ Rectangle {
         anchors.verticalCenter: tagSpace.verticalCenter
         color: root.textColor
         text: root.artist ? root.artist.name : ""
-        font.pixelSize: textSize
+        font.pixelSize: _style.fontSizeEntries
         font.bold: true
     }
 

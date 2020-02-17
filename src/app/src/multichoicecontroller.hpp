@@ -12,6 +12,7 @@ class MultiChoiceController : public QObject
     Q_PROPERTY(qreal mouseY READ mouseY NOTIFY mouseChanged)
     Q_PROPERTY(bool visible READ visible NOTIFY popupChanged)
     Q_PROPERTY(int selected READ selected NOTIFY selectedIndexChanged)
+    Q_PROPERTY(float uiScale READ uiScale WRITE setUiScale NOTIFY uiScaleChanged)
 
 public:
     using QObject::QObject;
@@ -24,6 +25,9 @@ public:
     qreal mouseY() const { return m_mouseY; }
     bool visible() const { return m_visible; }
     int selected() const { return m_selectedIndex; }
+    float uiScale() const { return m_uiScale; }
+
+    void setUiScale(float uiScale);
 
     Q_INVOKABLE void show(QQuickItem *parent, const QStringList &options, qreal x, qreal y);
     Q_INVOKABLE void move(qreal x, qreal y);
@@ -34,6 +38,7 @@ signals:
     void popupChanged();
     void mouseChanged();
     void selectedIndexChanged(int selected);
+    void uiScaleChanged(float uiScale);
 
 private:
     QStringList m_options;
@@ -46,4 +51,5 @@ private:
     qreal m_originY = 0.0;
     bool m_visible = false;
     int m_selectedIndex;
+    float m_uiScale = 1.0f;
 };

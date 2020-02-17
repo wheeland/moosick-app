@@ -81,7 +81,7 @@ Rectangle {
             id: leftText
             text: _app.audio.timeToDisplayString(seekerBandItem.displayPos)
             color: "white"
-            font.pixelSize: 20
+            font.pixelSize: _style.fontSizeEntries
             width: 70
             horizontalAlignment: Text.AlignRight
         }
@@ -123,7 +123,7 @@ Rectangle {
             id: rightText
             text: _app.audio.durationString
             color: "white"
-            font.pixelSize: 20
+            font.pixelSize: _style.fontSizeEntries
             width: 70
             horizontalAlignment: Text.AlignLeft
             anchors.right: parent.right
@@ -145,6 +145,7 @@ Rectangle {
                     return "";
                 return _app.playlist.currentSong.artist + " - " + _app.playlist.currentSong.album + " - " + _app.playlist.currentSong.title
             }
+            font.pixelSize: _style.fontSizeEntries
         }
     }
 

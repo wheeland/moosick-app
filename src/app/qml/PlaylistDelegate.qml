@@ -42,6 +42,7 @@ Rectangle {
             text: entry.artist
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: _style.fontSizeEntries
         }
 
         Item {
@@ -52,12 +53,14 @@ Rectangle {
                 id: album
                 text: entry.album
                 x: parent.width / 4 - width / 2
+                font.pixelSize: _style.fontSizeEntries
             }
 
             Text {
                 id: title
                 text: entry.title
                 x: 3 * parent.width / 4 - width / 2
+                font.pixelSize: _style.fontSizeEntries
             }
         }
     }
@@ -68,6 +71,7 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
         anchors.margins: d.margin
+        font.pixelSize: _style.fontSizeEntries
     }
 
     MouseArea {

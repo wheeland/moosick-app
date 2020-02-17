@@ -9,6 +9,12 @@ Item {
 
     readonly property real scale: width / _defaultWindowWidth
 
+    Binding {
+        target: _multiChoiceController
+        property: "uiScale"
+        value: root.scale
+    }
+
     MainWindow {
         width: parent.width / root.scale
         height: parent.height / root.scale

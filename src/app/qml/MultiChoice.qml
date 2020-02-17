@@ -13,7 +13,7 @@ Item {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        pressAndHoldInterval: 400
+        pressAndHoldInterval: 250
 
         property bool longPressed: false
 

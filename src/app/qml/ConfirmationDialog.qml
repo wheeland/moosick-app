@@ -3,11 +3,9 @@ import QtQuick 2.11
 Rectangle {
     id: root
 
-    color: "black"
-    property real fontSize: 20
-
     visible: _app.database.confirmationVisible
 
+    color: "black"
     border.color: "white"
     border.width: 3
 
@@ -23,7 +21,7 @@ Rectangle {
             margins: 20
         }
         text: _app.database.confirmationText
-        font.pixelSize: root.fontSize * 1.5
+        font.pixelSize: _style.fontSizeLabels
         wrapMode: Text.WordWrap
         color: "white"
         horizontalAlignment: Text.AlignHCenter

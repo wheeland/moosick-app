@@ -16,10 +16,10 @@ Rectangle {
         id: positionText
         anchors.verticalCenter: parent.verticalCenter
         x: 5
-        width: 1.5 * textSize
+        width: 1.5 * _style.fontSizeEntries
         color: root.textColor
         text: root.song ? root.song.position : ""
-        font.pixelSize: textSize
+        font.pixelSize: _style.fontSizeEntries
         horizontalAlignment: Text.AlignRight
     }
 
@@ -30,7 +30,7 @@ Rectangle {
         color: root.textColor
         text: root.song ? root.song.name : ""
         font.bold: true
-        font.pixelSize: textSize
+        font.pixelSize: _style.fontSizeEntries
     }
 
     LibraryTagSpace {
@@ -57,7 +57,7 @@ Rectangle {
         color: root.textColor
         text: root.song ? root.song.durationString : ""
         font.italic: true
-        font.pixelSize: textSize
+        font.pixelSize: _style.fontSizeEntries
     }
 
     MultiChoice {

@@ -9,7 +9,7 @@ Rectangle {
     property color foregroundColor: "#888888"
     property color textColor: "black"
     property color activeColor: "#cccccc"
-    property real pixelSize: 18
+    property real fontSize: _style.fontSizeSwipe
 
     color: root.backgroundColor
 
@@ -45,7 +45,7 @@ Rectangle {
                     anchors.centerIn: parent
                     text: root.entries[index]
                     color: root.textColor
-                    font.pixelSize: root.pixelSize
+                    font.pixelSize: root.fontSize
                 }
 
                 MouseArea {
