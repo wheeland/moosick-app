@@ -81,7 +81,7 @@ Rectangle {
             id: leftText
             text: _app.audio.timeToDisplayString(seekerBandItem.displayPos)
             color: "white"
-            font.pointSize: 20
+            font.pixelSize: 20
             width: 70
             horizontalAlignment: Text.AlignRight
         }
@@ -123,7 +123,7 @@ Rectangle {
             id: rightText
             text: _app.audio.durationString
             color: "white"
-            font.pointSize: 20
+            font.pixelSize: 20
             width: 70
             horizontalAlignment: Text.AlignLeft
             anchors.right: parent.right

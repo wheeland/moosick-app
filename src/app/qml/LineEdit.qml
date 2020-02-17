@@ -19,6 +19,7 @@ Rectangle {
         id: input
         font.pixelSize: root.pixelSize
         anchors.fill: parent
+        verticalAlignment: TextInput.AlignVCenter
         anchors.margins: 5
     }
 }

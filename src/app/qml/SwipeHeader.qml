@@ -9,6 +9,7 @@ Rectangle {
     property color foregroundColor: "#888888"
     property color textColor: "black"
     property color activeColor: "#cccccc"
+    property real pixelSize: 18
 
     color: root.backgroundColor
 
@@ -19,10 +20,13 @@ Rectangle {
 
     signal change(var toIndex)
 
+    height: inner.height + 2 * offset
+
     Item {
         id: inner
-        anchors.fill: parent
-        anchors.margins: root.offset
+        anchors.centerIn: parent
+        width: root.width - 2 * root.offset
+        height: childrenRect.height
 
         property real entryWidth: (inner.width - (root.entries.length - 1) * root.offset) / root.entries.length
 
@@ -32,14 +36,16 @@ Rectangle {
             delegate: Rectangle {
                 x: (width + root.offset) * index
                 width: inner.entryWidth
-                height: inner.height
+                height: text.height + 10
 
                 color: (index === root.index) ? root.activeColor : root.foregroundColor
 
                 Text {
+                    id: text
                     anchors.centerIn: parent
                     text: root.entries[index]
                     color: root.textColor
+                    font.pixelSize: root.pixelSize
                 }
 
                 MouseArea {

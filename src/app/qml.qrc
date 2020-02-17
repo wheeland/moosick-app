@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
+        <file>qml/MainWindow.qml</file>
 
         <file>qml/KeyboardItem.qml</file>
         <file>qml/LineEdit.qml</file>

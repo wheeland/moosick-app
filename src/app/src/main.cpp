@@ -23,12 +23,14 @@ int main(int argc, char **argv)
 
     QGuiApplication app(argc, argv);
 
+    static const int DEFAULT_WIDTH = 540;
+
 #ifdef Q_OS_ANDROID
     AndroidUtil::Logger logger;
     logger.install();
     const QSize screenSize = app.primaryScreen()->size();
 #else
-    const QSize screenSize = QSize(540, 920);
+    const QSize screenSize = QSize(DEFAULT_WIDTH, 920);
 #endif
 
     Controller controller;
@@ -63,6 +65,7 @@ int main(int argc, char **argv)
     view.rootContext()->setContextProperty("_isAndroid", false);
 #endif
     view.rootContext()->setContextProperty("_app", &controller);
+    view.rootContext()->setContextProperty("_defaultWindowWidth", DEFAULT_WIDTH);
     view.rootContext()->setContextProperty("_multiChoiceController", &multiChoiceController);
     view.setSource(QUrl("qrc:/qml/main.qml"));
     view.show();
