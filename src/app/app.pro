@@ -2,11 +2,15 @@ TARGET = moosick
 CONFIG += c++11
 TEMPLATE = app
 
-QT += core quick qml network multimedia virtualkeyboard
-QTPLUGIN += qtvirtualkeyboardplugin
+QT += core quick qml network multimedia
 
-# force application integration for QtVirtualKeyboard
-CONFIG += disable-desktop
+!android {
+    QT += virtualkeyboard
+    QTPLUGIN += qtvirtualkeyboardplugin
+
+    # force application integration for QtVirtualKeyboard
+    CONFIG += disable-desktop
+}
 
 SOURCES += \
     src/audio.cpp \
@@ -52,3 +56,18 @@ LIBS += \
     -L../bin/ -lcommon
 
 DESTDIR = ../bin/
+
+android {
+    DISTFILES += \
+        android/AndroidManifest.xml \
+        android/build.gradle \
+        android/gradle/wrapper/gradle-wrapper.jar \
+        android/gradle/wrapper/gradle-wrapper.properties \
+        android/gradlew \
+        android/gradlew.bat \
+        android/res/values/libs.xml
+
+    ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
+
+    ANDROID_EXTRA_LIBS = bin/libcommon.so
+}

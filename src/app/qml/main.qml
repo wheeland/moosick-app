@@ -3,6 +3,10 @@ import QtQuick.Controls 2.4
 
 import Moosick 1.0 as Moosick
 
+import QtQml 2.11 as QQML
+import QtMultimedia 5.11 as QQM
+import QtQuick.Layouts 1.11 as QQL
+
 Rectangle {
     id: root
 
@@ -117,11 +121,13 @@ Rectangle {
         height: parent.height / 2
     }
 
-    KeyboardItem {
-        id: keyboard
+    Loader {
+        visible: !_isAndroid && (y < parent.height)
+        active: !_isAndroid
+        source: "KeyboardItem.qml"
+
         width: parent.width
         y: Qt.inputMethod.visible ? parent.height - height : parent.height
-        visible: (y < parent.height)
         Behavior on y { NumberAnimation { duration: 100 } }
     }
 

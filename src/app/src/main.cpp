@@ -15,14 +15,17 @@
 
 int main(int argc, char **argv)
 {
+#ifndef Q_OS_ANDROID
+    // only use QtVirtualKeyboard on host builds, doesn't seem to work on Android
     qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
     qputenv("QT_VIRTUALKEYBOARD_LAYOUT_PATH", QByteArray(":/qml/layouts/"));
+#endif
 
     QGuiApplication app(argc, argv);
 
+#ifdef Q_OS_ANDROID
     AndroidUtil::Logger logger;
     logger.install();
-#ifdef Q_OS_ANDROID
     const QSize screenSize = app.primaryScreen()->size();
 #else
     const QSize screenSize = QSize(540, 920);
@@ -54,9 +57,12 @@ int main(int argc, char **argv)
     view.setResizeMode(QQuickView::SizeRootObjectToView);
 #ifdef Q_OS_ANDROID
     view.rootContext()->setContextProperty("_logger", &logger);
+    view.rootContext()->setContextProperty("_isAndroid", true);
+#else
+    view.rootContext()->setContextProperty("_logger", nullptr);
+    view.rootContext()->setContextProperty("_isAndroid", false);
 #endif
     view.rootContext()->setContextProperty("_app", &controller);
-    view.rootContext()->setContextProperty("_logger", &logger);
     view.rootContext()->setContextProperty("_multiChoiceController", &multiChoiceController);
     view.setSource(QUrl("qrc:/qml/main.qml"));
     view.show();
