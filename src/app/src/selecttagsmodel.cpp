@@ -34,7 +34,7 @@ void SelectTagsModel::addTag(DbTag *tag)
 // sort root tags alphabetically
 void sortTags(QVector<DbTag*> &tags)
 {
-    qSort(tags.begin(), tags.end(), [](DbTag *lhs, DbTag *rhs) {
+    std::sort(tags.begin(), tags.end(), [](DbTag *lhs, DbTag *rhs) {
         return lhs->name().toLower() <= rhs->name().toLower();
     });
 };

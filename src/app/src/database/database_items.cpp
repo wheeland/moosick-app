@@ -105,7 +105,7 @@ void DbAlbum::setSongs(const Moosick::SongIdList &songs)
     QVector<DbSong*> newSongs;
     for (const Moosick::SongId &songId : songs)
         newSongs << new DbSong(database(), songId, this);
-    qSort(newSongs.begin(), newSongs.end(), [=](DbSong *lhs, DbSong *rhs) {
+    std::sort(newSongs.begin(), newSongs.end(), [=](DbSong *lhs, DbSong *rhs) {
         return lhs->position() < rhs->position();
     });
     for (DbSong *song : newSongs)

@@ -62,7 +62,7 @@ QVector<TagId> Library::rootTags() const
 QVector<ArtistId> Library::artistsByName() const
 {
     QVector<ArtistId> ret = m_artists.ids<ArtistId>();
-    qSort(ret.begin(), ret.end(), [&](ArtistId a, ArtistId b) {
+    std::sort(ret.begin(), ret.end(), [&](ArtistId a, ArtistId b) {
         const int cmp = a.name(*this).localeAwareCompare(b.name(*this));
         return cmp <= 0;
     });

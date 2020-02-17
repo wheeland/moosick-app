@@ -326,7 +326,7 @@ bool Database::applyLibraryChanges(const QByteArray &changesJsonData)
 
     // add into existing committed changes and apply as many as possible, and delete duplicates
     m_waitingChanges << changes;
-    qSort(m_waitingChanges.begin(), m_waitingChanges.end(), [](const Moosick::CommittedLibraryChange &a, const Moosick::CommittedLibraryChange &b) {
+    std::sort(m_waitingChanges.begin(), m_waitingChanges.end(), [](const Moosick::CommittedLibraryChange &a, const Moosick::CommittedLibraryChange &b) {
         return a.revision <= b.revision;
     });
     for (auto it = m_waitingChanges.begin(); it != m_waitingChanges.end(); /*empty*/) {

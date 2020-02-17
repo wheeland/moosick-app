@@ -85,7 +85,7 @@ void StringModel::endEditing()
     m_entries = m_newEntries;
 
     // sort alphabetically
-    qSort(m_entries.begin(), m_entries.end(), [=](const Entry &lhs, const Entry &rhs) {
+    std::sort(m_entries.begin(), m_entries.end(), [=](const Entry &lhs, const Entry &rhs) {
         const int count = qMin(lhs.keywords.size(), rhs.keywords.size());
         for (int i = 0; i < count; ++i) {
             const int cmp = lhs.keywords[i].compare(rhs.keywords[i]);
