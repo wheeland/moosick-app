@@ -6,6 +6,7 @@
 
 #include <QTimer>
 #include <QJsonDocument>
+#include <QDebug>
 
 using Moosick::LibraryChange;
 using Moosick::CommittedLibraryChange;

@@ -12,6 +12,7 @@
 #include <QJsonArray>
 #include <QBuffer>
 #include <QImage>
+#include <QDebug>
 
 namespace Search {
 

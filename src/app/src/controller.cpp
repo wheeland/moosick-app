@@ -1,5 +1,7 @@
 #include "controller.hpp"
 
+#include <QDebug>
+
 using Database::DbItem;
 using Database::DbArtist;
 using Database::DbAlbum;
