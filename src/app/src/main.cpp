@@ -21,6 +21,9 @@ int main(int argc, char **argv)
     qputenv("QT_VIRTUALKEYBOARD_LAYOUT_PATH", QByteArray(":/qml/layouts/"));
 #endif
 
+    QCoreApplication::setOrganizationName("de.wheeland.moosick");
+    QCoreApplication::setApplicationName("Moosick");
+
     QGuiApplication app(argc, argv);
 
     static const int DEFAULT_WIDTH = 540;

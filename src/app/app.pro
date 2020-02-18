@@ -21,6 +21,7 @@ SOURCES += \
     src/playlist.cpp \
     src/search.cpp \
     src/selecttagsmodel.cpp \
+    src/storage.cpp \
     src/stringmodel.cpp \
     src/database/database.cpp \
     src/database/database_items.cpp \
@@ -37,6 +38,7 @@ HEADERS += \
     src/playlist.hpp \
     src/search.hpp \
     src/selecttagsmodel.hpp \
+    src/storage.hpp \
     src/stringmodel.hpp \
     src/database/database.hpp \
     src/database/database_items.hpp \
