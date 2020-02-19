@@ -1,0 +1,9 @@
+*.mp3
+*.opus
+temp
+*.pro.user*
+*.json
+*.json.log
+*.json.gz
+lighttpd.log
+stdout.log
