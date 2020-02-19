@@ -20,38 +20,30 @@ quint16 HttpRequester::port() const
     return m_httpClient->m_port;
 }
 
-QNetworkReply *HttpRequester::request(const QNetworkRequest &request)
+HttpRequestId HttpRequester::request(const QNetworkRequest &request)
 {
-    m_runningQueries << m_httpClient->request(this, request);
-    emit runningRequestsChanged(runningRequests());
-    return m_runningQueries.last();
+    return m_httpClient->request(this, request);
 }
 
-QNetworkReply *HttpRequester::requestFromServer(const QString &path, const QString &query)
+HttpRequestId HttpRequester::requestFromServer(const QString &path, const QString &query)
 {
     const QString p = path.startsWith("/") ? path : QString("/") + path;
-    m_runningQueries << m_httpClient->requestFromServer(this, p, query);
-    emit runningRequestsChanged(runningRequests());
-    return m_runningQueries.last();
+    return m_httpClient->requestFromServer(this, p, query);
 }
 
 void HttpRequester::abortAll()
 {
-    for (QNetworkReply *reply : qAsConst(m_runningQueries))
-        m_httpClient->abort(reply);
-    m_runningQueries.clear();
-    emit runningRequestsChanged(runningRequests());
+    m_httpClient->abortAll(this);
 }
 
 HttpClient::HttpClient(const QString &host, quint16 port, QObject *parent)
     : QObject(parent)
-    , m_manager(new QNetworkAccessManager(this))
     , m_host(host)
     , m_port(port)
+    , m_manager(new QNetworkAccessManager(this))
 {
-    connect(m_manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
-        onNetworkReplyFinished(reply, QNetworkReply::NoError);
-    });
+    connect(m_manager, &QNetworkAccessManager::finished, this, &HttpClient::onNetworkReplyFinished);
+    connect(m_manager, &QNetworkAccessManager::networkAccessibleChanged, this, &HttpClient::onNetworkConnectivityChanged);
 }
 
 HttpClient::~HttpClient()
@@ -68,51 +60,112 @@ void HttpClient::setPort(quint16 port)
     m_port = port;
 }
 
-void HttpClient::abort(QNetworkReply *reply)
+void HttpClient::abortAll(HttpRequester *requester)
 {
-    const auto it = m_runningQueries.find(reply);
-    if (it == m_runningQueries.end())
-        return;
-
-    reply->abort();
-    reply->deleteLater();
-    m_runningQueries.erase(it);
+    Q_UNUSED(requester)
+    Q_ASSERT(false); // TODO
 }
 
-QNetworkReply *HttpClient::request(HttpRequester *requester, const QNetworkRequest &request)
+HttpRequestId HttpClient::request(HttpRequester *requester, const QNetworkRequest &request)
 {
     Q_ASSERT(requester);
 
-    QNetworkReply *reply = m_manager->get(request);
-    connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
-            this, [=](QNetworkReply::NetworkError error) {
-        onNetworkReplyFinished(reply, error);
-    });
+    RunningRequest newRequest;
+    newRequest.id = m_nextRequestId++;
+    newRequest.requester = requester;
+    newRequest.globalRequest = request;
+    newRequest.isGlobalRequest = true;
 
-    m_runningQueries[reply] = requester;
-    return reply;
+    launchRequest(newRequest);
+    m_runningRequests << newRequest;
+
+    return newRequest.id;
 }
 
-QNetworkReply *HttpClient::requestFromServer(HttpRequester *requester, const QString &path, const QString &query)
+HttpRequestId HttpClient::requestFromServer(HttpRequester *requester, const QString &path, const QString &query)
 {
-    QUrl url;
-    url.setScheme("http");
-    url.setHost(m_host);
-    url.setPort(m_port);
-    url.setPath(path);
-    url.setQuery(query, QUrl::StrictMode);
-    return request(requester, QNetworkRequest(url));
+    Q_ASSERT(requester);
+
+    RunningRequest newRequest;
+    newRequest.id = m_nextRequestId++;
+    newRequest.requester = requester;
+    newRequest.serverPath = path;
+    newRequest.serverQuery = query;
+    newRequest.isGlobalRequest = false;
+
+    launchRequest(newRequest);
+    m_runningRequests << newRequest;
+
+    return newRequest.id;
 }
 
-void HttpClient::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error)
+void HttpClient::launchRequest(HttpClient::RunningRequest &request)
 {
-    auto it = m_runningQueries.find(reply);
+    Q_ASSERT(request.currentReply.isNull());
 
-    if (it != m_runningQueries.end()) {
-        if (it.value())
-            it.value()->receivedReply(reply, error);
-        m_runningQueries.erase(it);
+    if (request.isGlobalRequest) {
+        request.currentReply = m_manager->get(request.globalRequest);
+    }
+    else {
+        QUrl url;
+        url.setScheme("http");
+        url.setHost(m_host);
+        url.setPort(m_port);
+        url.setPath(request.serverPath);
+        url.setQuery(request.serverQuery, QUrl::StrictMode);
+        request.currentReply = m_manager->get(QNetworkRequest(url));
+    }
+}
+
+void HttpClient::onNetworkReplyFinished(QNetworkReply *reply)
+{
+    reply->deleteLater();
+
+    // find RunningRequest
+    int requestIdx = -1;
+    for (int i = 0; i < m_runningRequests.size(); ++i) {
+        if (m_runningRequests[i].currentReply == reply) {
+            requestIdx = i;
+            break;
+        }
     }
 
-    reply->deleteLater();
+    if (requestIdx < 0) {
+        qWarning() << "HttpClient: no RunningRequest found for QNetworkReply" << reply;
+        return;
+    }
+
+    RunningRequest &runningRequest = m_runningRequests[requestIdx];
+    runningRequest.currentReply.clear();
+
+    if (runningRequest.requester.isNull()) {
+        qWarning() << "HttpClient: HttpRequester no longer exists for QNetworkReply";
+        m_runningRequests.remove(requestIdx);
+        return;
+    }
+
+    if (reply->error() == QNetworkReply::NoError) {
+        const QByteArray data = reply->readAll();
+        runningRequest.requester->receivedReply(runningRequest.id, data);
+        m_runningRequests.remove(requestIdx);
+        return;
+    }
+
+    // if there was an error, we want to re-schedule the request, either now, or when
+    // network connectivity is restored
+    if (m_manager->networkAccessible() == QNetworkAccessManager::Accessible) {
+        qWarning() << "retry" << reply;
+        launchRequest(runningRequest);
+    }
+}
+
+void HttpClient::onNetworkConnectivityChanged(QNetworkAccessManager::NetworkAccessibility accessible)
+{
+    if (accessible == QNetworkAccessManager::Accessible) {
+        // re-start pending requests
+        for (RunningRequest &runningRequest : m_runningRequests) {
+            if (runningRequest.currentReply.isNull())
+                launchRequest(runningRequest);
+        }
+    }
 }

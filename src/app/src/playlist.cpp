@@ -1,8 +1,6 @@
 #include "playlist.hpp"
 #include "util/qmlutil.hpp"
 
-#include <QNetworkReply>
-
 namespace Playlist {
 
 Entry::Entry(Entry::Source source,
@@ -110,16 +108,16 @@ void Playlist::requestIcon(Entry *entry)
     if (m_iconQueries.contains(entry->iconUrl()))
         return;
 
-    QNetworkReply *reply = m_http->request(QNetworkRequest(QUrl(entry->iconUrl())));
+    HttpRequestId reply = m_http->request(QNetworkRequest(QUrl(entry->iconUrl())));
     m_iconQueries[entry->iconUrl()] = reply;
 }
 
-void Playlist::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error)
+void Playlist::onNetworkReplyFinished(HttpRequestId requestId, const QByteArray &data)
 {
     // get URL for this query
     QString url;
     for (auto it = m_iconQueries.cbegin(); it != m_iconQueries.cend(); ++it) {
-        if (it.value() == reply) {
+        if (it.value() == requestId) {
             url = it.key();
             m_iconQueries.erase(it);
             break;
@@ -129,7 +127,6 @@ void Playlist::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
     if (url.isEmpty())
         return;
 
-    const QByteArray data = reply->readAll();
     const QString imgData = QmlUtil::imageDataToDataUri(data, url);
 
     // set icon for all entries that match

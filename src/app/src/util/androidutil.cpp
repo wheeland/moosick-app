@@ -17,11 +17,25 @@ bool CloseFilter::eventFilter(QObject *watched, QEvent *event)
 
 static Logger *s_handlingLogger = nullptr;
 
+static const char *msgTypeStr(QtMsgType type)
+{
+    switch (type) {
+    case QtDebugMsg: return "[DEBUG]";
+    case QtWarningMsg: return "[WARNING]";
+    case QtCriticalMsg: return "[CRITICAL]";
+    case QtFatalMsg: return "[FATA]L";
+    case QtInfoMsg: return "[INFO]";
+    default: return "[NONE]";
+    }
+}
+
 static void messageHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg)
 {
-    Q_UNUSED(type)
     Q_UNUSED(ctx)
-    s_handlingLogger->add(msg);
+    const QString out = QString(msgTypeStr(type)) + " " + msg;
+    fprintf(stderr, "%s\n", out.toLocal8Bit().data());
+    fflush(stderr);
+    s_handlingLogger->add(out);
 }
 
 void Logger::install()

@@ -301,10 +301,10 @@ void DatabaseInterface::editOkClicked()
             m_db->setAlbumArtist(m_editedItemId, selectedId);
         }
         else {
-            QNetworkReply *reply =
+            const HttpRequestId reply =
                 (m_editItemType == EditArtist) ? m_db->setArtistDetails(m_editedItemId, enteredName, selectedTags) :
                 (m_editItemType == EditAlbum) ? m_db->setAlbumDetails(m_editedItemId, enteredName, selectedTags) :
-                (m_editItemType == EditSong) ? m_db->setSongDetails(m_editedItemId, enteredName, selectedTags) : nullptr;
+                (m_editItemType == EditSong) ? m_db->setSongDetails(m_editedItemId, enteredName, selectedTags) : 0;
         }
 
         m_editItemType = EditNone;

@@ -95,7 +95,7 @@ signals:
 
 private slots:
     void onSelectedChanged();
-    void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
+    void onNetworkReplyFinished(HttpRequestId requestId, const QByteArray &data);
 
 private:
     Entry *createEntry(Entry::Source source,
@@ -108,7 +108,7 @@ private:
 
     ModelAdapter::Adapter<Entry*> m_entries;
     QHash<QString, QString> m_iconUrlToDataString;
-    QHash<QString, QNetworkReply*> m_iconQueries;
+    QHash<QString, HttpRequestId> m_iconQueries;
     int m_currentEntry = 0;
     bool m_hasSelected = false;
 

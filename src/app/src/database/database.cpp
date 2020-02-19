@@ -28,12 +28,12 @@ Database::~Database()
 {
 }
 
-QNetworkReply *Database::sync()
+HttpRequestId Database::sync()
 {
     if (hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryUpdate))
-        return nullptr;
+        return 0;
 
-    QNetworkReply *reply;
+    HttpRequestId reply;
     if (!m_hasLibrary) {
         reply = m_http->requestFromServer("/lib.do", "");
         m_requests[reply] = LibraryGet;
@@ -49,9 +49,9 @@ QNetworkReply *Database::sync()
     return reply;
 }
 
-QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags)
+HttpRequestId Database::download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags)
 {
-    QNetworkReply *reply = nullptr;
+    HttpRequestId reply = 0;
 
     request.currentRevision = m_library.revision();
 
@@ -70,7 +70,7 @@ QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moos
     }
     default:
         qFatal("no such download");
-        return nullptr;
+        return 0;
     }
 
     m_runningDownloads << Download { request, albumTags, reply };
@@ -81,7 +81,7 @@ QNetworkReply *Database::download(NetCommon::DownloadRequest request, const Moos
     return reply;
 }
 
-QNetworkReply *Database::setArtistDetails(Moosick::ArtistId id, const QString &name, const Moosick::TagIdList &tags)
+HttpRequestId Database::setArtistDetails(Moosick::ArtistId id, const QString &name, const Moosick::TagIdList &tags)
 {
     return setItemDetails(
         id, id.name(m_library), id.tags(m_library), name, tags,
@@ -89,7 +89,7 @@ QNetworkReply *Database::setArtistDetails(Moosick::ArtistId id, const QString &n
     );
 }
 
-QNetworkReply *Database::setAlbumDetails(Moosick::AlbumId id, const QString &name, const Moosick::TagIdList &tags)
+HttpRequestId Database::setAlbumDetails(Moosick::AlbumId id, const QString &name, const Moosick::TagIdList &tags)
 {
     return setItemDetails(
         id, id.name(m_library), id.tags(m_library), name, tags,
@@ -97,7 +97,7 @@ QNetworkReply *Database::setAlbumDetails(Moosick::AlbumId id, const QString &nam
     );
 }
 
-QNetworkReply *Database::setSongDetails(Moosick::SongId id, const QString &name, const Moosick::TagIdList &tags)
+HttpRequestId Database::setSongDetails(Moosick::SongId id, const QString &name, const Moosick::TagIdList &tags)
 {
     return setItemDetails(
         id, id.name(m_library), id.tags(m_library), name, tags,
@@ -105,7 +105,7 @@ QNetworkReply *Database::setSongDetails(Moosick::SongId id, const QString &name,
     );
 }
 
-QNetworkReply *Database::setAlbumArtist(Moosick::AlbumId album, Moosick::ArtistId artist)
+HttpRequestId Database::setAlbumArtist(Moosick::AlbumId album, Moosick::ArtistId artist)
 {
     return sendChangeRequests({ LibraryChange { LibraryChange::AlbumSetArtist, album, artist, "" } });
 }
@@ -135,38 +135,38 @@ void Database::addRemoveSong(QVector<LibraryChange> &changes, Moosick::SongId id
     changes << LibraryChange{ LibraryChange::SongRemove, id, 0, QString() };
 }
 
-QNetworkReply *Database::removeArtist(Moosick::ArtistId artistId)
+HttpRequestId Database::removeArtist(Moosick::ArtistId artistId)
 {
     QVector<LibraryChange> changes;
     addRemoveArtist(changes, artistId);
     return sendChangeRequests(changes);
 }
 
-QNetworkReply *Database::removeAlbum(Moosick::AlbumId albumId)
+HttpRequestId Database::removeAlbum(Moosick::AlbumId albumId)
 {
     QVector<LibraryChange> changes;
     addRemoveAlbum(changes, albumId);
     return sendChangeRequests(changes);
 }
 
-QNetworkReply *Database::removeSong(Moosick::SongId songId)
+HttpRequestId Database::removeSong(Moosick::SongId songId)
 {
     QVector<LibraryChange> changes;
     addRemoveSong(changes, songId);
     return sendChangeRequests(changes);
 }
 
-QNetworkReply *Database::sendChangeRequests(const QVector<LibraryChange> &changes)
+HttpRequestId Database::sendChangeRequests(const QVector<LibraryChange> &changes)
 {
     if (changes.isEmpty())
-        return nullptr;
+        return 0;
 
     QByteArray data;
     QDataStream writer(&data, QIODevice::WriteOnly);
     writer << changes;
 
     const QString query = QString("v=") + data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-    QNetworkReply *reply = m_http->requestFromServer("/request-changes.do", query);
+    HttpRequestId reply = m_http->requestFromServer("/request-changes.do", query);
     m_requests[reply] = LibraryChanges;
 
     m_changesPending = true;
@@ -175,7 +175,7 @@ QNetworkReply *Database::sendChangeRequests(const QVector<LibraryChange> &change
     return reply;
 }
 
-QNetworkReply *Database::setItemDetails(
+HttpRequestId Database::setItemDetails(
         quint32 id,
         const QString &oldName, const Moosick::TagIdList &oldTags,
         const QString &newName, const Moosick::TagIdList &newTags,
@@ -199,25 +199,17 @@ QNetworkReply *Database::setItemDetails(
     return sendChangeRequests(changes);
 }
 
-void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error)
+void Database::onNetworkReplyFinished(HttpRequestId reply, const QByteArray &data)
 {
     const RequestType requestType = m_requests.take(reply);
-    const QByteArray data = reply->readAll();
-    const bool hasError = (error != QNetworkReply::NoError);
-
-    if (hasError) {
-        qWarning() << reply->errorString();
-    }
 
     switch (requestType) {
     case LibraryGet: {
-        if (!hasError)
-            onNewLibrary(parseJsonObject(data, "Library"));
+        onNewLibrary(parseJsonObject(data, "Library"));
         break;
     }
     case LibraryUpdate: {
-        if (!hasError)
-            applyLibraryChanges(data);
+        applyLibraryChanges(data);
         break;
     }
     case BandcampDownload:
@@ -228,7 +220,7 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
 
         if (downloadIt != m_runningDownloads.end()) {
             downloadIt->id = data.toInt();
-            downloadIt->networkReply = nullptr;
+            downloadIt->networkReply = 0;
         }
 
         if (!m_downloadQueryTimer.isActive() && !m_downloadQuery)
@@ -241,9 +233,7 @@ void Database::onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::Netwo
         break;
     }
     case LibraryChanges: {
-        if (!hasError) {
-            applyLibraryChanges(data);
-        }
+        applyLibraryChanges(data);
         break;
     }
     default:
@@ -267,7 +257,7 @@ void Database::onDownloadQueryTimer()
 void Database::onDownloadQueryResult(const QByteArray &data)
 {
     Q_ASSERT(m_downloadQuery);
-    m_downloadQuery = nullptr;
+    m_downloadQuery = 0;
 
     const QJsonArray jsonArray = QJsonDocument::fromJson(data).array();
 

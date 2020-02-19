@@ -1,12 +1,11 @@
 #pragma once
 
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QPointer>
 #include <QTimer>
 
 #include "library.hpp"
 #include "requests.hpp"
+#include "../httpclient.hpp"
 
 class HttpClient;
 class HttpRequester;
@@ -34,23 +33,23 @@ public:
     bool changesPending() const { return hasRunningRequestType(LibraryChanges); }
     const Moosick::Library &library() const { return m_library; }
 
-    QNetworkReply *sync();
-    QNetworkReply *download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags);
+    HttpRequestId sync();
+    HttpRequestId download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags);
 
-    QNetworkReply *setArtistDetails(Moosick::ArtistId id, const QString &name, const Moosick::TagIdList &tags);
-    QNetworkReply *setAlbumDetails(Moosick::AlbumId id, const QString &name, const Moosick::TagIdList &tags);
-    QNetworkReply *setSongDetails(Moosick::SongId id, const QString &name, const Moosick::TagIdList &tags);
+    HttpRequestId setArtistDetails(Moosick::ArtistId id, const QString &name, const Moosick::TagIdList &tags);
+    HttpRequestId setAlbumDetails(Moosick::AlbumId id, const QString &name, const Moosick::TagIdList &tags);
+    HttpRequestId setSongDetails(Moosick::SongId id, const QString &name, const Moosick::TagIdList &tags);
 
-    QNetworkReply *setTagName(Moosick::TagId id, const QString &name);
+    HttpRequestId setTagName(Moosick::TagId id, const QString &name);
 
-    QNetworkReply *setAlbumArtist(Moosick::AlbumId album, Moosick::ArtistId artist);
+    HttpRequestId setAlbumArtist(Moosick::AlbumId album, Moosick::ArtistId artist);
 
-    QNetworkReply *removeArtist(Moosick::ArtistId artistId);
-    QNetworkReply *removeAlbum(Moosick::AlbumId albumId);
-    QNetworkReply *removeSong(Moosick::SongId songId);
+    HttpRequestId removeArtist(Moosick::ArtistId artistId);
+    HttpRequestId removeAlbum(Moosick::AlbumId albumId);
+    HttpRequestId removeSong(Moosick::SongId songId);
 
 private slots:
-    void onNetworkReplyFinished(QNetworkReply *reply, QNetworkReply::NetworkError error);
+    void onNetworkReplyFinished(HttpRequestId reply, const QByteArray &data);
     void onDownloadQueryTimer();
 
 signals:
@@ -63,14 +62,14 @@ private:
     void onNewLibrary(const QJsonObject &json);
     bool applyLibraryChanges(const QByteArray &changesJsonData);
 
-    QNetworkReply *sendChangeRequests(const QVector<Moosick::LibraryChange> &changes);
+    HttpRequestId sendChangeRequests(const QVector<Moosick::LibraryChange> &changes);
 
-    QNetworkReply *setItemDetails(quint32 id,
-                                  const QString &oldName, const Moosick::TagIdList &oldTags,
-                                  const QString &newName, const Moosick::TagIdList &newTags,
-                                  Moosick::LibraryChange::Type setName,
-                                  Moosick::LibraryChange::Type addTag,
-                                  Moosick::LibraryChange::Type removeTag);
+    HttpRequestId setItemDetails(quint32 id,
+                                 const QString &oldName, const Moosick::TagIdList &oldTags,
+                                 const QString &newName, const Moosick::TagIdList &newTags,
+                                 Moosick::LibraryChange::Type setName,
+                                 Moosick::LibraryChange::Type addTag,
+                                 Moosick::LibraryChange::Type removeTag);
 
     void addRemoveArtist(QVector<Moosick::LibraryChange> &changes, Moosick::ArtistId id);
     void addRemoveAlbum(QVector<Moosick::LibraryChange> &changes, Moosick::AlbumId id);
@@ -94,7 +93,7 @@ private:
     Moosick::Library m_library;
 
     HttpRequester *m_http;
-    QHash<QNetworkReply*, RequestType> m_requests;
+    QHash<HttpRequestId, RequestType> m_requests;
 
     bool hasRunningRequestType(RequestType requestType) const;
 
@@ -115,13 +114,13 @@ private:
     struct Download {
         NetCommon::DownloadRequest request;
         Moosick::TagIdList albumTags;
-        QNetworkReply *networkReply;
+        HttpRequestId networkReply;
         quint32 id;
     };
     QVector<Download> m_runningDownloads;
 
     /** regularly query the state of the downloads */
-    QNetworkReply *m_downloadQuery = nullptr;
+    HttpRequestId m_downloadQuery = 0;
     QTimer m_downloadQueryTimer;
     bool m_isSyncing;
 };

@@ -26,14 +26,15 @@ int main(int argc, char **argv)
 
     QGuiApplication app(argc, argv);
 
+    AndroidUtil::Logger logger;
+    logger.install();
+
     static const int DEFAULT_WIDTH = 540;
 
 #ifdef Q_OS_ANDROID
-    AndroidUtil::Logger logger;
-    logger.install();
     const QSize screenSize = app.primaryScreen()->size();
 #else
-    const QSize screenSize = QSize(DEFAULT_WIDTH, 920);
+    const QSize screenSize = QSize(300, 550);
 #endif
 
     Controller controller;
@@ -60,11 +61,10 @@ int main(int argc, char **argv)
     QQuickView view;
     view.resize(screenSize);
     view.setResizeMode(QQuickView::SizeRootObjectToView);
-#ifdef Q_OS_ANDROID
     view.rootContext()->setContextProperty("_logger", &logger);
+#ifdef Q_OS_ANDROID
     view.rootContext()->setContextProperty("_isAndroid", true);
 #else
-    view.rootContext()->setContextProperty("_logger", nullptr);
     view.rootContext()->setContextProperty("_isAndroid", false);
 #endif
     view.rootContext()->setContextProperty("_app", &controller);
@@ -79,10 +79,6 @@ int main(int argc, char **argv)
     view.show();
 
     const int ret = app.exec();
-
-#ifdef Q_OS_ANDROID
     logger.uninstall();
-#endif
-
     return ret;
 }

@@ -65,7 +65,7 @@ public:
     Status status() const { return m_status; }
     QString iconData() const { return m_iconData; }
 
-    void setIconData(const QString &url, const QByteArray &data);
+    void setIconData(const QByteArray &data);
     void setStatus(Status status);
     void setDownloadStatus(DownloadStatus downloadStatus);
 
@@ -194,12 +194,12 @@ signals:
     void hasErrorsChanged(bool hasErrors);
 
 private slots:
-    void onReply(QNetworkReply *reply, QNetworkReply::NetworkError error);
+    void onReply(HttpRequestId requestId, const QByteArray &data);
 
 private:
-    QNetworkReply *requestRootSearch();
-    QNetworkReply *requestArtistSearch(const QString &url);
-    QNetworkReply *requestAlbumSearch(const QString &url);
+    HttpRequestId requestRootSearch();
+    HttpRequestId requestArtistSearch(const QString &url);
+    HttpRequestId requestAlbumSearch(const QString &url);
     void requestIcon(Result *result);
 
     BandcampAlbumResult *createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon);
@@ -214,10 +214,10 @@ private:
     QString m_searchString;
 
     // associate each query with what they were querying
-    QNetworkReply *m_activeRootPageQuery = nullptr;
-    QHash<QNetworkReply*, BandcampArtistResult*> m_artistQueries;
-    QHash<QNetworkReply*, BandcampAlbumResult*> m_albumQueries;
-    QHash<QNetworkReply*, Result*> m_iconQueries;
+    HttpRequestId m_activeRootPageQuery = 0;
+    QHash<HttpRequestId, BandcampArtistResult*> m_artistQueries;
+    QHash<HttpRequestId, BandcampAlbumResult*> m_albumQueries;
+    QHash<HttpRequestId, Result*> m_iconQueries;
 
     ModelAdapter::Adapter<Result*> m_rootResults;
 };
