@@ -2,6 +2,7 @@ TARGET = common
 CONFIG += c++11
 TEMPLATE = lib
 
+QT -= gui
 QT += core network
 
 SOURCES += \
