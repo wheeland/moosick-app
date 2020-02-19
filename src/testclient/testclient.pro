@@ -10,7 +10,7 @@ SOURCES += \
 HEADERS += \
 
 INCLUDEPATH += \
-    ../../common/include/
+    ../common/include/
 
 LIBS += \
     -L../bin/ -lcommon
