@@ -36,9 +36,12 @@ private:
 class HttpClient : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(bool hostValid READ hostValid NOTIFY hostValidChanged)
+    Q_PROPERTY(QString host READ host WRITE setHost NOTIFY hostChanged)
+    Q_PROPERTY(quint16 port READ port WRITE setPort NOTIFY portChanged)
 
 public:
-    HttpClient(const QString &host, quint16 port, QObject *parent = nullptr);
+    HttpClient(QObject *parent = nullptr);
     ~HttpClient() override;
 
     void setHost(const QString &name);
@@ -46,9 +49,16 @@ public:
 
     QString host() const { return m_host; }
     quint16 port() const { return m_port; }
+    bool hostValid() const { return m_hostValid; }
+
+signals:
+    void hostValidChanged(bool hostValid);
+    void portChanged(quint16 port);
+    void hostChanged(QString host);
 
 private slots:
-    void onNetworkConnectivityChanged(QNetworkAccessManager::NetworkAccessibility accessible);
+    void onNetworkReplyFinished(QNetworkReply *reply);
+    void maybeRelaunchRequests();
 
 private:
     struct RunningRequest
@@ -64,7 +74,6 @@ private:
 
     HttpRequestId request(HttpRequester *requester, const QNetworkRequest &request);
     HttpRequestId requestFromServer(HttpRequester *requester, const QString &path, const QString &query);
-    void onNetworkReplyFinished(QNetworkReply *reply);
 
     void launchRequest(RunningRequest &request);
 
@@ -78,4 +87,5 @@ private:
 
     HttpRequestId m_nextRequestId = 1;
     QVector<RunningRequest> m_runningRequests;
+    bool m_hostValid = false;
 };

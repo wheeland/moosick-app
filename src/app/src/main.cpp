@@ -55,6 +55,7 @@ int main(int argc, char **argv)
     qmlRegisterUncreatableType<StringModel>("Moosick", 1, 0, "StringModel", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<SelectTagsModel>("Moosick", 1, 0, "SelectTagsModel", "ain't gonna do that from QML!");
     qmlRegisterUncreatableType<MultiChoiceController>("Moosick", 1, 0, "MultiChoiceController", "ain't gonna do that from QML!");
+    qmlRegisterUncreatableType<HttpClient>("Moosick", 1, 0, "HttpClient", "ain't gonna do that from QML!");
 
     MultiChoiceController multiChoiceController;
 

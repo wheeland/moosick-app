@@ -16,6 +16,8 @@
         <file>qml/InputBlocker.qml</file>
         <file>qml/ConfirmationDialog.qml</file>
         <file>qml/LogOutput.qml</file>
+        <file>qml/HostDetailsDialog.qml</file>
+        <file>qml/HostDetailsDialogEntry.qml</file>
 
         <file>qml/PlayerBar.qml</file>
         <file>qml/PlayerBarButton.qml</file>

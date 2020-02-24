@@ -15,6 +15,7 @@ class Controller : public QObject
     Q_PROPERTY(Playlist::Playlist *playlist READ playlist CONSTANT)
     Q_PROPERTY(Database::DatabaseInterface *database READ database CONSTANT)
     Q_PROPERTY(Audio *audio READ audio CONSTANT)
+    Q_PROPERTY(HttpClient *httpClient READ httpClient CONSTANT)
 
 public:
     Controller(QObject *parent = nullptr);
@@ -24,6 +25,7 @@ public:
     Search::Query *search() const { return m_search; }
     Database::DatabaseInterface *database() const { return m_database; }
     Audio *audio() const { return m_audio; }
+    HttpClient *httpClient() const { return m_httpClient; }
 
     Q_INVOKABLE void addSearchResultToPlaylist(Search::Result *result, bool append);
     Q_INVOKABLE void addLibraryItemToPlaylist(Database::DbItem *item, bool append);
