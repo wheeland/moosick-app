@@ -10,6 +10,8 @@ Rectangle {
     property real pixelSize: 11
 
     property alias hasInputFocus : input.focus
+    property alias inputMethodHints : input.inputMethodHints
+    property alias echoMode: input.echoMode
 
     border.color: foreground
     border.width: 1
