@@ -19,6 +19,7 @@ Rectangle {
     }
 
     color: "black"
+    visible: false
     property real fontSize: 20
 
     border.color: "white"
