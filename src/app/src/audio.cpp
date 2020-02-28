@@ -132,4 +132,7 @@ void Audio::updateStatus()
         emit statusChanged();
         emit positionChanged();
     }
+
+    if (m_player->mediaStatus() == QMediaPlayer::EndOfMedia)
+        m_playlist->next();
 }

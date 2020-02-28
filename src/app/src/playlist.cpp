@@ -73,8 +73,8 @@ void Playlist::onSelectedChanged()
     const auto isSelected = [](Entry *e) { return e->isSelected(); };
     const bool hasSelected = std::any_of(entries.cbegin(), entries.cend(), isSelected);
 
-    if (m_hasSelected != hasSelected) {
-        m_hasSelected = hasSelected;
+    if (m_hasSelectedSongs != hasSelected) {
+        m_hasSelectedSongs = hasSelected;
         emit hasSelectedSongsChanged(hasSelected);
     }
 }
@@ -84,14 +84,18 @@ void Playlist::advance(int delta)
     if (m_entries.size() == 0 || delta == 0)
         return;
 
+    Entry *oldSong = currentSong();
+
     // advance index
     m_currentEntry += delta;
-    if (m_currentEntry >= m_entries.size())
-        m_currentEntry = 0;
-    else if (m_currentEntry < 0)
-        m_currentEntry = m_entries.size() - 1;
+    while (m_repeat && m_currentEntry >= m_entries.size())
+        m_currentEntry -= m_entries.size();
+    while (m_repeat && m_currentEntry < 0)
+        m_currentEntry += m_entries.size();
 
-    emit currentSongChanged();
+    Entry *newSong = currentSong();
+    if (newSong != oldSong)
+        emit currentSongChanged();
 }
 
 void Playlist::requestIcon(Entry *entry)
@@ -223,6 +227,15 @@ void Playlist::addFromLibrary(const QString &fileName, const QString &artist, co
 
     if (m_entries.size() == 1)
         emit currentSongChanged();
+}
+
+void Playlist::setRepeat(bool repeat)
+{
+    if (m_repeat == repeat)
+        return;
+
+    m_repeat = repeat;
+    emit repeatChanged(m_repeat);
 }
 
 Entry *Playlist::createEntry(Entry::Source source,

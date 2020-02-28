@@ -64,6 +64,7 @@ class Playlist : public QObject
     Q_PROPERTY(Entry *currentSong READ currentSong NOTIFY currentSongChanged)
     Q_PROPERTY(ModelAdapter::Model *entries READ entries CONSTANT)
     Q_PROPERTY(bool hasSelectedSongs READ hasSelectedSongs NOTIFY hasSelectedSongsChanged)
+    Q_PROPERTY(bool repeat READ repeat WRITE setRepeat NOTIFY repeatChanged)
 
 public:
     Playlist(HttpClient *httpClient, QObject *parent = nullptr);
@@ -71,7 +72,8 @@ public:
 
     ModelAdapter::Model *entries() const;
     Entry *currentSong() const;
-    bool hasSelectedSongs() const { return m_hasSelected; }
+    bool hasSelectedSongs() const { return m_hasSelectedSongs; }
+    bool repeat() const { return m_repeat; }
 
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();
@@ -89,9 +91,13 @@ public:
         int duration, bool append
     );
 
+public slots:
+    void setRepeat(bool repeat);
+
 signals:
     void currentSongChanged();
     void hasSelectedSongsChanged(bool hasSelectedSongs);
+    void repeatChanged(bool repeat);
 
 private slots:
     void onSelectedChanged();
@@ -110,7 +116,8 @@ private:
     QHash<QString, QString> m_iconUrlToDataString;
     QHash<QString, HttpRequestId> m_iconQueries;
     int m_currentEntry = 0;
-    bool m_hasSelected = false;
+    bool m_hasSelectedSongs = false;
+    bool m_repeat = false;
 
     HttpRequester *m_http;
 };
