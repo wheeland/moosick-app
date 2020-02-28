@@ -6,8 +6,9 @@ Rectangle {
     id: root
 
     property PlaylistEntry entry
+    readonly property bool isSelected: (entry === _app.playlist.currentSong)
 
-    color: "#333333"
+    color: isSelected ? "#999999" : "#666666"
     border.width: 2
     border.color: "white"
 
