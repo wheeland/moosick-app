@@ -75,6 +75,6 @@ int main(int argc, char **argv)
 
         std::cout << QJsonDocument(toJson(changes).toArray()).toJson().constData() << std::endl;
 
-        return 0;
+        return changes.isEmpty() ? 1 : 0;
     }
 }
