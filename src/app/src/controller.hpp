@@ -4,6 +4,7 @@
 #include "playlist.hpp"
 #include "audio.hpp"
 #include "httpclient.hpp"
+#include "storage.hpp"
 #include "database/database.hpp"
 #include "database/database_items.hpp"
 #include "database/database_interface.hpp"
@@ -36,6 +37,7 @@ private:
     void queueBandcampTrack(Search::BandcampTrackResult *track, bool append);
     void queueYoutubeVideo(Search::YoutubeVideoResult *video, bool append);
 
+    Storage *m_storage;
     HttpClient *m_httpClient;
     Database::DatabaseInterface *m_database;
     Playlist::Playlist *m_playlist;

@@ -17,16 +17,21 @@ public:
     bool readLibrary(Moosick::Library &library) const;
     void writeLibrary(const Moosick::Library &library);
 
-    QString readHost() const;
+    QString host() const;
+    quint16 port() const;
+    QString userName() const;
+    QString password() const;
+
     void writeHost(const QString &host);
+    void writePort(quint16 port);
+    void writeUserName(const QString &userName);
+    void writePassword(const QString &password);
 
     QStringList allLocalSongFiles() const;
     void addLocalSongFile(const QString &fileName, const QByteArray &data);
     void removeLocalSongFile(const QString &fileName);
 
 private:
-    QString storageDir() const;
-
     QString m_storageDirectory;
     QSettings m_settings;
 };

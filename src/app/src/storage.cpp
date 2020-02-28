@@ -9,6 +9,9 @@
 static const char *LIBRARY_FILE = "lib.json.gz";
 
 static const char *SETTINGS_HOST = "host";
+static const char *SETTINGS_PORT = "port";
+static const char *SETTINGS_USER = "user";
+static const char *SETTINGS_PASS = "pass";
 static const char *SETTINGS_STORAGE = "storage";
 static const char *SETTINGS_LOCALSONGS = "localsongs";
 
@@ -76,14 +79,44 @@ void Storage::writeLibrary(const Moosick::Library &library)
     file.write(data);
 }
 
-QString Storage::readHost() const
+QString Storage::host() const
 {
     return m_settings.value(SETTINGS_HOST).toString();
+}
+
+quint16 Storage::port() const
+{
+    return m_settings.value(SETTINGS_PORT).toUInt();
+}
+
+QString Storage::userName() const
+{
+    return m_settings.value(SETTINGS_USER).toString();
+}
+
+QString Storage::password() const
+{
+    return m_settings.value(SETTINGS_PASS).toString();
 }
 
 void Storage::writeHost(const QString &host)
 {
     m_settings.setValue(SETTINGS_HOST, host);
+}
+
+void Storage::writePort(quint16 port)
+{
+    m_settings.setValue(SETTINGS_PORT, port);
+}
+
+void Storage::writeUserName(const QString &userName)
+{
+    m_settings.setValue(SETTINGS_USER, userName);
+}
+
+void Storage::writePassword(const QString &password)
+{
+    m_settings.setValue(SETTINGS_PASS, password);
 }
 
 QStringList Storage::allLocalSongFiles() const

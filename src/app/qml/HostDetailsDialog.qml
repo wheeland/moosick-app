@@ -10,8 +10,11 @@ Rectangle {
     Connections {
         target: httpClient
         onHostValidChanged: {
-            if (!httpClient.hostValid)
+            if (!httpClient.hostValid) {
                 root.visible = true;
+                hostEntry.text = httpClient.host;
+                portEntry.text = httpClient.port;
+            }
         }
     }
 
