@@ -25,12 +25,17 @@ DatabaseInterface::DatabaseInterface(HttpClient *httpClient, QObject *parent)
     connect(m_editArtistStringList, &StringModel::selected, this, &DatabaseInterface::onArtistStringSelected);
 
     connect(m_db, &Database::libraryChanged, this, &DatabaseInterface::onLibraryChanged);
-    m_db->sync();
 
     connect(m_db, &Database::libraryChanged, this, &DatabaseInterface::hasLibraryChanged);
     connect(m_db, &Database::changesPendingChanged, this, &DatabaseInterface::changesPendingChanged);
     connect(m_db, &Database::downloadsPendingChanged, this, &DatabaseInterface::downloadsPendingChanged);
     connect(m_db, &Database::isSyncingChanged, this, &DatabaseInterface::isSyncingChanged);
+}
+
+DatabaseInterface::DatabaseInterface(const Moosick::Library &library, HttpClient *httpClient, QObject *parent)
+    : DatabaseInterface(httpClient, parent)
+{
+    m_db->setLibrary(library);
 }
 
 DatabaseInterface::~DatabaseInterface()
@@ -40,6 +45,11 @@ DatabaseInterface::~DatabaseInterface()
 const Moosick::Library &DatabaseInterface::library() const
 {
     return m_db->library();
+}
+
+void DatabaseInterface::sync()
+{
+    m_db->sync();
 }
 
 void DatabaseInterface::onLibraryChanged()

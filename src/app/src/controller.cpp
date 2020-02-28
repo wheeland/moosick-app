@@ -11,7 +11,6 @@ Controller::Controller(QObject *parent)
     : QObject(parent)
     , m_storage(new Storage())
     , m_httpClient(new HttpClient(this))
-    , m_database(new Database::DatabaseInterface(m_httpClient, this))
     , m_playlist(new Playlist::Playlist(m_httpClient, this))
     , m_search(new Search::Query(m_httpClient, this))
     , m_audio(new Audio(m_playlist, this))
@@ -20,6 +19,13 @@ Controller::Controller(QObject *parent)
     m_httpClient->setPort(m_storage->port());
     connect(m_httpClient, &HttpClient::hostChanged, [=]() { m_storage->writeHost(m_httpClient->host()); });
     connect(m_httpClient, &HttpClient::portChanged, [=]() { m_storage->writePort(m_httpClient->port()); });
+
+    Moosick::Library library;
+    if (m_storage->readLibrary(library))
+        m_database = new Database::DatabaseInterface(library, m_httpClient, this);
+    else
+        m_database = new Database::DatabaseInterface(m_httpClient, this);
+    m_database->sync();
 }
 
 Controller::~Controller()

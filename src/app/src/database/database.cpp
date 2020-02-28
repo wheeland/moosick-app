@@ -28,6 +28,13 @@ Database::~Database()
 {
 }
 
+void Database::setLibrary(const Moosick::Library &library)
+{
+    m_library = library;
+    m_hasLibrary = true;
+    emit libraryChanged();
+}
+
 HttpRequestId Database::sync()
 {
     if (hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryUpdate))

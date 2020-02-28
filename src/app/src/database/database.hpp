@@ -27,6 +27,8 @@ public:
     Database(HttpClient *httpClient, QObject *parent = nullptr);
     ~Database() override;
 
+    void setLibrary(const Moosick::Library &library);
+
     bool hasLibrary() const { return m_hasLibrary; }
     bool isSyncing() const { return hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryUpdate); }
     bool downloadsPending() const { return m_downloadsPending; }

@@ -83,9 +83,11 @@ public:
     Q_ENUM(EditItemSource)
 
     DatabaseInterface(HttpClient *httpClient, QObject *parent = nullptr);
+    DatabaseInterface(const Moosick::Library &library, HttpClient *httpClient, QObject *parent = nullptr);
     ~DatabaseInterface() override;
 
     const Moosick::Library &library() const;
+    Q_INVOKABLE void sync();
 
     bool hasLibrary() const { return m_db->hasLibrary(); }
     bool isSyncing() const { return m_db->isSyncing(); }
