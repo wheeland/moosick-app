@@ -21,15 +21,25 @@ Controller::Controller(QObject *parent)
     connect(m_httpClient, &HttpClient::portChanged, [=]() { m_storage->writePort(m_httpClient->port()); });
 
     Moosick::Library library;
-    if (m_storage->readLibrary(library))
+    if (m_storage->readLibrary(library)) {
         m_database = new Database::DatabaseInterface(library, m_httpClient, this);
-    else
+    }
+    else {
         m_database = new Database::DatabaseInterface(m_httpClient, this);
+
+        // when we receive the first library, store it to disk, but only once please
+        connect(m_database, &Database::DatabaseInterface::hasLibraryChanged, [=]() {
+            m_storage->writeLibrary(m_database->library());
+            disconnect(m_database, &Database::DatabaseInterface::hasLibraryChanged, this, 0);
+        });
+    }
     m_database->sync();
 }
 
 Controller::~Controller()
 {
+    if (m_database->hasLibrary())
+        m_storage->writeLibrary(m_database->library());
 }
 
 void Controller::addSearchResultToPlaylist(Search::Result *result, bool append)
