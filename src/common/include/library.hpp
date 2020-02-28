@@ -93,10 +93,40 @@ public:
     void deserialize(const QByteArray &bytes);
 
 private:
-    struct Song;
-    struct Album;
-    struct Artist;
-    struct Tag;
+    struct Song
+    {
+        QString name;
+        AlbumId album;
+        quint32 fileEnding = 0;
+        quint32 position = 0;
+        quint32 secs = 0;
+        TagIdList tags;
+    };
+
+    struct Album
+    {
+        QString name;
+        ArtistId artist;
+        SongIdList songs;
+        TagIdList tags;
+    };
+
+    struct Artist
+    {
+        QString name;
+        AlbumIdList albums;
+        TagIdList tags;
+    };
+
+    struct Tag
+    {
+        QString name;
+        TagId parent;
+        TagIdList children;
+        SongIdList songs;
+        AlbumIdList albums;
+        ArtistIdList artists;
+    };
 
     quint32 getFileEnding(const QString &ending);
 

@@ -26,7 +26,6 @@ HEADERS += \
     include/tcpserver.hpp \
     include/requests.hpp \
     include/type_ids.hpp \
-    src/library_priv.hpp \
     src/util.hpp \
 
 INCLUDEPATH += \

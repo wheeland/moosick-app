@@ -1,5 +1,4 @@
 #include "library.hpp"
-#include "library_priv.hpp"
 
 #include <QDebug>
 #include <QJsonArray>
