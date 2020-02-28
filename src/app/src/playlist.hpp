@@ -65,15 +65,17 @@ class Playlist : public QObject
     Q_PROPERTY(ModelAdapter::Model *entries READ entries CONSTANT)
     Q_PROPERTY(bool hasSelectedSongs READ hasSelectedSongs NOTIFY hasSelectedSongsChanged)
     Q_PROPERTY(bool repeat READ repeat WRITE setRepeat NOTIFY repeatChanged)
+    Q_PROPERTY(bool randomized READ randomized WRITE setRandomized NOTIFY randomizedChanged)
 
 public:
     Playlist(HttpClient *httpClient, QObject *parent = nullptr);
     ~Playlist();
 
     ModelAdapter::Model *entries() const;
-    Entry *currentSong() const;
+    Entry *currentSong() const { return m_currentSong; }
     bool hasSelectedSongs() const { return m_hasSelectedSongs; }
     bool repeat() const { return m_repeat; }
+    bool randomized() const { return m_randomized; }
 
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();
@@ -91,13 +93,16 @@ public:
         int duration, bool append
     );
 
+
 public slots:
     void setRepeat(bool repeat);
+    void setRandomized(bool randomized);
 
 signals:
     void currentSongChanged();
     void hasSelectedSongsChanged(bool hasSelectedSongs);
     void repeatChanged(bool repeat);
+    void randomizedChanged(bool randomized);
 
 private slots:
     void onSelectedChanged();
@@ -107,6 +112,7 @@ private:
     Entry *createEntry(Entry::Source source,
                        const QString &artist, const QString &album, const QString &title,
                        const QString &url, int duration, const QString &iconUrl);
+    void insertEntry(Entry *newEntry, bool append);
     void advance(int delta);
 
     void purgeUnusedIcons();
@@ -115,9 +121,20 @@ private:
     ModelAdapter::Adapter<Entry*> m_entries;
     QHash<QString, QString> m_iconUrlToDataString;
     QHash<QString, HttpRequestId> m_iconQueries;
-    int m_currentEntry = 0;
+
+    // -1 if we are at the end of the playlist
+    int m_currentEntry = -1;
     bool m_hasSelectedSongs = false;
     bool m_repeat = false;
+
+    Entry *m_currentSong = nullptr;
+    void currentSongMaybeChanged();
+
+    // if the playlist is randomized, the current entry index doesn't refer to the
+    // actual m_entries list, but rather goes through the indirection of the
+    // random index overlay
+    bool m_randomized = false;
+    QVector<int> m_randomizedOverlay;
 
     HttpRequester *m_http;
 };

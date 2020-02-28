@@ -28,6 +28,14 @@ Rectangle {
             onClicked: _app.playlist.previous()
         }
 
+        SimpleButton {
+            x: parent.width * 0.35 - 0.5 * width
+            y: 20
+            label: "S"
+            background: _app.playlist.randomized ? "#555555" : "#222222"
+            onClicked: _app.playlist.randomized = !_app.playlist.randomized
+        }
+
         PlayerBarButton {
             center: parent.width * 0.5
             size: parent.height
@@ -44,6 +52,14 @@ Rectangle {
             source: "../data/pause.png"
             enabled: _app.audio.hasSong
             onClicked: _app.audio.pause()
+        }
+
+        SimpleButton {
+            x: parent.width * 0.65 - 0.5 * width
+            y: 20
+            label: "R"
+            background: _app.playlist.repeat ? "#555555" : "#222222"
+            onClicked: _app.playlist.repeat = !_app.playlist.repeat
         }
 
         PlayerBarButton {

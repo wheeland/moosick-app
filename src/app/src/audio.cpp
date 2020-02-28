@@ -11,7 +11,7 @@ Audio::Audio(Playlist::Playlist *playlist, QObject *parent)
     connect(playlist, &Playlist::Playlist::currentSongChanged, this, &Audio::onCurrentSongChanged);
     connect(m_player, &QMediaPlayer::positionChanged, this, &Audio::positionChanged);
     connect(m_player, static_cast<void (QMediaPlayer::*)(QMediaPlayer::Error)>(&QMediaPlayer::error), this, &Audio::updateStatus);
-    connect(m_player, &QMediaPlayer::mediaStatusChanged, this, &Audio::updateStatus);
+    connect(m_player, &QMediaPlayer::mediaStatusChanged, this, &Audio::onMediaStatusChanged);
     connect(m_player, &QMediaPlayer::stateChanged, this, &Audio::updateStatus);
     connect(m_player, &QMediaPlayer::durationChanged, this, &Audio::durationStringChanged);
 }
@@ -94,6 +94,14 @@ void Audio::onCurrentSongChanged()
     updateStatus();
 }
 
+void Audio::onMediaStatusChanged()
+{
+    updateStatus();
+
+    if (m_player->mediaStatus() == QMediaPlayer::EndOfMedia)
+        m_playlist->next();
+}
+
 Audio::Status Audio::computeStatus()
 {
     if (m_player->error() != QMediaPlayer::NoError) {
@@ -132,7 +140,4 @@ void Audio::updateStatus()
         emit statusChanged();
         emit positionChanged();
     }
-
-    if (m_player->mediaStatus() == QMediaPlayer::EndOfMedia)
-        m_playlist->next();
 }

@@ -62,11 +62,6 @@ ModelAdapter::Model *Playlist::entries() const
     return m_entries.model();
 }
 
-Entry *Playlist::currentSong() const
-{
-    return m_entries.data().value(m_currentEntry);
-}
-
 void Playlist::onSelectedChanged()
 {
     const QVector<Entry*> &entries = m_entries.data();
@@ -84,18 +79,20 @@ void Playlist::advance(int delta)
     if (m_entries.size() == 0 || delta == 0)
         return;
 
-    Entry *oldSong = currentSong();
-
     // advance index
     m_currentEntry += delta;
-    while (m_repeat && m_currentEntry >= m_entries.size())
-        m_currentEntry -= m_entries.size();
-    while (m_repeat && m_currentEntry < 0)
-        m_currentEntry += m_entries.size();
+    if (m_repeat) {
+        while (m_currentEntry < 0)
+            m_currentEntry += m_entries.size();
+        while (m_currentEntry >= m_entries.size())
+            m_currentEntry -= m_entries.size();
+    }
+    else {
+        if (m_currentEntry < 0 || m_currentEntry >= m_entries.size())
+            m_currentEntry = -1;
+    }
 
-    Entry *newSong = currentSong();
-    if (newSong != oldSong)
-        emit currentSongChanged();
+    currentSongMaybeChanged();
 }
 
 void Playlist::requestIcon(Entry *entry)
@@ -114,6 +111,20 @@ void Playlist::requestIcon(Entry *entry)
 
     HttpRequestId reply = m_http->request(QNetworkRequest(QUrl(entry->iconUrl())));
     m_iconQueries[entry->iconUrl()] = reply;
+}
+
+void Playlist::currentSongMaybeChanged()
+{
+    Entry *newSong = nullptr;
+    if (m_currentEntry >= 0 && m_currentEntry < m_entries.size()) {
+        const int idx = m_randomized ? m_randomizedOverlay[m_currentEntry] : m_currentEntry;
+        newSong = m_entries[idx];
+    }
+
+    if (m_currentSong != newSong) {
+        m_currentSong = newSong;
+        emit currentSongChanged();
+    }
 }
 
 void Playlist::onNetworkReplyFinished(HttpRequestId requestId, const QByteArray &data)
@@ -168,28 +179,31 @@ void Playlist::previous()
 
 void Playlist::play(Entry *entry)
 {
-    const int rootSongIndex = m_entries.data().indexOf(entry);
-    if (rootSongIndex >= 0) {
-        m_currentEntry = rootSongIndex;
-        emit currentSongChanged();
+    const int entryIndex = m_entries.data().indexOf(entry);
+    if (entryIndex >= 0) {
+        if (m_randomized)
+            m_currentEntry = m_randomizedOverlay.indexOf(entryIndex);
+        else
+            m_currentEntry = entryIndex;
+        currentSongMaybeChanged();
     }
 }
 
 void Playlist::remove(Entry *entry)
 {
-    const int rootSongIndex = m_entries.data().indexOf(entry);
-    if (rootSongIndex >= 0) {
-        // current song?
-        if (rootSongIndex == m_currentEntry) {
-            m_entries.remove(entry);
-            emit currentSongChanged();
-        }
-        else if (rootSongIndex < m_currentEntry) {
+    const int entryIndex = m_entries.data().indexOf(entry);
+    if (entryIndex >= 0) {
+        // need to shift songs one backwards?
+        if (!m_randomized && entryIndex < m_currentEntry) {
             m_currentEntry -= 1;
         }
+        m_randomizedOverlay.removeAll(entryIndex);
 
+        m_entries.remove(entry);
         entry->deleteLater();
         purgeUnusedIcons();
+
+        currentSongMaybeChanged();
     }
 }
 
@@ -199,14 +213,7 @@ void Playlist::addFromInternet(
     int duration, const QString &iconUrl, bool append)
 {
     Entry *entry = createEntry(source, artist, album, title, url, duration, iconUrl);
-
-    if (append)
-        m_entries.add(entry);
-    else
-        m_entries.insert(0, entry);
-
-    if (m_entries.size() == 1)
-        emit currentSongChanged();
+    insertEntry(entry, append);
 }
 
 void Playlist::addFromLibrary(const QString &fileName, const QString &artist, const QString &album, const QString &title, int duration, bool append)
@@ -219,14 +226,7 @@ void Playlist::addFromLibrary(const QString &fileName, const QString &artist, co
     url += fileName;
 
     Entry *entry = createEntry(Entry::Library, artist, album, title, url, duration, "");
-
-    if (append)
-        m_entries.add(entry);
-    else
-        m_entries.insert(0, entry);
-
-    if (m_entries.size() == 1)
-        emit currentSongChanged();
+    insertEntry(entry, append);
 }
 
 void Playlist::setRepeat(bool repeat)
@@ -236,6 +236,62 @@ void Playlist::setRepeat(bool repeat)
 
     m_repeat = repeat;
     emit repeatChanged(m_repeat);
+}
+
+void Playlist::setRandomized(bool randomized)
+{
+    if (m_randomized == randomized)
+        return;
+
+    m_randomized = randomized;
+    emit randomizedChanged(m_randomized);
+
+    if (m_randomized) {
+        // create random permutation of playlist songs
+        for (int i = 0; i < m_entries.size(); ++i)
+            m_randomizedOverlay << i;
+        std::random_shuffle(m_randomizedOverlay.begin(), m_randomizedOverlay.end());
+
+        // if we are currently playing a song, put it in front
+        if (m_randomizedOverlay.removeAll(m_currentEntry))
+            m_randomizedOverlay.prepend(m_currentEntry);
+        m_currentEntry = 0;
+    } else {
+        // restore current index
+        m_currentEntry = m_randomizedOverlay.value(m_currentEntry, -1);
+        m_randomizedOverlay.clear();
+    }
+}
+
+void Playlist::insertEntry(Entry *newEntry, bool append)
+{
+    if (append)
+        m_entries.add(newEntry);
+    else
+        m_entries.insert(0, newEntry);
+
+    if (m_randomized) {
+        // shift all indices, if entry was inserted at front
+        if (!append) {
+            for (int &index : m_randomizedOverlay)
+                ++index;
+        }
+        // insert new entry randomly behind current song
+        const int minIndex = m_currentEntry + 1;
+        const int insertIndex = minIndex + rand() % (m_randomizedOverlay.size() + 1 - minIndex);
+        m_randomizedOverlay.insert(insertIndex, append ? m_entries.size() - 1 : 0);
+    }
+    else {
+        // shift current index, if entry was inserted at front
+        if (!append)
+            m_currentEntry++;
+    }
+
+    // first song? -> start playing
+    if (m_entries.size() == 1) {
+        m_currentEntry = 0;
+        currentSongMaybeChanged();
+    }
 }
 
 Entry *Playlist::createEntry(Entry::Source source,

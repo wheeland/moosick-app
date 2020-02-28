@@ -53,6 +53,7 @@ signals:
 
 private slots:
     void onCurrentSongChanged();
+    void onMediaStatusChanged();
     void updateStatus();
 
 private:
