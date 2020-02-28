@@ -25,7 +25,7 @@ Rectangle {
             size: parent.height
             source: "../data/back.png"
             enabled: _app.audio.hasSong
-            onClicked: _app.playlist.next()
+            onClicked: _app.playlist.previous()
         }
 
         PlayerBarButton {
@@ -51,7 +51,7 @@ Rectangle {
             size: parent.height
             source: "../data/forward.png"
             enabled: _app.audio.hasSong
-            onClicked: _app.playlist.previous()
+            onClicked: _app.playlist.next()
         }
     }
 
