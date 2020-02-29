@@ -36,6 +36,8 @@
         <file>qml/LibraryTagSpace.qml</file>
         <file>qml/LibraryItemEditPopup.qml</file>
 
+        <file>qml/TagsPane.qml</file>
+
         <file>qml/layouts/en_GB/main.qml</file>
         <file>qml/layouts/en_GB/dialpad.qml</file>
         <file>qml/layouts/en_GB/digits.qml</file>

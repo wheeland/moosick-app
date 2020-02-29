@@ -94,27 +94,6 @@ DbTag *DatabaseInterface::getOrCreateDbTag(Moosick::TagId tagId)
     return it.value();
 }
 
-void DatabaseInterface::removeTag(Moosick::TagId tagId)
-{
-    Q_ASSERT(tagId.isValid());
-
-    const auto it = m_tags.find(tagId);
-    if (it == m_tags.end())
-        return;
-
-    // remove from parent
-    DbTag *parent = tagForTagId(tagId.parent(m_db->library()));
-    if (parent)
-        parent->removeChildTag(it.value());
-
-    // remove children
-    for (const Moosick::TagId &childId : tagId.children(m_db->library()))
-        removeTag(childId);
-
-    it.value()->deleteLater();
-    m_tags.erase(it);
-}
-
 void DatabaseInterface::search(const QString &searchString)
 {
     if (m_searchString == searchString)
@@ -168,18 +147,23 @@ void DatabaseInterface::editItem(DbItem *item)
     Q_ASSERT(m_editItemType == EditNone);
     Q_ASSERT(m_editItemSource == SourceNone);
 
-    if (DbArtist *artist = qobject_cast<DbArtist*>(item))
+    if (DbArtist *artist = qobject_cast<DbArtist*>(item)) {
         m_editItemType = EditArtist;
-    else if (DbAlbum *album = qobject_cast<DbAlbum*>(item))
+    } else if (DbAlbum *album = qobject_cast<DbAlbum*>(item)) {
         m_editItemType = EditAlbum;
-    else if (DbSong *song = qobject_cast<DbSong*>(item))
+    } else if (DbSong *song = qobject_cast<DbSong*>(item)) {
         m_editItemType = EditSong;
-    else
+    } else if (DbTag *tag = qobject_cast<DbTag*>(item)) {
+        m_editItemType = EditTag;
+        m_tagsModel->setSelectedTagIds({ tag->id().parent(library()) }, false);
+    } else {
         m_editItemType = EditNone;
+    }
 
     if (m_editItemType != EditNone) {
         m_editArtistStringList->popup(item->name());
-        m_tagsModel->setSelectedTagIds(qobject_cast<DbTaggedItem*>(item)->tagIds());
+        if (DbTaggedItem *taggedItem = qobject_cast<DbTaggedItem*>(item))
+            m_tagsModel->setSelectedTagIds(taggedItem->tagIds(), true);
     }
 
     m_editItemSource = (m_editItemType != EditNone) ? SourceLibrary : SourceNone;
@@ -200,7 +184,7 @@ void DatabaseInterface::requestDownload(const NetCommon::DownloadRequest &reques
     m_editedItemId = 0;
 
     m_editArtistStringList->popup(request.artistName);
-    m_tagsModel->setSelectedTagIds({});
+    m_tagsModel->setSelectedTagIds({}, true);
 
     emit stateChanged();
 }
@@ -214,11 +198,42 @@ void DatabaseInterface::removeItem(DbItem *item)
     emit confirmationChanged();
 }
 
+void DatabaseInterface::addNewTag()
+{
+    Q_ASSERT(m_editItemType == EditNone);
+    Q_ASSERT(m_editItemSource == SourceNone);
+
+    m_editItemType = AddNewTag;
+    m_editItemSource = SourceLibrary;
+    m_editedItemId = 0;
+    m_editArtistStringList->popup("");
+    m_tagsModel->setSelectedTagIds({}, false);
+
+    emit stateChanged();
+}
+
 QString DatabaseInterface::confirmationText() const
 {
     if (m_itemToBeRemoved.isNull())
         return "";
-    return QString("Really remove ") + m_itemToBeRemoved->name() + "?";
+
+    QString ret = QString("Really remove ") + m_itemToBeRemoved->name() + "?";
+
+    // if we remove a tag that is still being used, show a warning
+    if (DbTag *tag = qobject_cast<DbTag*>(m_itemToBeRemoved)) {
+        QStringList stillUsing;
+        const auto addStillUsing = [&](const char *name, int count) {
+            if (count > 0)
+                stillUsing << QString::number(count) + " " + name;
+        };
+        addStillUsing("Artists", tag->id().artists(library()).size());
+        addStillUsing("Albums", tag->id().albums(library()).size());
+        addStillUsing("Songs", tag->id().songs(library()).size());
+        if (!stillUsing.isEmpty())
+            ret += QString("\n\n") + stillUsing.join(", ") + " are still using this tag.";
+    }
+
+    return ret;
 }
 
 bool DatabaseInterface::confirmationVisible() const
@@ -235,6 +250,8 @@ void DatabaseInterface::confirm(bool ok)
             m_db->removeAlbum(album->id());
         else if (DbSong *song = qobject_cast<DbSong*>(m_itemToBeRemoved))
             m_db->removeSong(song->id());
+        else if (DbTag *tag = qobject_cast<DbTag*>(m_itemToBeRemoved))
+            m_db->removeTag(tag->id(), true);
     }
 
     m_itemToBeRemoved.clear();
@@ -248,7 +265,7 @@ void DatabaseInterface::onArtistStringSelected(int id)
 
     switch (m_editItemType) {
     case EditArtist:
-        m_tagsModel->setSelectedTagIds(Moosick::ArtistId(id).tags(m_db->library()));
+        m_tagsModel->setSelectedTagIds(Moosick::ArtistId(id).tags(m_db->library()), true);
         break;
     case EditNone:
     default:
@@ -305,16 +322,20 @@ void DatabaseInterface::editOkClicked()
     }
 
     if (m_editItemSource == SourceLibrary) {
-        Q_ASSERT(m_editedItemId > 0);
+        Q_ASSERT((m_editItemType == AddNewTag) || (m_editedItemId > 0));
 
         if ((m_editItemType == ChangeAlbumArtist) && (selectedId > 0)) {
             m_db->setAlbumArtist(m_editedItemId, selectedId);
+        }
+        else if (m_editItemType == AddNewTag && !enteredName.isEmpty()) {
+            m_db->addTag(enteredName, selectedTags.value(0, 0));
         }
         else {
             const HttpRequestId reply =
                 (m_editItemType == EditArtist) ? m_db->setArtistDetails(m_editedItemId, enteredName, selectedTags) :
                 (m_editItemType == EditAlbum) ? m_db->setAlbumDetails(m_editedItemId, enteredName, selectedTags) :
-                (m_editItemType == EditSong) ? m_db->setSongDetails(m_editedItemId, enteredName, selectedTags) : 0;
+                (m_editItemType == EditSong) ? m_db->setSongDetails(m_editedItemId, enteredName, selectedTags) :
+                (m_editItemType == EditTag) ? m_db->setTagDetails(m_editedItemId, enteredName, selectedTags.value(0, 0)) : 0;
         }
 
         m_editItemType = EditNone;
@@ -468,6 +489,12 @@ void DatabaseInterface::repopulateEditStringList()
 
 void DatabaseInterface::repopulateTagsModel()
 {
+    // delete all tags and re-create them
+    m_tagsModel->clear();
+    for (DbTag *tag : m_tags)
+        tag->deleteLater();
+    m_tags.clear();
+
     for (const Moosick::TagId &tagId : m_db->library().rootTags()) {
         DbTag *rootTag = getOrCreateDbTag(tagId);
         m_tagsModel->addTag(rootTag);

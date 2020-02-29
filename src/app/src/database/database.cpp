@@ -112,6 +112,39 @@ HttpRequestId Database::setSongDetails(Moosick::SongId id, const QString &name, 
     );
 }
 
+HttpRequestId Database::addTag(const QString &name, Moosick::TagId parent)
+{
+    return sendChangeRequests({ LibraryChange{ LibraryChange::TagAdd, parent, 0, name } });
+}
+
+HttpRequestId Database::removeTag(Moosick::TagId id, bool force)
+{
+    Q_ASSERT(id.children(m_library).size() == 0);
+
+    QVector<LibraryChange> changes;
+    if (force) {
+        for (Moosick::SongId song : id.songs(m_library))
+            changes << LibraryChange{ LibraryChange::SongRemoveTag, song, id, "" };
+        for (Moosick::AlbumId album : id.albums(m_library))
+            changes << LibraryChange{ LibraryChange::AlbumRemoveTag, album, id, "" };
+        for (Moosick::ArtistId artist : id.artists(m_library))
+            changes << LibraryChange{ LibraryChange::ArtistRemoveTag, artist, id, "" };
+    }
+    changes << LibraryChange{ LibraryChange::TagRemove, id, 0, "" };
+
+    return sendChangeRequests(changes);
+}
+
+HttpRequestId Database::setTagDetails(Moosick::TagId id, const QString &name, Moosick::TagId parent)
+{
+    QVector<LibraryChange> changes;
+    if (id.name(m_library) != name)
+        changes << LibraryChange { LibraryChange::TagSetName, id, 0, name };
+    if (id.parent(m_library) != parent)
+        changes << LibraryChange { LibraryChange::TagSetParent, id, parent, "" };
+    return sendChangeRequests(changes);
+}
+
 HttpRequestId Database::setAlbumArtist(Moosick::AlbumId album, Moosick::ArtistId artist)
 {
     return sendChangeRequests({ LibraryChange { LibraryChange::AlbumSetArtist, album, artist, "" } });

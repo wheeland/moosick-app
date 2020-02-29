@@ -17,6 +17,12 @@ SelectTagsModel::~SelectTagsModel()
 {
 }
 
+void SelectTagsModel::clear()
+{
+    m_tagEntries.clear();
+    m_rootTags.clear();
+}
+
 void SelectTagsModel::addTag(DbTag *tag)
 {
     if (tag->parentTag()) {
@@ -37,7 +43,7 @@ void sortTags(QVector<DbTag*> &tags)
     std::sort(tags.begin(), tags.end(), [](DbTag *lhs, DbTag *rhs) {
         return lhs->name().toLower() <= rhs->name().toLower();
     });
-};
+}
 
 void SelectTagsModel::addTagEntry(Database::DbTag *tag, int offset)
 {
@@ -51,6 +57,10 @@ void SelectTagsModel::addTagEntry(Database::DbTag *tag, int offset)
 
 void SelectTagsModel::updateEntries()
 {
+    if (!m_dirty)
+        return;
+    m_dirty = false;
+
     m_tagEntries.clear();
 
     sortTags(m_rootTags);
@@ -63,10 +73,14 @@ void SelectTagsModel::setSelected(DbTag *tag, bool selected)
 {
     for (int i = 0; i < m_tagEntries.size(); ++i) {
         TagEntry entry = m_tagEntries[i];
+
         if (entry.tag == tag) {
             entry.selected = selected;
             m_tagEntries.set(i, entry);
-            return;
+        }
+        else if (entry.selected && !m_multiSelect) {
+            entry.selected = false;
+            m_tagEntries.set(i, entry);
         }
     }
 }
@@ -91,8 +105,10 @@ Moosick::TagIdList SelectTagsModel::selectedTagsIds() const
     return ret;
 }
 
-void SelectTagsModel::setSelectedTagIds(const Moosick::TagIdList &tags)
+void SelectTagsModel::setSelectedTagIds(const Moosick::TagIdList &tags, bool multiSelect)
 {
+    Q_ASSERT(tags.size() <= 1 || multiSelect);
+
     for (int i = 0; i < m_tagEntries.size(); ++i) {
         TagEntry entry = m_tagEntries[i];
 
@@ -107,4 +123,6 @@ void SelectTagsModel::setSelectedTagIds(const Moosick::TagIdList &tags)
             m_tagEntries.set(i, entry);
         }
     }
+
+    m_multiSelect = multiSelect;
 }

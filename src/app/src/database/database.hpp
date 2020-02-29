@@ -42,7 +42,9 @@ public:
     HttpRequestId setAlbumDetails(Moosick::AlbumId id, const QString &name, const Moosick::TagIdList &tags);
     HttpRequestId setSongDetails(Moosick::SongId id, const QString &name, const Moosick::TagIdList &tags);
 
-    HttpRequestId setTagName(Moosick::TagId id, const QString &name);
+    HttpRequestId addTag(const QString &name, Moosick::TagId parent);
+    HttpRequestId removeTag(Moosick::TagId id, bool force);
+    HttpRequestId setTagDetails(Moosick::TagId id, const QString &name, Moosick::TagId parent);
 
     HttpRequestId setAlbumArtist(Moosick::AlbumId album, Moosick::ArtistId artist);
 

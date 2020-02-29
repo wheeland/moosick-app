@@ -51,6 +51,7 @@ class DbTag : public DbItem
 {
     Q_OBJECT
     Q_PROPERTY(ModelAdapter::Model *childTags READ childTagsModel CONSTANT)
+    Q_PROPERTY(DbTag *parentTag READ parentTag CONSTANT)
 
 public:
     DbTag(DatabaseInterface *db, Moosick::TagId tag);

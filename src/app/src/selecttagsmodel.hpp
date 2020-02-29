@@ -30,6 +30,7 @@ public:
 
     ModelAdapter::Model *tags() const { return m_tagEntries.model(); }
 
+    void clear();
     void addTag(Database::DbTag *tag);
 
     Q_INVOKABLE void setSelected(Database::DbTag *tag, bool selected);
@@ -37,13 +38,14 @@ public:
     QVector<Database::DbTag*> selectedTags() const;
     Moosick::TagIdList selectedTagsIds() const;
 
-    void setSelectedTagIds(const Moosick::TagIdList &tags);
+    void setSelectedTagIds(const Moosick::TagIdList &tags, bool multiSelect);
 
 public slots:
     void updateEntries();
 
 private:
     bool m_dirty = false;
+    bool m_multiSelect = true;
     QVector<Database::DbTag*> m_rootTags;
 
     void addTagEntry(Database::DbTag *tag, int offset);

@@ -69,7 +69,9 @@ public:
         EditArtist,
         EditAlbum,
         EditSong,
+        EditTag,
         ChangeAlbumArtist,
+        AddNewTag,
     };
     Q_ENUM(EditItemType)
 
@@ -108,6 +110,7 @@ public:
 
     Q_INVOKABLE void changeAlbumArtist(DbAlbum *album);
 
+    Q_INVOKABLE void addNewTag();
     Q_INVOKABLE void editItem(DbItem *item);
     Q_INVOKABLE void editOkClicked();
     Q_INVOKABLE void editCancelClicked();
@@ -145,7 +148,6 @@ private:
 
     DbTag *tagForTagId(Moosick::TagId tagId) const;
     DbTag *getOrCreateDbTag(Moosick::TagId tagId);
-    void removeTag(Moosick::TagId tagId);
 
     QHash<Moosick::TagId::IntType, DbTag*> m_tags;  // instantiations for all tag IDs
     SelectTagsModel *m_tagsModel;

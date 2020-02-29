@@ -13,7 +13,7 @@ Rectangle {
 
     SwipeHeader {
         id: header
-        entries: ["Search", "Library", "Playlist" ]
+        entries: ["Search", "Library", "Playlist", "Tags" ]
         index: swipeView.currentIndex
         anchors {
             top: parent.top
@@ -45,6 +45,9 @@ Rectangle {
         }
 
         PlaylistPane {
+        }
+
+        TagsPane {
         }
     }
 
