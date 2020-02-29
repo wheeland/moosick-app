@@ -99,10 +99,11 @@ void DatabaseInterface::search(const QString &searchString)
     if (m_searchString == searchString)
         return;
 
-    updateSearchResults();
-
     m_searchString = searchString;
     m_searchKeywords = searchString.split(" ");
+
+    updateSearchResults();
+
     emit searchStringChanged(m_searchString);
 }
 
@@ -374,29 +375,30 @@ QVector<DatabaseInterface::SearchResultArtist> DatabaseInterface::computeSearchR
     for (const Moosick::ArtistId artistId : m_db->library().artistsByName()) {
         const bool artistHasTag = matchesTags(artistId.tags(lib));
         const bool artistHasString = matchesSearch(artistId.name(lib));
+        const bool includeArtist = artistHasTag && artistHasString;
 
         SearchResultArtist artist;
         artist.id = artistId;
 
         for (const Moosick::AlbumId albumId : artistId.albums(lib)) {
-            const bool albumHasTag = artistHasTag || matchesTags(albumId.tags(lib));
-            const bool albumHasString = artistHasString || matchesSearch(albumId.name(lib));
+            const bool includeAlbum = includeArtist
+                    || (matchesTags(albumId.tags(lib)) && matchesSearch(albumId.name(lib)));
 
             SearchResultAlbum album;
             album.albumId = albumId;
 
             for (const Moosick::SongId songId : albumId.songs(lib)) {
-                const bool songHasTag = albumHasTag || matchesTags(songId.tags(lib));
-                const bool songHasString = albumHasString || matchesSearch(songId.name(lib));
-                if (songHasTag && songHasString)
+                const bool includeSong = includeAlbum
+                        || (matchesTags(songId.tags(lib)) && matchesSearch(songId.name(lib)));
+                if (includeSong)
                     album.songs << songId;
             }
 
-            if (albumHasTag || albumHasString || !album.songs.isEmpty())
+            if (!album.songs.isEmpty())
                 artist.albums << album;
         }
 
-        if (artistHasTag || artistHasString || !artist.albums.isEmpty())
+        if (!artist.albums.isEmpty())
             ret << artist;
     }
 
