@@ -30,6 +30,11 @@ int Model::roleIndex(const QString &name) const
     return (idx < 0) ? idx : (idx + Qt::UserRole);
 }
 
+int Model::size() const
+{
+    return m_adapter->size();
+}
+
 AdapterBase::AdapterBase()
     : m_model(new Model(this))
 {
@@ -47,6 +52,7 @@ void AdapterBase::beginAdd(int start, int end)
 void AdapterBase::endAdd()
 {
     m_model->endInsertRows();
+    emit m_model->sizeChanged(size());
 }
 
 void AdapterBase::beginRemove(int start, int end)
@@ -57,6 +63,7 @@ void AdapterBase::beginRemove(int start, int end)
 void AdapterBase::endRemove()
 {
     m_model->endRemoveRows();
+    emit m_model->sizeChanged(size());
 }
 
 void AdapterBase::beginMove(int from, int to)

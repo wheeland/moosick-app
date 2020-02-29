@@ -11,6 +11,7 @@ class AdapterBase;
 class Model : public QAbstractListModel
 {
     Q_OBJECT
+    Q_PROPERTY(int size READ size NOTIFY sizeChanged)
 
 public:
     Model(AdapterBase *adapter, QObject* parent = nullptr);
@@ -21,6 +22,11 @@ public:
     QVariant data(const QModelIndex &modelIndex, int role) const override;
 
     int roleIndex(const QString &name) const;
+
+    int size() const;
+
+signals:
+    void sizeChanged(int size);
 
 private:
     AdapterBase *m_adapter;
