@@ -528,6 +528,24 @@ TagIdList TagId::children(const Library &library) const
     return tag->children;
 }
 
+ArtistIdList TagId::artists(const Library &library) const
+{
+    FETCH(tag, m_tags, m_value);
+    return tag->artists;
+}
+
+AlbumIdList TagId::albums(const Library &library) const
+{
+    FETCH(tag, m_tags, m_value);
+    return tag->albums;
+}
+
+SongIdList TagId::songs(const Library &library) const
+{
+    FETCH(tag, m_tags, m_value);
+    return tag->songs;
+}
+
 QString TagId::name(const Library &library) const
 {
     FETCH(tag, m_tags, m_value);

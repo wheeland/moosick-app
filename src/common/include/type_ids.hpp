@@ -89,6 +89,10 @@ struct TagId : public detail::FromU32
     TagId parent(const Library &library) const;
     TagIdList children(const Library &library) const;
 
+    ArtistIdList artists(const Library &library) const;
+    AlbumIdList albums(const Library &library) const;
+    SongIdList songs(const Library &library) const;
+
     QString name(const Library &library) const;
 };
 
