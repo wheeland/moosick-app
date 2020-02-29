@@ -11,6 +11,7 @@ Rectangle {
 
         model: _app.database.searchResults
         spacing: 3
+        flickableDirection: Flickable.AutoFlickIfNeeded
 
         delegate: LibraryArtist {
             id: libArtist

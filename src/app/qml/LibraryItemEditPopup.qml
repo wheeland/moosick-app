@@ -120,6 +120,7 @@ Rectangle {
                 anchors.fill: parent
                 anchors.margins: 8
                 clip: true
+                flickableDirection: Flickable.AutoFlickIfNeeded
 
                 model: root.stringsModel
 
@@ -161,6 +162,7 @@ Rectangle {
                 anchors.fill: parent
                 anchors.margins: 8
                 clip: true
+                flickableDirection: Flickable.AutoFlickIfNeeded
 
                 model: root.tagsModel.tags
 
