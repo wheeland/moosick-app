@@ -107,6 +107,7 @@ signals:
 private slots:
     void onSelectedChanged();
     void onNetworkReplyFinished(HttpRequestId requestId, const QByteArray &data);
+    void onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkError error);
 
 private:
     Entry *createEntry(Entry::Source source,

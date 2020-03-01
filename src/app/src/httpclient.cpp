@@ -235,7 +235,7 @@ void HttpClient::launchRequest(HttpClient::RunningRequest &request)
     Q_ASSERT(request.currentReply.isNull());
 
     if (!m_hostValid || (m_manager->networkAccessible() != QNetworkAccessManager::Accessible)) {
-        qWarning() << "POSTPONE" << request.globalRequest.url() << request.serverPath << request.serverQuery;
+//        qWarning() << "POSTPONE" << request.globalRequest.url() << request.serverPath << request.serverQuery;
         return;
     }
 
@@ -263,7 +263,7 @@ void HttpClient::launchRequest(HttpClient::RunningRequest &request)
         connect(request.currentReply, &QNetworkReply::sslErrors, this, &HttpClient::onSslErrors);
     }
 
-    qWarning() << "LAUNCH" << request.currentReply->url();
+//    qWarning() << "LAUNCH" << request.currentReply->url();
 }
 
 static bool isHostOffline(QNetworkReply::NetworkError error)
@@ -282,6 +282,18 @@ static bool isHostOffline(QNetworkReply::NetworkError error)
     case QNetworkReply::ContentConflictError:
     case QNetworkReply::ContentGoneError:
     case QNetworkReply::OperationNotImplementedError:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool isTransientError(QNetworkReply::NetworkError error)
+{
+    switch (error) {
+    case QNetworkReply::ServiceUnavailableError:
+    case QNetworkReply::TimeoutError:
+    case QNetworkReply::TemporaryNetworkFailureError:
         return true;
     default:
         return false;
@@ -318,22 +330,31 @@ void HttpClient::onNetworkReplyFinished(QNetworkReply *reply)
 
     if (error == QNetworkReply::NoError) {
         const QByteArray data = reply->readAll();
-        runningRequest.requester->receivedReply(runningRequest.id, data);
+        emit runningRequest.requester->receivedReply(runningRequest.id, data);
         m_runningRequests.remove(requestIdx);
         return;
     }
 
-    // if there were SSL errors, we will try again once one of the pending errors
-    // got dealt with by the user
-    if (error == QNetworkReply::SslHandshakeFailedError) {
-        runningRequest.hasPendingSslError = true;
-        return;
+    if (!runningRequest.isGlobalRequest) {
+        // if there were SSL errors, we will try again once one of the pending errors
+        // got dealt with by the user
+        if (error == QNetworkReply::SslHandshakeFailedError) {
+            runningRequest.hasPendingSslError = true;
+            return;
+        }
+
+        // if this is a server request and the host can't be reached,
+        // prompt the user again for the host name
+        if (isHostOffline(error)) {
+            m_hostValid = false;
+            emit hostValidChanged(false);
+            return;
+        }
     }
 
-    // if the host can't be reached, prompt the user again for the host name
-    if (isHostOffline(error)) {
-        m_hostValid = false;
-        emit hostValidChanged(false);
+    if (runningRequest.isGlobalRequest && !isTransientError(error)) {
+        emit runningRequest.requester->networkError(runningRequest.id, error);
+        m_runningRequests.remove(requestIdx);
         return;
     }
 

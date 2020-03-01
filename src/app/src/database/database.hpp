@@ -55,6 +55,7 @@ public:
 
 private slots:
     void onNetworkReplyFinished(HttpRequestId reply, const QByteArray &data);
+    void onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkError error);
     void onDownloadQueryTimer();
 
 signals:

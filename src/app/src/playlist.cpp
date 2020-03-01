@@ -49,6 +49,7 @@ Playlist::Playlist(HttpClient *httpClient, QObject *parent)
 {
     m_entries.addValueAccessor("entry");
     connect(m_http, &HttpRequester::receivedReply, this, &Playlist::onNetworkReplyFinished);
+    connect(m_http, &HttpRequester::networkError, this, &Playlist::onNetworkError);
 }
 
 Playlist::~Playlist()
@@ -148,6 +149,15 @@ void Playlist::onNetworkReplyFinished(HttpRequestId requestId, const QByteArray 
     for (Entry *entry : m_entries.data()) {
         if (entry->iconUrl() == url)
             entry->setIconData(imgData);
+    }
+}
+
+void Playlist::onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkError error)
+{
+    for (auto it = m_iconQueries.cbegin(); it != m_iconQueries.cend(); ++it) {
+        if (it.value() == requestId) {
+            qWarning() << "Network error for icon query" << it.key() << ": " << error;
+        }
     }
 }
 

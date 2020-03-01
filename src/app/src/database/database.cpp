@@ -18,6 +18,7 @@ Database::Database(HttpClient *httpClient, QObject *parent)
     , m_http(new HttpRequester(httpClient, this))
 {
     connect(m_http, &HttpRequester::receivedReply, this, &Database::onNetworkReplyFinished);
+    connect(m_http, &HttpRequester::networkError, this, &Database::onNetworkError);
 
     connect(&m_downloadQueryTimer, &QTimer::timeout, this, &Database::onDownloadQueryTimer);
     m_downloadQueryTimer.setSingleShot(true);
@@ -283,6 +284,12 @@ void Database::onNetworkReplyFinished(HttpRequestId reply, const QByteArray &dat
     m_changesPending = hasRunningRequestType(LibraryChanges);
     emit changesPendingChanged(m_changesPending);
     emit isSyncingChanged();
+}
+
+void Database::onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkError error)
+{
+    const RequestType requestType = m_requests.take(requestId);
+    qWarning() << "Network error for" << requestType << ": " << error;
 }
 
 void Database::onDownloadQueryTimer()

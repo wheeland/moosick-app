@@ -144,6 +144,7 @@ Query::Query(HttpClient *http, QObject *parent)
 {
     m_rootResults.addValueAccessor("result");
     connect(m_http, &HttpRequester::receivedReply, this, &Query::onReply);
+    connect(m_http, &HttpRequester::networkError, this, &Query::onNetworkError);
 }
 
 Query::~Query()
@@ -267,15 +268,12 @@ void Query::onReply(HttpRequestId requestId, const QByteArray &data)
         emit hasErrorsChanged(hasErrors());
     }
 
-    else if (m_artistQueries.contains(requestId)) {
-        BandcampArtistResult *artist = m_artistQueries.take(requestId);
+    else if (BandcampArtistResult *artist = m_artistQueries.take(requestId)) {
         populateArtist(artist, data);
         artist->setStatus(Result::Done);
     }
 
-    else if (m_albumQueries.contains(requestId)) {
-        BandcampAlbumResult *album = m_albumQueries.take(requestId);
-
+    else if (BandcampAlbumResult *album = m_albumQueries.take(requestId)) {
         const QJsonObject json = parseJsonObject(data, "bandcamp-album-info");
         NetCommon::BandcampAlbumInfo albumInfo;
         if (!albumInfo.fromJson(json))
@@ -286,9 +284,26 @@ void Query::onReply(HttpRequestId requestId, const QByteArray &data)
         album->setStatus(Result::Done);
     }
 
-    else if (m_iconQueries.contains(requestId)) {
-        Result *result = m_iconQueries.take(requestId);
+    else if (Result *result = m_iconQueries.take(requestId)) {
         result->setIconData(data);
+    }
+}
+
+void Query::onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkError error)
+{
+    // is this the first root query?
+    if (m_activeRootPageQuery == requestId) {
+        m_activeRootPageQuery = 0;
+        qWarning() << "Network error for root page query:" << error;
+    }
+    else if (BandcampArtistResult *artist = m_artistQueries.take(requestId)) {
+        qWarning() << "Network error for artist query:" << artist->title() << error;
+    }
+    else if (BandcampAlbumResult *album = m_albumQueries.take(requestId)) {
+        qWarning() << "Network error for album query:" << album->title() << error;
+    }
+    else if (Result *result = m_iconQueries.take(requestId)) {
+        qWarning() << "Network error for icon query:" << result->title() << error;
     }
 }
 

@@ -195,6 +195,7 @@ signals:
 
 private slots:
     void onReply(HttpRequestId requestId, const QByteArray &data);
+    void onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkError error);
 
 private:
     HttpRequestId requestRootSearch();

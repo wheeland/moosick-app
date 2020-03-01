@@ -26,6 +26,7 @@ public:
 
 signals:
     void receivedReply(HttpRequestId requestId, const QByteArray &data);
+    void networkError(HttpRequestId requestId, QNetworkReply::NetworkError error);
     void runningRequestsChanged(int runningRequests);
 
 private:
