@@ -42,12 +42,15 @@ int runProcess(
         const QStringList &args,
         QByteArray *out,
         QByteArray *err,
-        int timeout)
+        int timeout,
+        const QByteArray &inputData)
 {
     QProcess process;
     process.setProgram(program);
     process.setArguments(args);
     process.start();
+
+    process.write(inputData);
 
     int retCode = 0;
 

@@ -141,9 +141,10 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
     REQUIRE(!dstDir.isEmpty());
     status = runProcess(toolDir + "/bandcamp-dl", {
                    QString("--base-dir=") + dstDir,
+                   "--overwrite",
                    "--template=%{track}",
                    request.url
-               }, &out, &err, 120000);
+               }, &out, &err, 120000, "yes");
 
     if (status != 0) {
         qWarning() << "bandcamp-dl failed, status =" << status;

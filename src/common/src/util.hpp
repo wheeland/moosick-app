@@ -18,7 +18,8 @@ int runProcess(
         const QStringList &args,
         QByteArray *out,
         QByteArray *err,
-        int timeout
+        int timeout,
+        const QByteArray &inputData = QByteArray()
 );
 
 } //namespace ClientCommon
