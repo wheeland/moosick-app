@@ -24,6 +24,12 @@ Controller::Controller(QObject *parent)
     connect(m_httpClient, &HttpClient::userChanged, [=]() { m_storage->writeUserName(m_httpClient->user()); });
     connect(m_httpClient, &HttpClient::passChanged, [=]() { m_storage->writePassword(m_httpClient->pass()); });
 
+    // remember all SSL errors that the user chose to ignore
+    m_httpClient->setIgnoredSslErrorData(m_storage->ignoredSslErrorData());
+    connect(m_httpClient, &HttpClient::pendingSslErrorChanged, this, [=]() {
+        m_storage->writeIgnoredSslErrorData(m_httpClient->ignoredSslErrorData());
+    });
+
     Moosick::Library library;
     if (m_storage->readLibrary(library)) {
         m_database = new Database::DatabaseInterface(library, m_httpClient, this);

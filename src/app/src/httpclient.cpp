@@ -1,6 +1,7 @@
 #include "httpclient.hpp"
 
 #include <QTimer>
+#include <QDataStream>
 
 HttpRequester::HttpRequester(HttpClient *client, QObject *parent)
     : QObject(parent)
@@ -189,6 +190,44 @@ QList<QSslError> HttpClient::ignoredSslErrors() const
             ret << it.key();
     }
     return ret;
+}
+
+QByteArray HttpClient::ignoredSslErrorData() const
+{
+    QByteArray ret;
+    QDataStream out(&ret, QIODevice::WriteOnly);
+
+    const QList<QSslError> ignoredErrors = ignoredSslErrors();
+    out << (qint32) ignoredErrors.size();
+
+    for (const QSslError &error : ignoredErrors) {
+        out << (qint32) error.error();
+        out << error.certificate().toPem();
+    }
+
+    return ret;
+}
+
+void HttpClient::setIgnoredSslErrorData(const QByteArray &data)
+{
+    QDataStream in(data);
+
+    qint32 count, error;
+    QByteArray cert;
+    QVector<QSslError> errors;
+
+    in >> count;
+    for (int i = 0; i < count; ++i) {
+        in >> error;
+        in >> cert;
+        errors << QSslError((QSslError::SslError) error, QSslCertificate(cert, QSsl::Pem));
+    }
+
+    if (in.status() == QDataStream::Ok) {
+        for (const QSslError &newError : errors)
+            m_sslErrors[newError] = SslErrorIgnore;
+        qWarning() << "Imported" << count << "ignored SSL errors";
+    }
 }
 
 void HttpClient::launchRequest(HttpClient::RunningRequest &request)

@@ -14,6 +14,7 @@ static const char *SETTINGS_USER = "user";
 static const char *SETTINGS_PASS = "pass";
 static const char *SETTINGS_STORAGE = "storage";
 static const char *SETTINGS_LOCALSONGS = "localsongs";
+static const char *SETTINGS_IGNORED_SSL_ERRORS = "ignoredSslErrors";
 
 Storage::Storage()
 {
@@ -150,4 +151,14 @@ void Storage::removeLocalSongFile(const QString &fileName)
         files.removeAll(fileName);
         m_settings.setValue(SETTINGS_LOCALSONGS, files);
     }
+}
+
+QByteArray Storage::ignoredSslErrorData() const
+{
+    return m_settings.value(SETTINGS_IGNORED_SSL_ERRORS).toByteArray();
+}
+
+void Storage::writeIgnoredSslErrorData(const QByteArray &data)
+{
+    m_settings.setValue(SETTINGS_IGNORED_SSL_ERRORS, data);
 }

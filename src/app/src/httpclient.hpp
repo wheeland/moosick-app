@@ -60,6 +60,9 @@ public:
     QString pass() const { return m_pass; }
     bool hostValid() const { return m_hostValid; }
 
+    QByteArray ignoredSslErrorData() const;
+    void setIgnoredSslErrorData(const QByteArray &data);
+
     bool hasPendingSslError() const;
     QString pendingSslError() const;
     Q_INVOKABLE void ignorePendingSslError(bool ignore);

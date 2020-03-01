@@ -31,6 +31,9 @@ public:
     void addLocalSongFile(const QString &fileName, const QByteArray &data);
     void removeLocalSongFile(const QString &fileName);
 
+    QByteArray ignoredSslErrorData() const;
+    void writeIgnoredSslErrorData(const QByteArray &data);
+
 private:
     QString m_storageDirectory;
     QSettings m_settings;
