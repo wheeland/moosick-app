@@ -20,14 +20,6 @@ public:
     SelectTagsModel(QObject *parent = nullptr);
     ~SelectTagsModel() override;
 
-    /**
-     * TODO: expose to QML, let QML (de-)select tags, use this info in Database
-     * to edit/download stuff
-     *
-     * - sort all tags alphabetically + hierarchically
-     * - add to existing QML StringChoiceDialog as separate tab
-     */
-
     ModelAdapter::Model *tags() const { return m_tagEntries.model(); }
 
     void clear();
