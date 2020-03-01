@@ -156,49 +156,15 @@ Rectangle {
                 }
             }
 
-            ListView {
+            TagSelection {
                 id: tagsListView
                 visible: !entriesListView.visible
                 anchors.fill: parent
                 anchors.margins: 8
-                clip: true
-                flickableDirection: Flickable.AutoFlickIfNeeded
 
-                model: root.tagsModel.tags
-
-                delegate: Item {
-                    width: parent.width
-                    height: tagBubble.height + 4
-
-                    Rectangle {
-                        id: tagBubble
-                        anchors {
-                            fill: tagText
-                            margins: -3
-                            leftMargin: -10
-                            rightMargin: -10
-                        }
-                        radius: height / 2
-                        color: "#333333"
-                        border.color: "#cccccc"
-                        border.width: model.selected ? 2 : 0
-                    }
-
-                    Text {
-                        id: tagText
-                        anchors.verticalCenter: parent.verticalCenter
-                        x: 20 + 40 * model.offset
-                        text: model.tag.name
-                        color: "white"
-                        font.pixelSize: root.fontSize
-                    }
-
-                    MouseArea {
-                        anchors.fill: tagBubble
-                        onClicked: {
-                            root.tagsModel.setSelected(model.tag, !model.selected);
-                        }
-                    }
+                tagsModel: root.tagsModel
+                onClicked: {
+                    root.tagsModel.setSelected(tag, !selected);
                 }
             }
         }
