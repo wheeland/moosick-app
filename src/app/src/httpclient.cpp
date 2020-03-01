@@ -125,6 +125,72 @@ HttpRequestId HttpClient::requestFromServer(HttpRequester *requester, const QStr
     return newRequest.id;
 }
 
+void HttpClient::onSslErrors(const QList<QSslError> &errors)
+{
+    // add to encountered SSL errors, if it's a new one
+    for (const QSslError &error : errors) {
+        auto it = m_sslErrors.find(error);
+
+        if (it == m_sslErrors.end()) {
+            it = m_sslErrors.insert(error, SslErrorPending);
+
+            if (m_pendingSslError.isNull()) {
+                m_pendingSslError.reset(new QSslError(error));
+                emit pendingSslErrorChanged();
+            }
+        }
+    }
+}
+
+bool HttpClient::hasPendingSslError() const
+{
+    return !m_pendingSslError.isNull();
+}
+
+QString HttpClient::pendingSslError() const
+{
+    if (m_pendingSslError.isNull())
+        return QString();
+
+    QString ret = m_pendingSslError->errorString();
+    ret += ":\n\n";
+
+    const QSslCertificate cert = m_pendingSslError->certificate();
+    ret += cert.toText();
+
+    return ret;
+}
+
+void HttpClient::ignorePendingSslError(bool ignore)
+{
+    Q_ASSERT(!m_pendingSslError.isNull());
+    Q_ASSERT(m_sslErrors.contains(*m_pendingSslError));
+
+    m_sslErrors[*m_pendingSslError] = ignore ? SslErrorIgnore : SslErrorFail;
+
+    for (RunningRequest &runningRequest : m_runningRequests)
+        runningRequest.hasPendingSslError = false;
+    maybeRelaunchRequests();
+
+    // ask user to confirm next pending SSL error, if there is another one
+    m_pendingSslError.reset();
+    for (auto it = m_sslErrors.begin(); it != m_sslErrors.end(); ++it) {
+        if (it.value() == SslErrorPending)
+            m_pendingSslError.reset(new QSslError(it.key()));
+    }
+    pendingSslErrorChanged();
+}
+
+QList<QSslError> HttpClient::ignoredSslErrors() const
+{
+    QList<QSslError> ret;
+    for (auto it = m_sslErrors.begin(); it != m_sslErrors.end(); ++it) {
+        if (it.value() == SslErrorIgnore)
+            ret << it.key();
+    }
+    return ret;
+}
+
 void HttpClient::launchRequest(HttpClient::RunningRequest &request)
 {
     Q_ASSERT(request.currentReply.isNull());
@@ -153,6 +219,9 @@ void HttpClient::launchRequest(HttpClient::RunningRequest &request)
             req.setHeader(QNetworkRequest::ContentTypeHeader, "text/plain");
             request.currentReply = m_manager->post(req, request.serverQuery.toLocal8Bit());
         }
+
+        request.currentReply->ignoreSslErrors(ignoredSslErrors());
+        connect(request.currentReply, &QNetworkReply::sslErrors, this, &HttpClient::onSslErrors);
     }
 
     qWarning() << "LAUNCH" << request.currentReply->url();
@@ -215,6 +284,13 @@ void HttpClient::onNetworkReplyFinished(QNetworkReply *reply)
         return;
     }
 
+    // if there were SSL errors, we will try again once one of the pending errors
+    // got dealt with by the user
+    if (error == QNetworkReply::SslHandshakeFailedError) {
+        runningRequest.hasPendingSslError = true;
+        return;
+    }
+
     // if the host can't be reached, prompt the user again for the host name
     if (isHostOffline(error)) {
         m_hostValid = false;
@@ -234,7 +310,7 @@ void HttpClient::maybeRelaunchRequests()
     if (m_hostValid && (m_manager->networkAccessible() == QNetworkAccessManager::Accessible)) {
         // re-start pending requests
         for (RunningRequest &runningRequest : m_runningRequests) {
-            if (runningRequest.currentReply.isNull())
+            if (runningRequest.currentReply.isNull() && !runningRequest.hasPendingSslError)
                 launchRequest(runningRequest);
         }
     }

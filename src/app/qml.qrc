@@ -18,6 +18,7 @@
         <file>qml/LogOutput.qml</file>
         <file>qml/HostDetailsDialog.qml</file>
         <file>qml/HostDetailsDialogEntry.qml</file>
+        <file>qml/PendingSslErrorPopup.qml</file>
         <file>qml/TagSelection.qml</file>
 
         <file>qml/PlayerBar.qml</file>

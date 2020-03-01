@@ -84,6 +84,16 @@ Rectangle {
         height: parent.height * 0.4
     }
 
+    InputBlocker {
+        visible: _app.httpClient.hasPendingSslError
+    }
+
+    PendingSslErrorPopup {
+        anchors.centerIn: parent
+        width: parent.width * 0.8
+        height: parent.height * 0.4
+    }
+
     Row {
         height: childrenRect.height
         anchors.left: parent.left
