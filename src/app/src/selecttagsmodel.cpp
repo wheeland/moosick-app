@@ -76,18 +76,25 @@ void SelectTagsModel::updateEntries()
 
 void SelectTagsModel::setSelected(DbTag *tag, bool selected)
 {
+    bool changed = false;
+
     for (int i = 0; i < m_tagEntries.size(); ++i) {
         TagEntry entry = m_tagEntries[i];
 
         if (entry.tag == tag) {
             entry.selected = selected;
             m_tagEntries.set(i, entry);
+            changed = true;
         }
         else if (entry.selected && !m_multiSelect) {
             entry.selected = false;
             m_tagEntries.set(i, entry);
+            changed = true;
         }
     }
+
+    if (changed)
+        emit selectionChanged();
 }
 
 QVector<DbTag*> SelectTagsModel::selectedTags() const

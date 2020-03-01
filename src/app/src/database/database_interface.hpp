@@ -43,6 +43,7 @@ class DatabaseInterface : public QObject
 
     /** list of all available tags in the library */
     Q_PROPERTY(SelectTagsModel *tagsModel READ tagsModel CONSTANT)
+    Q_PROPERTY(SelectTagsModel *filterTagsModel READ filterTagsModel CONSTANT)
 
     /** list of artists that match the current search criteria */
     Q_PROPERTY(ModelAdapter::Model *searchResults READ searchResults CONSTANT)
@@ -97,6 +98,7 @@ public:
     bool changesPending() const { return m_db->changesPending(); }
 
     SelectTagsModel *tagsModel() const { return m_tagsModel; }
+    SelectTagsModel *filterTagsModel() const { return m_filterTagsModel; }
     ModelAdapter::Model *searchResults() const { return m_searchResults.model(); }
     QString searchString() const { return m_searchString; }
     StringModel *editStringList() const { return m_editArtistStringList; }
@@ -151,6 +153,7 @@ private:
 
     QHash<Moosick::TagId::IntType, DbTag*> m_tags;  // instantiations for all tag IDs
     SelectTagsModel *m_tagsModel;
+    SelectTagsModel *m_filterTagsModel;
 
     /**
      * Data structures for all currently active search results:

@@ -36,6 +36,9 @@ public:
 public slots:
     void updateEntries();
 
+signals:
+    void selectionChanged();
+
 private:
     bool m_dirty = false;
     bool m_multiSelect = true;

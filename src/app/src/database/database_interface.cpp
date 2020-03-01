@@ -16,6 +16,7 @@ DatabaseInterface::DatabaseInterface(HttpClient *httpClient, QObject *parent)
     : QObject(parent)
     , m_db(new Database(httpClient, parent))
     , m_tagsModel(new SelectTagsModel(this))
+    , m_filterTagsModel(new SelectTagsModel(this))
     , m_editArtistStringList(new StringModel(this))
 {
     m_searchResults.addAccessor("artist", [&](const SearchResultArtist &artist) {
@@ -25,11 +26,12 @@ DatabaseInterface::DatabaseInterface(HttpClient *httpClient, QObject *parent)
     connect(m_editArtistStringList, &StringModel::selected, this, &DatabaseInterface::onArtistStringSelected);
 
     connect(m_db, &Database::libraryChanged, this, &DatabaseInterface::onLibraryChanged);
-
     connect(m_db, &Database::libraryChanged, this, &DatabaseInterface::hasLibraryChanged);
     connect(m_db, &Database::changesPendingChanged, this, &DatabaseInterface::changesPendingChanged);
     connect(m_db, &Database::downloadsPendingChanged, this, &DatabaseInterface::downloadsPendingChanged);
     connect(m_db, &Database::isSyncingChanged, this, &DatabaseInterface::isSyncingChanged);
+
+    connect(m_filterTagsModel, &SelectTagsModel::selectionChanged, this, [=]() { updateSearchResults(); });
 }
 
 DatabaseInterface::DatabaseInterface(const Moosick::Library &library, HttpClient *httpClient, QObject *parent)
@@ -86,9 +88,6 @@ DbTag *DatabaseInterface::getOrCreateDbTag(Moosick::TagId tagId)
             DbTag *child = getOrCreateDbTag(childId);
             it.value()->addChildTag(child);
         }
-
-        if (!parentId.isValid())
-            m_tagsModel->addTag(it.value());
     }
 
     return it.value();
@@ -360,8 +359,11 @@ QVector<DatabaseInterface::SearchResultArtist> DatabaseInterface::computeSearchR
     const Moosick::Library &lib = library();
     QVector<SearchResultArtist> ret;
 
+    const Moosick::TagIdList filterTags = m_filterTagsModel->selectedTagsIds();
     const auto matchesTags = [=](const Moosick::TagIdList &tags) {
-        return true;    // for now..
+        if (filterTags.isEmpty())
+            return true;
+        return std::any_of(tags.begin(), tags.end(), [&](Moosick::TagId tag) { return filterTags.contains(tag); });
     };
 
     const auto matchesSearch = [=](const QString &name) {
@@ -493,6 +495,7 @@ void DatabaseInterface::repopulateTagsModel()
 {
     // delete all tags and re-create them
     m_tagsModel->clear();
+    m_filterTagsModel->clear();
     for (DbTag *tag : m_tags)
         tag->deleteLater();
     m_tags.clear();
@@ -500,6 +503,7 @@ void DatabaseInterface::repopulateTagsModel()
     for (const Moosick::TagId &tagId : m_db->library().rootTags()) {
         DbTag *rootTag = getOrCreateDbTag(tagId);
         m_tagsModel->addTag(rootTag);
+        m_filterTagsModel->addTag(rootTag);
     }
 }
 

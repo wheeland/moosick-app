@@ -8,10 +8,14 @@ Rectangle {
 
     property bool showingTagFilters: false
 
+    readonly property Moosick.SelectTagsModel filterTagsModel : _app.database.filterTagsModel
+
     Item {
         id: header
         width: parent.width
-        height: childrenRect.height
+        height: root.showingTagFilters ? (tagsListView.y + tagsListView.height) : clearButton.height
+        Behavior on height { NumberAnimation { duration: 100 } }
+        clip: true
 
         SimpleButton {
             id: filterButton
@@ -46,6 +50,24 @@ Rectangle {
             onClicked: {
                 textInput.hasInputFocus = false;
                 textInput.text = "";
+            }
+        }
+
+        TagSelection {
+            id: tagsListView
+            visible: root.showingTagFilters
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: clearButton.bottom
+                topMargin: 10
+            }
+            height: 200
+
+            tagsModel: root.filterTagsModel
+
+            onClicked: {
+                root.filterTagsModel.setSelected(tag, !selected);
             }
         }
     }
