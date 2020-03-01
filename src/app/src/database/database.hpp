@@ -5,6 +5,7 @@
 
 #include "library.hpp"
 #include "requests.hpp"
+#include "flatmap.hpp"
 #include "../httpclient.hpp"
 
 class HttpClient;
@@ -97,7 +98,7 @@ private:
     Moosick::Library m_library;
 
     HttpRequester *m_http;
-    QHash<HttpRequestId, RequestType> m_requests;
+    FlatMap<HttpRequestId, RequestType> m_requests;
 
     bool hasRunningRequestType(RequestType requestType) const;
 

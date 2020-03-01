@@ -17,6 +17,7 @@ SOURCES += \
     src/util.cpp \
 
 HEADERS += \
+    include/flatmap.hpp \
     include/download.hpp \
     include/itemcollection.hpp \
     include/jsonconv.hpp \
