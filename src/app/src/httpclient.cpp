@@ -125,8 +125,14 @@ void HttpClient::launchRequest(HttpClient::RunningRequest &request)
         url.setHost(m_host);
         url.setPort(m_port);
         url.setPath(request.serverPath);
-        url.setQuery(request.serverQuery, QUrl::StrictMode);
-        request.currentReply = m_manager->get(QNetworkRequest(url));
+        if (request.serverQuery.size() < 64) {
+            url.setQuery(request.serverQuery, QUrl::StrictMode);
+            request.currentReply = m_manager->get(QNetworkRequest(url));
+        } else {
+            QNetworkRequest req(url);
+            req.setHeader(QNetworkRequest::ContentTypeHeader, "text/plain");
+            request.currentReply = m_manager->post(req, request.serverQuery.toLocal8Bit());
+        }
     }
 
     qWarning() << "LAUNCH" << request.currentReply->url();

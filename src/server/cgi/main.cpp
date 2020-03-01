@@ -22,15 +22,29 @@ static QByteArray getCommand(QByteArray request)
 
 int main(int argc, char **argv)
 {
+    QByteArray contentBytes;
+    const int contentLength = qgetenv("CONTENT_LENGTH").toInt();
+    if (contentLength > 0) {
+        while(!std::cin.eof()) {
+            char arr[1024];
+            std::cin.read(arr,sizeof(arr));
+            int s = std::cin.gcount();
+            contentBytes.append(arr,s);
+        }
+    }
+
     const QByteArray request = qgetenv("REQUEST_URI");
     if (request.isEmpty() || !request.startsWith("/"))
         return 0;
 
-    // extract command and key/value pairs
+    // extract command
     const QList<QByteArray> parts = request.mid(1).split('?');
     const QByteArray command = getCommand(parts[0]);
+
+    // extract key-value pairs, if this is not a POST
+    const QByteArray keyValueString = contentBytes.isEmpty() ? parts.value(1) : contentBytes;
     QHash<QByteArray, QByteArray> values;
-    for (const QByteArray &keyValue : parts.value(1).split('&')) {
+    for (const QByteArray &keyValue : keyValueString.split('&')) {
         const QList<QByteArray> kvPair = keyValue.split('=');
         if (kvPair.size() == 2)
             values[kvPair[0]] = kvPair[1];
