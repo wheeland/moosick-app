@@ -17,8 +17,12 @@ Controller::Controller(QObject *parent)
 {
     m_httpClient->setHost(m_storage->host());
     m_httpClient->setPort(m_storage->port());
+    m_httpClient->setUser(m_storage->userName());
+    m_httpClient->setPass(m_storage->password());
     connect(m_httpClient, &HttpClient::hostChanged, [=]() { m_storage->writeHost(m_httpClient->host()); });
     connect(m_httpClient, &HttpClient::portChanged, [=]() { m_storage->writePort(m_httpClient->port()); });
+    connect(m_httpClient, &HttpClient::userChanged, [=]() { m_storage->writeUserName(m_httpClient->user()); });
+    connect(m_httpClient, &HttpClient::passChanged, [=]() { m_storage->writePassword(m_httpClient->pass()); });
 
     Moosick::Library library;
     if (m_storage->readLibrary(library)) {

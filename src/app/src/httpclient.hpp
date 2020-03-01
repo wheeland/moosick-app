@@ -39,6 +39,8 @@ class HttpClient : public QObject
     Q_PROPERTY(bool hostValid READ hostValid NOTIFY hostValidChanged)
     Q_PROPERTY(QString host READ host WRITE setHost NOTIFY hostChanged)
     Q_PROPERTY(quint16 port READ port WRITE setPort NOTIFY portChanged)
+    Q_PROPERTY(QString user READ user WRITE setUser NOTIFY userChanged)
+    Q_PROPERTY(QString pass READ pass WRITE setPass NOTIFY passChanged)
 
 public:
     HttpClient(QObject *parent = nullptr);
@@ -46,15 +48,21 @@ public:
 
     void setHost(const QString &name);
     void setPort(quint16 port);
+    void setPass(const QString &pass);
+    void setUser(const QString &user);
 
     QString host() const { return m_host; }
     quint16 port() const { return m_port; }
+    QString user() const { return m_user; }
+    QString pass() const { return m_pass; }
     bool hostValid() const { return m_hostValid; }
 
 signals:
     void hostValidChanged(bool hostValid);
-    void portChanged(quint16 port);
     void hostChanged(QString host);
+    void portChanged(quint16 port);
+    void passChanged(QString pass);
+    void userChanged(QString user);
 
 private slots:
     void onNetworkReplyFinished(QNetworkReply *reply);
@@ -83,6 +91,8 @@ private:
 
     QString m_host;
     quint16 m_port;
+    QString m_pass;
+    QString m_user;
     QNetworkAccessManager *m_manager = nullptr;
 
     HttpRequestId m_nextRequestId = 1;

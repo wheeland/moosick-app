@@ -14,6 +14,8 @@ Rectangle {
                 root.visible = true;
                 hostEntry.text = httpClient.host;
                 portEntry.text = httpClient.port;
+                userEntry.text = httpClient.user;
+                passEntry.text = httpClient.pass;
             }
         }
     }
@@ -54,6 +56,8 @@ Rectangle {
             removeFocus();
             httpClient.host = hostEntry.text;
             httpClient.port = portEntry.text;
+            httpClient.user = userEntry.text;
+            httpClient.pass = passEntry.text;
             root.visible = false;
         }
     }

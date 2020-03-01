@@ -68,6 +68,24 @@ void HttpClient::setPort(quint16 port)
     emit portChanged(port);
 }
 
+void HttpClient::setUser(const QString &user)
+{
+    m_user = user;
+    m_hostValid = true;
+    QTimer::singleShot(0, this, &HttpClient::maybeRelaunchRequests);
+    emit hostValidChanged(true);
+    emit userChanged(user);
+}
+
+void HttpClient::setPass(const QString &pass)
+{
+    m_pass = pass;
+    m_hostValid = true;
+    QTimer::singleShot(0, this, &HttpClient::maybeRelaunchRequests);
+    emit hostValidChanged(true);
+    emit passChanged(pass);
+}
+
 void HttpClient::abortAll(HttpRequester *requester)
 {
     Q_UNUSED(requester)
@@ -121,9 +139,11 @@ void HttpClient::launchRequest(HttpClient::RunningRequest &request)
     }
     else {
         QUrl url;
-        url.setScheme("http");
+        url.setScheme("https");
         url.setHost(m_host);
         url.setPort(m_port);
+        url.setUserName(m_user);
+        url.setPassword(m_pass);
         url.setPath(request.serverPath);
         if (request.serverQuery.size() < 64) {
             url.setQuery(request.serverQuery, QUrl::StrictMode);
