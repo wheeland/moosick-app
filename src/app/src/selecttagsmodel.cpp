@@ -19,6 +19,10 @@ SelectTagsModel::~SelectTagsModel()
 
 void SelectTagsModel::clear()
 {
+    m_lastSelectedFlag.clear();
+    for (const TagEntry &entry : m_tagEntries.data())
+        m_lastSelectedFlag[entry.tag->id()] = entry.selected;
+
     m_tagEntries.clear();
     m_rootTags.clear();
 }
@@ -47,7 +51,8 @@ void sortTags(QVector<DbTag*> &tags)
 
 void SelectTagsModel::addTagEntry(Database::DbTag *tag, int offset)
 {
-    m_tagEntries.add(TagEntry{ tag, false, offset });
+    const bool wasSelected = m_lastSelectedFlag.value(tag->id(), false);
+    m_tagEntries.add(TagEntry{ tag, wasSelected, offset });
 
     QVector<DbTag*> childTags = tag->childTags();
     sortTags(childTags);

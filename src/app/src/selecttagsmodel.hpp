@@ -2,6 +2,7 @@
 
 #include "util/modeladapter.hpp"
 #include "library.hpp"
+#include "flatmap.hpp"
 
 namespace Database {
 class DbItem;
@@ -48,4 +49,7 @@ private:
         int offset;
     };
     ModelAdapter::Adapter<TagEntry> m_tagEntries;
+
+    // caches the selected flag when the model was cleared, so that we can restore it later
+    FlatMap<Moosick::TagId, bool> m_lastSelectedFlag;
 };
