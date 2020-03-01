@@ -36,8 +36,10 @@ void SelectTagsModel::addTag(DbTag *tag)
 
     if (!m_rootTags.contains(tag)) {
         m_rootTags << tag;
-        m_dirty = true;
-        QTimer::singleShot(0, this, &SelectTagsModel::updateEntries);
+        if (!m_dirty) {
+            m_dirty = true;
+            QTimer::singleShot(0, this, &SelectTagsModel::updateEntries);
+        }
     }
 }
 
