@@ -20,6 +20,25 @@ static QByteArray getCommand(QByteArray request)
     return request;
 }
 
+void execute(const QString &program, const QStringList &args)
+{
+    QProcess proc;
+    proc.setProgram(program);
+    proc.setArguments(args);
+    proc.start();
+    if (!proc.waitForFinished(3600000)) {
+        qWarning() << program << args << "failed:" << proc.error() << proc.exitCode() << proc.exitStatus();
+        qWarning() << "stdout:";
+        qWarning().noquote() << proc.readAllStandardOutput();
+        qWarning() << "stderr:";
+        qWarning().noquote() << proc.readAllStandardError();
+    }
+    else {
+        const QByteArray out = proc.readAllStandardOutput();
+        std::cout << out.constData() << "\n";
+    }
+}
+
 int main(int argc, char **argv)
 {
     QByteArray contentBytes;
@@ -110,7 +129,7 @@ int main(int argc, char **argv)
     else if (command == "search.do") {
         if (values.contains("v") && !values["v"].isEmpty()) {
             const QString searchPattern = QByteArray::fromBase64(values["v"], QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-            QProcess::execute(toolDir + "node", {jsDir + "search.js", searchPattern});
+            execute(toolDir + "node", {jsDir + "search.js", searchPattern});
         } else
             std::cout << "[]" << std::endl;
         return 0;
@@ -133,7 +152,7 @@ int main(int argc, char **argv)
     else if (command == "bandcamp-artist-info.do") {
         if (values.contains("v") && !values["v"].isEmpty()) {
             const QString url = values["v"];
-            QProcess::execute(toolDir + "node", {jsDir + "bandcamp-artist-info.js", url});
+            execute(toolDir + "node", {jsDir + "bandcamp-artist-info.js", url});
         } else
             std::cout << "[]" << std::endl;
         return 0;
@@ -141,7 +160,7 @@ int main(int argc, char **argv)
     else if (command == "bandcamp-album-info.do") {
         if (values.contains("v") && !values["v"].isEmpty()) {
             const QString url = values["v"];
-            QProcess::execute(toolDir + "node", {jsDir + "bandcamp-album-info.js", url});
+            execute(toolDir + "node", {jsDir + "bandcamp-album-info.js", url});
         } else
             std::cout << "[]" << std::endl;
         return 0;
