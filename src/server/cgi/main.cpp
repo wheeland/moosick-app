@@ -9,9 +9,7 @@
 #include "download.hpp"
 #include "json.hpp"
 #include "jsonconv.hpp"
-
-static const char *LIB_SERVER_PORT = "LIB_SERVER_PORT";
-static const char *DOWNLOAD_SERVER_PORT = "DOWNLOAD_SERVER_PORT";
+#include "serversettings.hpp"
 
 static QByteArray getCommand(QByteArray request)
 {
@@ -41,6 +39,12 @@ void execute(const QString &program, const QStringList &args)
 
 int main(int argc, char **argv)
 {
+    const ServerSettings settings;
+    if (!settings.isValid()) {
+        qWarning() << "Settings file not valid";
+        return 1;
+    }
+
     QByteArray contentBytes;
     const int contentLength = qgetenv("CONTENT_LENGTH").toInt();
     if (contentLength > 0) {
@@ -69,19 +73,14 @@ int main(int argc, char **argv)
             values[kvPair[0]] = kvPair[1];
     }
 
-    const QString rootDir = qgetenv("DOCUMENT_ROOT");
-    const QString toolDir = rootDir + "/../tools/";
+    const QString rootDir = settings.serverRoot();
+    const QString toolDir = settings.toolsDir();
     const QString jsDir = toolDir + "scrapers/";
-    const QString tmpDir = "/tmp/";
-    const QString mediaDir = rootDir;
+    const QString tmpDir = settings.tempDir();
+    const QString mediaDir = settings.serverRoot();
 
-    ClientCommon::ServerConfig libraryServer{ "localhost", 12345, 1000 };
-    ClientCommon::ServerConfig downloadServer{ "localhost", 54321, 1000 };
-
-    if (qEnvironmentVariableIsEmpty(LIB_SERVER_PORT))
-        libraryServer.port = qEnvironmentVariable(LIB_SERVER_PORT).toUShort();
-    if (qEnvironmentVariableIsEmpty(DOWNLOAD_SERVER_PORT))
-        downloadServer.port = qEnvironmentVariable(DOWNLOAD_SERVER_PORT).toUShort();
+    ClientCommon::ServerConfig libraryServer{ "localhost", settings.dbserverPort(), 1000 };
+    ClientCommon::ServerConfig downloadServer{ "localhost", settings.downloaderPort(), 1000 };
 
     if (command == "lib.do") {
         ClientCommon::Message answer;

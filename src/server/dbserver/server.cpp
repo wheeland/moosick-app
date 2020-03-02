@@ -10,12 +10,10 @@
 
 Server::Server(const QString &libraryPath,
                const QString &logPath,
-               const QString &dataPath,
                const QString &backupBasePath)
     : NetCommon::TcpServer()
     , m_libraryPath(libraryPath)
     , m_logPath(logPath)
-    , m_dataPath(dataPath)
     , m_backupBasePath(backupBasePath)
 {
     // maybe load library file

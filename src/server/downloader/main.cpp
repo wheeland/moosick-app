@@ -8,6 +8,7 @@
 #include "server.hpp"
 #include "download.hpp"
 #include "jsonconv.hpp"
+#include "serversettings.hpp"
 
 static const QString rootDir = qgetenv("DOCUMENT_ROOT");
 static const QString toolDir = rootDir + "/../tools/";
@@ -20,14 +21,17 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
 
+    const ServerSettings settings;
+    if (!settings.isValid()) {
+        qWarning() << "Settings file not valid";
+        return 1;
+    }
+
     QCommandLineParser parser;
     parser.addHelpOption();
     parser.addVersionOption();
-    parser.addOption({QStringList{"server"}, "Run as server, specify port", "port"});
+    parser.addOption(QCommandLineOption("server", "Run as server"));
     parser.addOption({QStringList{"download"}, "Download given base64 DownloadRequest", "request", "."});
-    parser.addOption({QStringList{"media"}, "Media directory", "media"});
-    parser.addOption({QStringList{"tool"}, "Tool directory", "tool"});
-    parser.addOption({QStringList{"temp"}, "Temp directory", "temp"});
     parser.process(app);
 
     const bool isServer = parser.isSet("server");
@@ -37,14 +41,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (!parser.isSet("media") || !parser.isSet("tool") || !parser.isSet("temp")) {
-        qCritical() << "media, tool, and temp directories must be set";
-        return 1;
-    }
-
-    const QString toolDir = parser.value("tool");
-    const QString tmpDir = parser.value("temp");
-    const QString mediaDir = parser.value("media");
+    const QString toolDir = settings.toolsDir();
+    const QString tmpDir = settings.tempDir();
+    const QString mediaDir = settings.serverRoot();
 
     if (!QDir(toolDir).exists() || !QDir(tmpDir).exists() || !QDir(mediaDir).exists()) {
         qCritical() << "media, tool, and temp directories must exist";
@@ -52,13 +51,7 @@ int main(int argc, char **argv)
     }
 
     if (isServer) {
-        const quint16 port = parser.value("server").toInt();
-        if (port == 0) {
-            qCritical() << parser.value("server") << "is not a valid port";
-            return 1;
-        }
-
-        Server server(argv[0], mediaDir, toolDir, tmpDir, port);
+        Server server(argv[0], mediaDir, toolDir, tmpDir, settings.downloaderPort());
         return app.exec();
     }
 

@@ -11,51 +11,29 @@
 #include "library.hpp"
 #include "server.hpp"
 #include "signalhandler.hpp"
-
-static constexpr quint16 DEFAULT_PORT = 12345;
-
-static QString getBackupPath(const QString &libPath)
-{
-    QFileInfo file(libPath);
-    return file.dir().path() + QDir::separator() + file.baseName();
-}
+#include "serversettings.hpp"
 
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
 
-    QCommandLineParser parser;
-    parser.addHelpOption();
-    parser.addVersionOption();
-    parser.addPositionalArgument("file", "Specify library file.");
-    parser.addOption({{"p", "port"}, "Specify port to listen on.", "port"});
-    parser.addOption({{"d", "data"}, "Specify path to library data.", "data", "."});
-    parser.addOption({{"l", "log"}, "Specify path to library log.", "log", "."});
-    parser.addOption({{"b", "backup"}, "Specify base path for backup files.", "backup", "."});
-    parser.process(app);
-
-    const QStringList posArgs = parser.positionalArguments();
-    if (posArgs.size() < 1)
-        parser.showHelp();
-
-    // get port
-    bool portOk;
-    quint16 port = parser.value("port").toUShort(&portOk);
-    if (!portOk)
-        port = DEFAULT_PORT;
+    const ServerSettings settings;
+    if (!settings.isValid()) {
+        qWarning() << "Settings file not valid";
+        return 1;
+    }
 
     // start TCP server
-    const QString libraryPath = posArgs[0];
-    const QString dataPath = parser.value("data");
-    const QString logPath = parser.isSet("log") ? parser.value("log") : (libraryPath + ".log");
-    const QString backupPath = parser.isSet("backup") ? parser.value("backup") : getBackupPath(libraryPath);
+    const QString libraryPath = settings.libraryFile();
+    const QString logPath = settings.libraryLogFile();
+    const QString backupPath = settings.libraryBackupDir();
 
-    qWarning() << "Data Path =" << dataPath;
+    qWarning() << "Library File =" << libraryPath;
     qWarning() << "Log Path =" << logPath;
     qWarning() << "Backup Base Path =" << backupPath;
 
-    Server server(libraryPath, logPath, dataPath, backupPath);
-    if (!server.listen(port))
+    Server server(libraryPath, logPath, backupPath);
+    if (!server.listen(settings.dbserverPort()))
         return 1;
 
     SignalHandler signalHandler;

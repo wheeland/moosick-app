@@ -14,6 +14,7 @@ SOURCES += \
     src/messages.cpp \
     src/tcpserver.cpp \
     src/requests.cpp \
+    src/serversettings.cpp \
     src/util.cpp \
 
 HEADERS += \
@@ -27,6 +28,7 @@ HEADERS += \
     include/tcpserver.hpp \
     include/requests.hpp \
     include/type_ids.hpp \
+    include/serversettings.hpp \
     src/util.hpp \
 
 INCLUDEPATH += \
