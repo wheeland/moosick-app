@@ -99,6 +99,11 @@ bool Server::handleMessage(const ClientCommon::Message &message, ClientCommon::M
         response.data = QJsonDocument(m_library.serializeToJson()).toJson();
         return true;
     }
+    case ClientCommon::IdRequest: {
+        response.tp = ClientCommon::IdResponse;
+        response.data = m_library.id().toString();
+        return true;
+    }
     case ClientCommon::ChangeListRequest: {
         const quint32 rev = message.data.toUInt();
         const QVector<Moosick::CommittedLibraryChange> changes = m_library.committedChangesSince(rev);

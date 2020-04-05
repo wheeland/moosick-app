@@ -90,6 +90,14 @@ int main(int argc, char **argv)
 
         return 0;
     }
+    else if (command == "id.do") {
+        ClientCommon::Message answer;
+        sendRecv(libraryServer, ClientCommon::Message{ ClientCommon::IdRequest }, answer);
+
+        std::cout << answer.data.constData() << "\n";
+
+        return 0;
+    }
     else if (command == "get-change-list.do") {
         if (values.contains("v") && !values["v"].isEmpty()) {
             const ClientCommon::Message request{ ClientCommon::ChangeListRequest, values["v"] };

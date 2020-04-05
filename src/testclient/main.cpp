@@ -206,6 +206,10 @@ int main(int argc, char **argv)
             sendRecv(s_serverConfig, ClientCommon::Message{ ClientCommon::Ping }, answer);
             qWarning().noquote() << answer.format();
         }
+        else if (line.toLower() == "id") {
+            sendRecv(s_serverConfig, ClientCommon::Message{ ClientCommon::IdRequest }, answer);
+            qWarning().noquote() << answer.format();
+        }
         else if (QString("library").startsWith(line.toLower())) {
             sendRecv(s_serverConfig, ClientCommon::Message{ ClientCommon::LibraryRequest }, answer);
             Moosick::Library lib;

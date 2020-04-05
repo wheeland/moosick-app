@@ -16,6 +16,10 @@ enum MessageType : quint32
     LibraryRequest,
     LibraryResponse,
 
+    /** Retrieve library ID */
+    IdRequest,
+    IdResponse,
+
     /** Apply a set of changes to the library, return applied changes */
     ChangesRequest,
     ChangesResponse,
