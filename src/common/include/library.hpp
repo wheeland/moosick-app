@@ -61,12 +61,34 @@ struct CommittedLibraryChange
     quint32 revision;
 };
 
+class LibraryId
+{
+public:
+    static constexpr int LENGTH = 8;
+
+    LibraryId() = default;
+    LibraryId(const LibraryId &other) = default;
+    LibraryId &operator=(const LibraryId &other) = default;
+
+    bool operator!=(const LibraryId &other) const { return !(*this == other); }
+    bool operator==(const LibraryId &other) const;
+
+    static LibraryId generate();
+
+    QByteArray toString() const;
+    bool fromString(const QByteArray &string);
+
+private:
+    std::array<quint8, LENGTH> m_bytes;
+};
+
 class Library
 {
 public:
     Library();
     ~Library();
 
+    LibraryId id() const { return m_id; }
     quint32 revision() const { return m_revision; }
 
     QVector<TagId> rootTags() const;
@@ -131,6 +153,7 @@ private:
     quint32 getFileEnding(const QString &ending);
 
     quint32 m_revision = 0;
+    LibraryId m_id = LibraryId::generate();
     QVector<CommittedLibraryChange> m_committedChanges;
 
     ItemCollection<Song> m_songs;

@@ -2,6 +2,7 @@
 #include "jsonconv.hpp"
 
 #include <QDebug>
+#include <QRandomGenerator>
 
 #define JSON_REQUIRE_VALUE(NAME, OBJ, TAG, TYPE) \
     const QJsonValue NAME##_jsonvalue = OBJ.value(TAG); \
@@ -84,6 +85,67 @@ QJsonValue toJson(Moosick::TagId tag)
 
 namespace Moosick {
 
+LibraryId LibraryId::generate()
+{
+    static QRandomGenerator random;
+    LibraryId ret;
+    for (int i = 0; i < LENGTH; ++i)
+        ret.m_bytes[i] = random.generate();
+    return ret;
+}
+
+static char toDigit(const quint8 n)
+{
+    Q_ASSERT(n < 16);
+    return (n < 10) ? ('0' + n) : ('a' + (n-10));
+}
+
+static bool fromDigit(const char c, quint8 &num)
+{
+    if (c >= '0' && c <= '9')
+        num = c - '0';
+    else if (c >= 'a' && c <= 'f')
+        num = 10 + (c - 'a');
+    else if (c >= 'A' && c <= 'F')
+        num = 10 + (c - 'A');
+    else
+        return false;
+    return true;
+}
+
+QByteArray LibraryId::toString() const
+{
+    QByteArray ret;
+    for (quint8 byte : m_bytes) {
+        ret += toDigit(byte / 16);
+        ret += toDigit(byte % 16);
+    }
+    return ret;
+}
+
+bool LibraryId::fromString(const QByteArray &string)
+{
+    if (string.size() != 2 * LENGTH)
+        return false;
+
+    for (int i = 0; i < LENGTH; ++i) {
+        quint8 high, low;
+        if (!fromDigit(string[2*i], high) || !fromDigit(string[2*i+1], low))
+            return false;
+        m_bytes[i] = 16 * high + low;
+    }
+    return true;
+}
+
+bool LibraryId::operator==(const LibraryId &other) const
+{
+    for (int i = 0; i < LENGTH; ++i) {
+        if (m_bytes[i] != other.m_bytes[i])
+            return false;
+    }
+    return true;
+}
+
 template <class T, class IntType>
 static QJsonArray collectionToJsonArray(const ItemCollection<T, IntType> &col, const std::function<void(QJsonObject&, const T &)> &dumper)
 {
@@ -102,6 +164,7 @@ QJsonObject Library::serializeToJson() const
     QJsonObject json;
 
     json["revision"] = QJsonValue((int) m_revision);
+    json["id"] = QJsonValue(QString(m_id.toString()));
 
     json["tags"] = collectionToJsonArray<Library::Tag>(m_tags, [&](QJsonObject &json, const Library::Tag &tag) {
         json["name"] = QJsonValue(tag.name);
@@ -165,6 +228,10 @@ static bool readJsonCollection(const QJsonValue &val, ItemCollection<T, IntType>
 bool Library::deserializeFromJson(const QJsonObject &json)
 {
     JSON_REQUIRE_INT(revision, json, "revision");
+    JSON_REQUIRE_STRING(id, json, "id");
+
+    if (!m_id.fromString(id.toLocal8Bit()))
+        return false;
 
     ItemCollection<Song> songs;
     ItemCollection<Album> albums;
@@ -316,6 +383,7 @@ static void dumpCollection(QDataStream &stream, const ItemCollection<T, IntType>
 QDataStream &operator<<(QDataStream &stream, const Library &lib)
 {
     stream << lib.m_revision;
+    stream << lib.m_id.toString();
 
     dumpCollection<Library::Tag>(stream, lib.m_tags, [&](const Library::Tag &tag) {
         stream << tag.name.toUtf8();
@@ -381,6 +449,11 @@ QDataStream &operator>>(QDataStream &stream, Library &lib)
     lib.m_fileEndings.clear();
 
     stream >> lib.m_revision;
+
+    QByteArray id;
+    stream >> id;
+    const bool success = lib.m_id.fromString(id);
+    Q_ASSERT(success);
 
     readCollection<Library::Tag, quint32>(stream, lib.m_tags, [&](quint32) {
         Library::Tag newTag;
