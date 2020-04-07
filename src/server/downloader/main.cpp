@@ -10,13 +10,6 @@
 #include "jsonconv.hpp"
 #include "serversettings.hpp"
 
-static const QString rootDir = qgetenv("DOCUMENT_ROOT");
-static const QString toolDir = rootDir + "/../tools/";
-static const QString jsDir = toolDir + "scrapers/";
-static const QString tmpDir = "/tmp/";
-static const QString mediaDir = rootDir;
-static const ClientCommon::ServerConfig serverConfig{"localhost", 12345, 1000};
-
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -62,6 +55,8 @@ int main(int argc, char **argv)
             qCritical() << "Failed parsing the base64 download request";
             return 1;
         }
+
+        const ClientCommon::ServerConfig serverConfig{"localhost", settings.dbserverPort(), 1000};
 
         const QVector<Moosick::CommittedLibraryChange> changes = ClientCommon::download(
                     serverConfig, request, mediaDir, toolDir, tmpDir);
