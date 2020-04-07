@@ -81,6 +81,8 @@ QString Message::format()
         "Pong",
         "LibraryRequest",
         "LibraryResponse",
+        "IdRequest",
+        "IdResponse",
         "ChangesRequest",
         "ChangesResponse",
         "ChangeListRequest",
