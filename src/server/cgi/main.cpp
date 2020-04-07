@@ -39,6 +39,8 @@ void execute(const QString &program, const QStringList &args)
 
 int main(int argc, char **argv)
 {
+    QCoreApplication app(argc, argv);
+
     const ServerSettings settings;
     if (!settings.isValid()) {
         qWarning() << "Settings file not valid";
