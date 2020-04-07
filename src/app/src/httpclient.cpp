@@ -23,6 +23,16 @@ quint16 HttpRequester::port() const
     return m_httpClient->m_port;
 }
 
+QString HttpRequester::user() const
+{
+    return m_httpClient->m_user;
+}
+
+QString HttpRequester::pass() const
+{
+    return m_httpClient->m_pass;
+}
+
 HttpRequestId HttpRequester::request(const QNetworkRequest &request)
 {
     return m_httpClient->request(this, request);

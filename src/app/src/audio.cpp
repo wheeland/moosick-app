@@ -86,7 +86,7 @@ void Audio::onCurrentSongChanged()
         m_player->stop();
         m_status = Stopped;
     } else {
-        m_player->setMedia(QUrl(song->url()));
+        m_player->setMedia(song->url());
         m_player->play();
         m_status = Playing;
     }

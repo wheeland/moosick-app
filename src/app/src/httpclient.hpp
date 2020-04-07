@@ -18,6 +18,8 @@ public:
 
     QString host() const;
     quint16 port() const;
+    QString user() const;
+    QString pass() const;
 
     HttpRequestId request(const QNetworkRequest &request);
     HttpRequestId requestFromServer(const QString &path, const QString &query);

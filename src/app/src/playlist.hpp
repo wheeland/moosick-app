@@ -12,7 +12,7 @@ class Entry : public QObject
     Q_PROPERTY(QString artist READ artist CONSTANT)
     Q_PROPERTY(QString album READ album CONSTANT)
     Q_PROPERTY(QString title READ title CONSTANT)
-    Q_PROPERTY(QString url READ url CONSTANT)
+    Q_PROPERTY(QUrl url READ url CONSTANT)
     Q_PROPERTY(QString durationString READ durationString CONSTANT)
     Q_PROPERTY(QString iconData READ iconData NOTIFY iconDataChanged)
     Q_PROPERTY(bool selected READ isSelected WRITE setSelected NOTIFY selectedChanged)
@@ -25,7 +25,7 @@ public:
     };
 
     Entry(Source source, const QString &artist, const QString &album, const QString &title,
-          const QString &url, const QString &iconUrl, int duration, QObject *parent = nullptr);
+          const QUrl &url, const QString &iconUrl, int duration, QObject *parent = nullptr);
     ~Entry() override;
 
     Source source() const { return m_source; }
@@ -33,7 +33,7 @@ public:
     QString artist() const { return m_artist; }
     QString album() const { return m_album; }
     QString iconData() const { return m_iconData; }
-    QString url() const { return m_url; }
+    QUrl url() const { return m_url; }
     QString iconUrl() const { return m_iconUrl; }
     bool isSelected() const { return m_selected; }
 
@@ -52,7 +52,7 @@ private:
     QString m_artist;
     QString m_album;
     QString m_iconData;
-    QString m_url;
+    QUrl m_url;
     QString m_iconUrl;
     int m_duration = 0;
     bool m_selected = false;
@@ -83,7 +83,7 @@ public:
     Q_INVOKABLE void remove(Entry *entry);
 
     void addFromInternet(
-        Entry::Source source, const QString &url,
+        Entry::Source source, const QUrl &url,
         const QString &artist, const QString &album, const QString &title,
         int duration, const QString &iconUrl, bool append
     );
@@ -112,7 +112,7 @@ private slots:
 private:
     Entry *createEntry(Entry::Source source,
                        const QString &artist, const QString &album, const QString &title,
-                       const QString &url, int duration, const QString &iconUrl);
+                       const QUrl &url, int duration, const QString &iconUrl);
     void insertEntry(Entry *newEntry, bool append);
     void advance(int delta);
 

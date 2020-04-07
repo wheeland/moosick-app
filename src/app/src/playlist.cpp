@@ -5,7 +5,7 @@ namespace Playlist {
 
 Entry::Entry(Entry::Source source,
              const QString &artist, const QString &album, const QString &title,
-             const QString &url, const QString &iconUrl, int duration, QObject *parent)
+             const QUrl &url, const QString &iconUrl, int duration, QObject *parent)
     : QObject(parent)
     , m_source(source)
     , m_title(title)
@@ -218,7 +218,7 @@ void Playlist::remove(Entry *entry)
 }
 
 void Playlist::addFromInternet(
-    Entry::Source source, const QString &url,
+    Entry::Source source, const QUrl &url,
     const QString &artist, const QString &album, const QString &title,
     int duration, const QString &iconUrl, bool append)
 {
@@ -228,12 +228,13 @@ void Playlist::addFromInternet(
 
 void Playlist::addFromLibrary(const QString &fileName, const QString &artist, const QString &album, const QString &title, int duration, bool append)
 {
-    QString url = "http://";
-    url += m_http->host();
-    url += ":";
-    url += QString::number(m_http->port());
-    url += "/";
-    url += fileName;
+    QUrl url;
+    url.setScheme("https");
+    url.setHost(m_http->host());
+    url.setPort(m_http->port());
+    url.setPath(QString("/") + fileName);
+    url.setUserName(m_http->user());
+    url.setPassword(m_http->pass());
 
     Entry *entry = createEntry(Entry::Library, artist, album, title, url, duration, "");
     insertEntry(entry, append);
@@ -306,7 +307,7 @@ void Playlist::insertEntry(Entry *newEntry, bool append)
 
 Entry *Playlist::createEntry(Entry::Source source,
                              const QString &artist, const QString &album, const QString &title,
-                             const QString &url, int duration, const QString &iconUrl)
+                             const QUrl &url, int duration, const QString &iconUrl)
 {
     Entry *entry = new Entry(source, artist, album, title, url, iconUrl, duration, this);
     connect(entry, &Entry::selectedChanged, this, &Playlist::onSelectedChanged);
