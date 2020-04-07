@@ -53,7 +53,7 @@ quint32 Server::startDownload(const NetCommon::DownloadRequest &request)
 
     QProcess *proc = new QProcess(this);
     proc->setProgram(m_program);
-    proc->setArguments({ "--download", request.toBase64(), "--media", m_media, "--tool", m_tool, "--temp", m_temp });
+    proc->setArguments({ "--download", request.toBase64() });
     proc->start();
     m_downloads[id] = RunningDownload { request, proc };
 
