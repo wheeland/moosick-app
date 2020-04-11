@@ -400,7 +400,7 @@ QVector<DatabaseInterface::SearchResultArtist> DatabaseInterface::computeSearchR
                 artist.albums << album;
         }
 
-        if (!artist.albums.isEmpty())
+        if (includeArtist || !artist.albums.isEmpty())
             ret << artist;
     }
 
