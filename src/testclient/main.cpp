@@ -30,6 +30,7 @@ static const QVector<QPair<QString, int>> changeTypesAndParamCount {
     {"AlbumRemoveTag", 2},
 
     {"ArtistAdd", 0},
+    {"ArtistAddOrGet", 0},
     {"ArtistRemove", 1},
     {"ArtistSetName", 2},
     {"ArtistAddTag", 2},
@@ -101,7 +102,7 @@ bool parseChange(const QString &str, Moosick::LibraryChange &change, QString &er
         quint32 subject, detail;
         QString name;
 
-        if (tp == Moosick::LibraryChange::ArtistAdd) {
+        if (tp == Moosick::LibraryChange::ArtistAdd || tp == Moosick::LibraryChange::ArtistAddOrGet) {
             name = parts[1];
         } else {
             subject = parts[1].toUInt(&subjectOk);

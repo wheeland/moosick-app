@@ -19,6 +19,7 @@ bool LibraryChange::isCreatingNewId(Type changeType)
     switch (changeType) {
     case TagAdd:
     case ArtistAdd:
+    case ArtistAddOrGet:
     case AlbumAdd:
     case SongAdd:
         return true;
@@ -32,6 +33,7 @@ bool LibraryChange::hasStringArg(Type changeType)
     switch (changeType) {
     case TagAdd:
     case ArtistAdd:
+    case ArtistAddOrGet:
     case AlbumAdd:
     case SongAdd:
     case SongSetFileEnding:
@@ -238,6 +240,18 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
         album->tags.removeAll(change.detail);
         tag->albums.removeAll(change.subject);
         break;
+    }
+    case Moosick::LibraryChange::ArtistAddOrGet: {
+        // See if the artist with that name already exists
+        for (ArtistId artistId : m_artists.ids<ArtistId>()) {
+            if (artistId.name(*this) == change.name) {
+                if (createdId)
+                    *createdId = artistId;
+                commit.change.detail = artistId;
+                break;
+            }
+        }
+        // fall-through to ArtistAdd
     }
     case Moosick::LibraryChange::ArtistAdd: {
         auto artist = m_artists.create();

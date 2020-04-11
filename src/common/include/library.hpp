@@ -31,6 +31,7 @@ struct LibraryChange
         AlbumRemoveTag,
 
         ArtistAdd,
+        ArtistAddOrGet,
         ArtistRemove,
         ArtistSetName,
         ArtistAddTag,

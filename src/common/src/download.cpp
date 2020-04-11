@@ -167,10 +167,10 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
     Moosick::ArtistId artistId = request.artistId;
     QVector<Moosick::CommittedLibraryChange> resultChanges;
     if (!artistId.isValid()) {
-        const Moosick::LibraryChange addArtist(Moosick::LibraryChange::ArtistAdd, 0, 0, request.artistName);
+        const Moosick::LibraryChange addArtist(Moosick::LibraryChange::ArtistAddOrGet, 0, 0, request.artistName);
         REQUIRE(sendChanges(server, {addArtist}, resultChanges));
         REQUIRE(!resultChanges.isEmpty());
-        REQUIRE(resultChanges.first().change.changeType == Moosick::LibraryChange::ArtistAdd);
+        REQUIRE(resultChanges.first().change.changeType == Moosick::LibraryChange::ArtistAddOrGet);
         REQUIRE(resultChanges.first().change.detail != 0);
         artistId = resultChanges.first().change.detail;
         ret << resultChanges;
@@ -294,10 +294,10 @@ QVector<Moosick::CommittedLibraryChange> youtubeDownload(
     Moosick::ArtistId artistId = request.artistId;
     QVector<Moosick::CommittedLibraryChange> resultChanges;
     if (!artistId.isValid()) {
-        const Moosick::LibraryChange addArtist(Moosick::LibraryChange::ArtistAdd, 0, 0, request.artistName);
+        const Moosick::LibraryChange addArtist(Moosick::LibraryChange::ArtistAddOrGet, 0, 0, request.artistName);
         REQUIRE(sendChanges(server, {addArtist}, resultChanges));
         REQUIRE(!resultChanges.isEmpty());
-        REQUIRE(resultChanges.first().change.changeType == Moosick::LibraryChange::ArtistAdd);
+        REQUIRE(resultChanges.first().change.changeType == Moosick::LibraryChange::ArtistAddOrGet);
         REQUIRE(resultChanges.first().change.detail != 0);
         artistId = resultChanges.first().change.detail;
         ret << resultChanges;
