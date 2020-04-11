@@ -31,7 +31,7 @@ public:
     void setLibrary(const Moosick::Library &library);
 
     bool hasLibrary() const { return m_hasLibrary; }
-    bool isSyncing() const { return hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryUpdate); }
+    bool isSyncing() const;
     bool downloadsPending() const { return m_downloadsPending; }
     bool changesPending() const { return hasRunningRequestType(LibraryChanges); }
     const Moosick::Library &library() const { return m_library; }
@@ -60,12 +60,15 @@ private slots:
 
 signals:
     void libraryChanged();
+    void newLibrary();
     void downloadsPendingChanged(bool downloadsPending);
     void changesPendingChanged(bool changesPending);
     void isSyncingChanged();
+    void libraryError(const QString &error);
 
 private:
     void onNewLibrary(const QJsonObject &json);
+    void onNewRemoteId(const QByteArray &data);
     bool applyLibraryChanges(const QByteArray &changesJsonData);
 
     HttpRequestId sendChangeRequests(const QVector<Moosick::LibraryChange> &changes);
@@ -85,6 +88,7 @@ private:
 
     enum RequestType {
         None,
+        LibraryId,
         LibraryGet,
         LibraryUpdate,
         LibraryChanges,
@@ -93,10 +97,12 @@ private:
         DownloadQuery,
     };
 
+    bool m_hasRemoteLibraryId = false;
     bool m_hasLibrary = false;
     bool m_downloadsPending = false;
     bool m_changesPending = false;
     Moosick::Library m_library;
+    Moosick::LibraryId m_remoteId;
 
     HttpRequester *m_http;
     FlatMap<HttpRequestId, RequestType> m_requests;

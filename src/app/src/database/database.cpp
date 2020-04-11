@@ -36,15 +36,26 @@ void Database::setLibrary(const Moosick::Library &library)
     emit libraryChanged();
 }
 
+bool Database::isSyncing() const
+{
+    return hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryId) || hasRunningRequestType(LibraryUpdate);
+}
+
 HttpRequestId Database::sync()
 {
-    if (hasRunningRequestType(LibraryGet) || hasRunningRequestType(LibraryUpdate))
+    if (isSyncing())
         return 0;
 
     HttpRequestId reply;
+
     if (!m_hasLibrary) {
         reply = m_http->requestFromServer("/lib.do", "");
         m_requests[reply] = LibraryGet;
+    }
+    // if we don't yet know the remote library ID, make sure to get that one first
+    else if (!m_hasRemoteLibraryId) {
+        reply = m_http->requestFromServer("/id.do", "");
+        m_requests[reply] = LibraryId;
     }
     // do a partial update if we already have a library
     else {
@@ -55,6 +66,37 @@ HttpRequestId Database::sync()
 
     emit isSyncingChanged();
     return reply;
+}
+
+void Database::onNewLibrary(const QJsonObject &json)
+{
+    if (!m_library.deserializeFromJson(json)) {
+        emit libraryError("Failed to parse Library JSON");
+        return;
+    }
+
+    m_hasLibrary = true;
+    m_hasRemoteLibraryId = true;
+    m_remoteId = m_library.id();
+    emit libraryChanged();
+    emit newLibrary();
+}
+
+void Database::onNewRemoteId(const QByteArray &data)
+{
+    if (m_remoteId.fromString(data)) {
+        m_hasRemoteLibraryId = true;
+
+        // wrong library ID? -> request fresh one
+        if (m_hasLibrary && m_library.id() != m_remoteId) {
+            m_hasLibrary = false;
+            m_library = Moosick::Library();
+        }
+
+        sync(); // continue syncing, either full or partial download
+    } else {
+        emit libraryError("Failed to parse library ID");
+    }
 }
 
 HttpRequestId Database::download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags)
@@ -249,6 +291,10 @@ void Database::onNetworkReplyFinished(HttpRequestId reply, const QByteArray &dat
         onNewLibrary(parseJsonObject(data, "Library"));
         break;
     }
+    case LibraryId: {
+        onNewRemoteId(data);
+        break;
+    }
     case LibraryUpdate: {
         applyLibraryChanges(data);
         break;
@@ -339,14 +385,6 @@ void Database::onDownloadQueryResult(const QByteArray &data)
     // if there are downloads still running, we'll need to check back later for the results
     if (m_downloadsPending)
         m_downloadQueryTimer.start(5000);
-}
-
-void Database::onNewLibrary(const QJsonObject &json)
-{
-    if (m_library.deserializeFromJson(json)) {
-        m_hasLibrary = true;
-        emit libraryChanged();
-    }
 }
 
 bool Database::applyLibraryChanges(const QByteArray &changesJsonData)
