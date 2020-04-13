@@ -18,23 +18,75 @@ static QByteArray getCommand(QByteArray request)
     return request;
 }
 
-void execute(const QString &program, const QStringList &args)
+bool execute(const QString &program, const QStringList &args, QByteArray &out)
 {
     QProcess proc;
     proc.setProgram(program);
     proc.setArguments(args);
     proc.start();
-    if (!proc.waitForFinished(3600000)) {
+    if (proc.waitForFinished(3600000) && proc.exitStatus() == QProcess::NormalExit && proc.exitCode() == 0) {
+        out = proc.readAllStandardOutput();
+        return true;
+    }
+    else {
         qWarning() << program << args << "failed:" << proc.error() << proc.exitCode() << proc.exitStatus();
         qWarning() << "stdout:";
         qWarning().noquote() << proc.readAllStandardOutput();
         qWarning() << "stderr:";
         qWarning().noquote() << proc.readAllStandardError();
+        return false;
     }
-    else {
-        const QByteArray out = proc.readAllStandardOutput();
-        std::cout << out.constData() << "\n";
+}
+
+bool printYoutubeUrl(const QString &toolDir, const QString &videoId)
+{
+    const QString url = QString("https://www.youtube.com/watch?v=") + videoId;
+    QByteArray youtubeDlOut;
+    if (!execute(toolDir + "/youtube-dl", {"-j", url}, youtubeDlOut))
+        return false;
+
+    const QJsonDocument jsonDoc = QJsonDocument::fromJson(youtubeDlOut);
+    if (!jsonDoc.isObject())
+        return false;
+    const QJsonObject json = jsonDoc.object();
+
+    const auto formatsIt = json.find("formats");
+    if (formatsIt == json.end() || !formatsIt->isArray())
+        return false;
+    const QJsonArray formats = formatsIt->toArray();
+
+    // find best audio URL among formats: no DASH, 'audio only', and largest file size
+    int bestAudioSize = 0;
+    QString bestUrl;
+    for (const QJsonValue &format : formats) {
+        const QString formatName = format["format"].toString();
+
+        // ain't nobody got love for DASH
+        if (formatName.toLower().contains("dash"))
+            continue;
+
+        const int size = format["filesize"].toInt();
+        bool isBest = bestUrl.isEmpty();
+        if (!isBest && formatName.contains("audio only") && size && size > bestAudioSize)
+            isBest = true;
+
+        if (isBest) {
+            bestUrl = format["url"].toString();
+            bestAudioSize = size;
+        }
     }
+
+    if (bestUrl.isEmpty())
+        return false;
+
+    QJsonObject out;
+    out["title"] = json["title"].toString();
+    out["duration"] = json["duration"].toInt();
+    out["chapters"] = json["chapters"].toArray();
+    out["url"] = bestUrl;
+
+    std::cout << QJsonDocument(out).toJson().data() << std::endl;
+    return true;
 }
 
 int main(int argc, char **argv)
@@ -135,12 +187,12 @@ int main(int argc, char **argv)
 
         return 0;
     }
-    else if (command == "search.do") {
-        if (values.contains("v") && !values["v"].isEmpty()) {
-            const QString searchPattern = QByteArray::fromBase64(values["v"], QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-            execute(toolDir + "node", {jsDir + "search.js", searchPattern});
-        } else
-            std::cout << "[]" << std::endl;
+    else if (command == "get-youtube-url.do") {
+        if (!values.contains("v") || values["v"].isEmpty())
+            return 0;
+
+        if (!printYoutubeUrl(toolDir, values["v"]))
+            std::cout << "{}" << std::endl;
         return 0;
     }
     else if (command == "download.do") {
@@ -156,22 +208,6 @@ int main(int argc, char **argv)
         ClientCommon::Message answer, request{ ClientCommon::DownloadQuery, "" };
         sendRecv(downloadServer, request, answer);
         std::cout << answer.data.constData() << "\n";
-        return 0;
-    }
-    else if (command == "bandcamp-artist-info.do") {
-        if (values.contains("v") && !values["v"].isEmpty()) {
-            const QString url = values["v"];
-            execute(toolDir + "node", {jsDir + "bandcamp-artist-info.js", url});
-        } else
-            std::cout << "[]" << std::endl;
-        return 0;
-    }
-    else if (command == "bandcamp-album-info.do") {
-        if (values.contains("v") && !values["v"].isEmpty()) {
-            const QString url = values["v"];
-            execute(toolDir + "node", {jsDir + "bandcamp-album-info.js", url});
-        } else
-            std::cout << "[]" << std::endl;
         return 0;
     }
 
