@@ -18,26 +18,13 @@ Flickable {
             width: parent.width
             height: childrenRect.height + 10
 
-            SimpleButton {
-                id: retryButton
-                anchors.left: parent.left
-                anchors.margins: 20
-                label: "Retry"
-                background: _app.search.hasErrors ? "black" : "darkgray"
-                foreground: _app.search.hasErrors ? "white" : "lightgray"
-                enabled: _app.search.hasErrors
-                onClicked: _app.search.retry()
-            }
-
             LineEdit {
                 id: textInput
                 anchors {
-                    left: retryButton.right
+                    left: parent.left
                     right: searchButton.left
-                    verticalCenter: retryButton.verticalCenter
                     margins: 20
                 }
-                height: retryButton.height - 10
                 background: "black"
                 foreground: "white"
                 pixelSize: _style.fontSizeButtons * 0.8

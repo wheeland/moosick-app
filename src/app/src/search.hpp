@@ -5,9 +5,8 @@
 #include "util/modeladapter.hpp"
 #include "httpclient.hpp"
 
-namespace NetCommon {
-class BandcampAlbumInfo;
-}
+namespace ScrapeBandcamp { struct Result; }
+namespace ScrapeYoutube { struct Result; }
 
 namespace Search {
 
@@ -146,18 +145,22 @@ private:
 class YoutubeVideoResult : public Result
 {
     Q_OBJECT
-    Q_PROPERTY(int secs READ secs CONSTANT)
-    Q_PROPERTY(QString videoUrl READ videoUrl CONSTANT)
 
 public:
-    YoutubeVideoResult(const QString &title, const QString &url, const QString &original, const QString &icon, int secs, QObject *parent = nullptr);
+    YoutubeVideoResult(const QString &title, const QString &videoUrl, const QString &icon, QObject *parent = nullptr);
     ~YoutubeVideoResult() = default;
+
     int secs() const { return m_secs; }
-    QString videoUrl() const { return m_originalUrl; }
+    QString audioUrl() { return m_audioUrl; }
+
+    void setDetails(const QString &audioUrl, int secs);
+
+signals:
+    void hasDetails();
 
 private:
     int m_secs;
-    QString m_originalUrl;
+    QString m_audioUrl;
 };
 
 /**
@@ -173,7 +176,6 @@ class Query : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool finished READ hasFinished NOTIFY finishedChanged)
-    Q_PROPERTY(bool hasErrors READ hasErrors NOTIFY hasErrorsChanged)
     Q_PROPERTY(QAbstractItemModel *model READ model CONSTANT)
 
 public:
@@ -183,41 +185,47 @@ public:
     QAbstractItemModel *model() const;
 
     bool hasFinished() const;
-    bool hasErrors() const;
 
     Q_INVOKABLE void clear();
-    Q_INVOKABLE void retry();
     Q_INVOKABLE void search(const QString &searchString);
 
 signals:
-    void finishedChanged(bool finished);
+    void finishedChanged();
     void hasErrorsChanged(bool hasErrors);
 
 private slots:
     void onReply(HttpRequestId requestId, const QByteArray &data);
     void onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkError error);
 
+    void startBandcampRootSearch();
+    void startYoutubeRootSearch();
+
 private:
-    HttpRequestId requestRootSearch();
-    HttpRequestId requestArtistSearch(const QString &url);
-    HttpRequestId requestAlbumSearch(const QString &url);
     void requestIcon(Result *result);
 
-    BandcampAlbumResult *createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon);
-    BandcampArtistResult *createArtistResult(const QString &name, const QString &url, const QString &icon);
-    YoutubeVideoResult *createYoutubeVideoResult(const QString &artist, const QString &name, const QString &audioUrl, const QString &url, const QString &icon, int secs);
+    BandcampArtistResult *createBandcampArtistResult(const ScrapeBandcamp::Result &result);
+    BandcampAlbumResult *createBandcampAlbumResult(const ScrapeBandcamp::Result &result);
+    YoutubeVideoResult *createYoutubeVideoResult(const QString &title, const QString &url, const QString &icon);
 
-    bool populateRootResults(const QByteArray &json);
-    void populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo);
-    bool populateArtist(BandcampArtistResult *artist, const QByteArray &artistInfo);
+    void requestBandcampBandInfo(BandcampArtistResult *artist);
+    void requestBandcampAlbumInfo(BandcampAlbumResult *album);
+    void requestYoutubeVideoInfo(YoutubeVideoResult *video);
 
-    HttpRequester *m_http;
+    void populateBandcampSearchResults(const QByteArray &html);
+    void populateBandcampArtist(BandcampArtistResult *artist, const QByteArray &html);
+    void populateBandcampAlbum(BandcampAlbumResult *album,const QByteArray &html);
+    void populateYoutubeSearchResults(const QByteArray &html);
+    void populateYoutubeVideo(YoutubeVideoResult *video, const QByteArray &html);
+
+    HttpRequester * const m_http;
     QString m_searchString;
 
     // associate each query with what they were querying
-    HttpRequestId m_activeRootPageQuery = 0;
-    QHash<HttpRequestId, BandcampArtistResult*> m_artistQueries;
-    QHash<HttpRequestId, BandcampAlbumResult*> m_albumQueries;
+    HttpRequestId m_bandcampRootSearch = HTTP_NULL_REQUEST;
+    HttpRequestId m_youtubeRootSearch = HTTP_NULL_REQUEST;
+    QHash<HttpRequestId, BandcampArtistResult*> m_bandcampArtistQueries;
+    QHash<HttpRequestId, BandcampAlbumResult*> m_bandcampAlbumQueries;
+    QHash<HttpRequestId, YoutubeVideoResult*> m_youtubeVideoQueries;
     QHash<HttpRequestId, Result*> m_iconQueries;
 
     ModelAdapter::Adapter<Result*> m_rootResults;

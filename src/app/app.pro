@@ -29,6 +29,21 @@ SOURCES += \
     src/util/androidutil.cpp \
     src/util/qmlutil.cpp \
     src/util/modeladapter.cpp \
+    \
+    src/gumbo/attribute.c \
+    src/gumbo/char_ref.c \
+    src/gumbo/error.c \
+    src/gumbo/parser.c \
+    src/gumbo/string_buffer.c \
+    src/gumbo/string_piece.c \
+    src/gumbo/tag.c \
+    src/gumbo/tokenizer.c \
+    src/gumbo/utf8.c \
+    src/gumbo/util.c \
+    src/gumbo/vector.c \
+    \
+    src/musicscrape/musicscrape.cpp \
+    src/musicscrape/qmusicscrape.cpp \
 
 HEADERS += \
     src/audio.hpp \
@@ -46,13 +61,18 @@ HEADERS += \
     src/util/androidutil.hpp \
     src/util/qmlutil.hpp \
     src/util/modeladapter.hpp \
+    \
+    src/musicscrape/musicscrape.hpp \
+    src/musicscrape/qmusicscrape.hpp \
 
 RESOURCES += \
     qml.qrc \
     data.qrc \
 
 INCLUDEPATH += \
-    ../common/include/
+    ../common/include/ \
+    src/gumbo/ \
+    src/ \
 
 LIBS += \
     -L../bin/ -lcommon

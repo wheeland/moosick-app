@@ -7,6 +7,7 @@
 class HttpClient;
 
 using HttpRequestId = quint64;
+constexpr static HttpRequestId HTTP_NULL_REQUEST = 0;
 
 class HttpRequester : public QObject
 {

@@ -13,6 +13,8 @@
 #include <QImage>
 #include <QDebug>
 
+#include "musicscrape/musicscrape.hpp"
+
 namespace Search {
 
 Result::Result(Type tp, const QString &title, const QString &url, const QString &icon, QObject *parent)
@@ -96,11 +98,16 @@ BandcampTrackResult::BandcampTrackResult(BandcampAlbumResult *album, const QStri
 {
 }
 
-YoutubeVideoResult::YoutubeVideoResult(const QString &title, const QString &url, const QString &original, const QString &icon, int secs, QObject *parent)
-    : Result(YoutubeVideo, title, url, icon, parent)
-    , m_secs(secs)
-    , m_originalUrl(original)
+YoutubeVideoResult::YoutubeVideoResult(const QString &title, const QString &videoUrl, const QString &icon, QObject *parent)
+    : Result(YoutubeVideo, title, videoUrl, icon, parent)
 {
+}
+
+void YoutubeVideoResult::setDetails(const QString &audioUrl, int secs)
+{
+    m_audioUrl = audioUrl;
+    m_secs = secs;
+    emit hasDetails();
 }
 
 QueryFilterModel::QueryFilterModel(QObject *parent)
@@ -159,16 +166,20 @@ QAbstractItemModel *Query::model() const
 
 bool Query::hasFinished() const
 {
-    return m_rootResults.size() > 0;
-}
-
-bool Query::hasErrors() const
-{
-    return (m_activeRootPageQuery == 0) && hasFinished();
+    return (m_rootResults.size() > 0) && !m_bandcampRootSearch && !m_youtubeRootSearch;
 }
 
 void Query::clear()
 {
+    m_bandcampRootSearch = HTTP_NULL_REQUEST;
+    m_youtubeRootSearch = HTTP_NULL_REQUEST;
+    m_bandcampArtistQueries.clear();
+    m_bandcampAlbumQueries.clear();
+    m_youtubeVideoQueries.clear();
+    m_iconQueries.clear();
+
+    m_http->abortAll();
+
     for (Result *result : m_rootResults.data())
         result->deleteLater();
     m_rootResults.clear();
@@ -178,112 +189,150 @@ void Query::search(const QString &searchString)
 {
     clear();
     m_searchString = searchString.trimmed();
-    m_activeRootPageQuery = requestRootSearch();
+    startBandcampRootSearch();
+    startYoutubeRootSearch();
 }
 
-void Query::retry()
+void Query::startBandcampRootSearch()
 {
-    if (!hasErrors())
-        return;
-
-    m_activeRootPageQuery = requestRootSearch();
-    emit hasErrorsChanged(false);
+    if (!m_bandcampRootSearch) {
+        const std::string url = ScrapeBandcamp::searchUrl(m_searchString.toStdString());
+        m_bandcampRootSearch = m_http->request(QNetworkRequest(QUrl(QString::fromStdString(url))));
+    }
 }
 
-bool Query::populateRootResults(const QByteArray &json)
+void Query::startYoutubeRootSearch()
 {
-    const QJsonArray root = parseJsonArray(json, "search.do");
-    if (root.isEmpty())
-        return false;
+    if (!m_youtubeRootSearch) {
+        const std::string url = ScrapeYoutube::searchUrl(m_searchString.toStdString());
+        m_youtubeRootSearch = m_http->request(QNetworkRequest(QUrl(QString::fromStdString(url))));
+    }
+}
 
-    QVector<Result*> newResults;
-
-    for (const QJsonValue &entry : root) {
-        const QString type = entry["type"].toString();
-        const QString name = entry["name"].toString();
-        const QString artist = entry["artist"].toString();
-        const QString url = entry["url"].toString();
-        const QString icon = entry["icon"].toString();
-
-        if (type == "artist") {
-            newResults << createArtistResult(name, url, icon);
-        }
-        else if (type == "album") {
-            newResults << createAlbumResult(artist, name, url, icon);
-        }
-        else if (type == "video") {
-            const QString audioUrl = entry["audioUrl"].toString();
-            const int secs = entry["duration"].toInt();
-            newResults << createYoutubeVideoResult(artist, name, audioUrl, url, icon, secs);
-        }
-        else if (type == "playlist") {
-            qWarning() << "playlist not implemented";
+void Query::populateBandcampSearchResults(const QByteArray &html)
+{
+    const ScrapeBandcamp::ResultList results = ScrapeBandcamp::searchResult(html.toStdString());
+    for (const ScrapeBandcamp::Result &result : results) {
+        switch (result.resultType) {
+        case ScrapeBandcamp::Result::Band:
+            m_rootResults.add(createBandcampArtistResult(result));
+            break;
+        case ScrapeBandcamp::Result::Album:
+            m_rootResults.add(createBandcampAlbumResult(result));
+            break;
+        case ScrapeBandcamp::Result::Track:
+            // ignore fucking tracks
+            break;
+        default:
+            qFatal("Query::populateBandcampResults: Invalid ScrapeBandcamp::Result");
         }
     }
-
-    // add to model
-    for (Result *newResult : qAsConst(newResults))
-        m_rootResults.add(newResult);
-
-    emit finishedChanged(true);
-
-    return true;
 }
 
-void Query::populateAlbum(BandcampAlbumResult *album, const NetCommon::BandcampAlbumInfo &albumInfo)
+static void addTracksToBandcampAlbum(BandcampAlbumResult *album, const ScrapeBandcamp::ResultList &results)
 {
-    for (const NetCommon::BandcampSongInfo &song : albumInfo.tracks) {
-        BandcampTrackResult *track = new BandcampTrackResult(album, song.name, song.url, albumInfo.icon, song.secs, this);
+    for (const ScrapeBandcamp::Result &result : results) {
+        Q_ASSERT(result.resultType == ScrapeBandcamp::Result::Track);
+        const QString name = QString::fromStdString(result.trackName);
+        const QString url = QString::fromStdString(result.mp3url);
+        const QString icon = QString::fromStdString(result.artUrl);
+        BandcampTrackResult *track = new BandcampTrackResult(album, name, url, icon, result.mp3duration, album);
         album->addTrack(track);
     }
 }
 
-bool Query::populateArtist(BandcampArtistResult *artist, const QByteArray &artistInfo)
+void Query::populateBandcampArtist(BandcampArtistResult *artist, const QByteArray &html)
 {
-    const QJsonArray root = parseJsonArray(artistInfo, "bandcamp-artist-info");
-    if (root.isEmpty())
-        return false;
+    bool singleRelease;
+    const std::string bandUrl = artist->url().toStdString();
+    const ScrapeBandcamp::ResultList results = ScrapeBandcamp::bandInfoResult(bandUrl, html.toStdString(), &singleRelease);
 
-    for (const QJsonValue &entry : root) {
-        const QString type = entry["type"].toString();
-        const QString name = entry["name"].toString();
-        const QString url = entry["url"].toString();
-        const QString icon = entry["icon"].toString();
-
-        BandcampAlbumResult *newAlbum = createAlbumResult(artist->title(), name, url, icon);
-        artist->addAlbum(newAlbum);
+    if (results.empty()) {
+        artist->setStatus(Result::Error);
+        return;
     }
 
-    return true;
+    if (!singleRelease) {
+        for (const ScrapeBandcamp::Result &result : results) {
+            if (result.resultType == ScrapeBandcamp::Result::Album)
+                artist->addAlbum(createBandcampAlbumResult(result));
+        }
+    }
+    else {
+        // create a fake 'Album' Result and create an album from it
+        ScrapeBandcamp::Result fakeResult = results.front();
+        fakeResult.resultType = ScrapeBandcamp::Result::Album;
+        fakeResult.url = bandUrl;
+
+        BandcampAlbumResult *album = createBandcampAlbumResult(results.front());
+        artist->addAlbum(album);
+        addTracksToBandcampAlbum(album, results);
+        album->setStatus(Result::Done);
+    }
+
+    artist->setStatus(Result::Done);
+}
+
+void Query::populateBandcampAlbum(BandcampAlbumResult *album, const QByteArray &html)
+{
+    const ScrapeBandcamp::ResultList results = ScrapeBandcamp::albumInfo(html.toStdString());
+
+    if (!results.empty()) {
+        addTracksToBandcampAlbum(album, results);
+        album->setStatus(Result::Done);
+    } else {
+        album->setStatus(Result::Error);
+    }
+}
+
+void Query::populateYoutubeSearchResults(const QByteArray &html)
+{
+    const ScrapeYoutube::ResultList results = ScrapeYoutube::searchResult(html.toStdString());
+    for (const ScrapeYoutube::Result &result : results) {
+        m_rootResults.add(
+            createYoutubeVideoResult(result.title.data(), result.url.data(), result.thumbnailUrl.data())
+        );
+    }
+}
+
+void Query::populateYoutubeVideo(YoutubeVideoResult *video, const QByteArray &html)
+{
+    const QJsonObject json = parseJsonObject(html, "youtube-info");
+    const auto durationIt = json.find("duration");
+    const auto urlIt = json.find("url");
+
+    if (durationIt != json.end() && urlIt != json.end()) {
+        video->setDetails(urlIt->toString(), durationIt->toInt());
+        video->setStatus(Result::Done);
+    }
+    else {
+        qWarning() << "Failed to parse youtube video info:" << json;
+        video->setStatus(Result::Error);
+    }
 }
 
 void Query::onReply(HttpRequestId requestId, const QByteArray &data)
 {
-    // is this the first root query?
-    if (m_activeRootPageQuery == requestId) {
-        m_activeRootPageQuery = 0;
-
-        populateRootResults(data);
-        emit finishedChanged(true);
-        emit hasErrorsChanged(hasErrors());
+    if (m_bandcampRootSearch == requestId) {
+        m_bandcampRootSearch = 0;
+        populateBandcampSearchResults(data);
+        emit finishedChanged();
     }
 
-    else if (BandcampArtistResult *artist = m_artistQueries.take(requestId)) {
-        populateArtist(artist, data);
-        artist->setStatus(Result::Done);
+    else if (m_youtubeRootSearch == requestId) {
+        m_youtubeRootSearch = 0;
+        populateYoutubeSearchResults(data);
+        emit finishedChanged();
     }
-
-    else if (BandcampAlbumResult *album = m_albumQueries.take(requestId)) {
-        const QJsonObject json = parseJsonObject(data, "bandcamp-album-info");
-        NetCommon::BandcampAlbumInfo albumInfo;
-        if (!albumInfo.fromJson(json))
-            qWarning() << "Failed to parse album info:" << json;
-        else
-            populateAlbum(album, albumInfo);
-
-        album->setStatus(Result::Done);
+    else if (BandcampArtistResult *artist = m_bandcampArtistQueries.take(requestId)) {
+        populateBandcampArtist(artist, data);
     }
-
+    else if (BandcampAlbumResult *album = m_bandcampAlbumQueries.take(requestId)) {
+        populateBandcampAlbum(album, data);
+    }
+    else if (YoutubeVideoResult *video = m_youtubeVideoQueries.take(requestId)) {
+        populateYoutubeVideo(video, data);
+    }
     else if (Result *result = m_iconQueries.take(requestId)) {
         result->setIconData(data);
     }
@@ -291,36 +340,26 @@ void Query::onReply(HttpRequestId requestId, const QByteArray &data)
 
 void Query::onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkError error)
 {
-    // is this the first root query?
-    if (m_activeRootPageQuery == requestId) {
-        m_activeRootPageQuery = 0;
-        qWarning() << "Network error for root page query:" << error;
+    if (m_bandcampRootSearch == requestId) {
+        m_bandcampRootSearch = 0;
+        qWarning() << "Network error for bandcamp root search query:" << error;
     }
-    else if (BandcampArtistResult *artist = m_artistQueries.take(requestId)) {
+    else if (m_youtubeRootSearch == requestId) {
+        m_youtubeRootSearch = 0;
+        qWarning() << "Network error for youtube root search query:" << error;
+    }
+    else if (BandcampArtistResult *artist = m_bandcampArtistQueries.take(requestId)) {
         qWarning() << "Network error for artist query:" << artist->title() << error;
     }
-    else if (BandcampAlbumResult *album = m_albumQueries.take(requestId)) {
+    else if (BandcampAlbumResult *album = m_bandcampAlbumQueries.take(requestId)) {
         qWarning() << "Network error for album query:" << album->title() << error;
+    }
+    else if (YoutubeVideoResult *video = m_youtubeVideoQueries.take(requestId)) {
+        qWarning() << "Network error for youtube video query:" << video->title() << error;
     }
     else if (Result *result = m_iconQueries.take(requestId)) {
         qWarning() << "Network error for icon query:" << result->title() << error;
     }
-}
-
-HttpRequestId Query::requestRootSearch()
-{
-    const QByteArray searchStringBase64 = m_searchString.toUtf8().toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-    return m_http->requestFromServer("/search.do", QString("v=") + searchStringBase64);
-}
-
-HttpRequestId Query::requestArtistSearch(const QString &url)
-{
-    return m_http->requestFromServer("/bandcamp-artist-info.do", QString("v=") + url);
-}
-
-HttpRequestId Query::requestAlbumSearch(const QString &url)
-{
-    return m_http->requestFromServer("/bandcamp-album-info.do", QString("v=") + url);
 }
 
 void Query::requestIcon(Result *result)
@@ -332,44 +371,69 @@ void Query::requestIcon(Result *result)
     m_iconQueries[reply] = result;
 }
 
-BandcampAlbumResult *Query::createAlbumResult(const QString &artist, const QString &name, const QString &url, const QString &icon)
+void Query::requestBandcampAlbumInfo(BandcampAlbumResult *album)
 {
+    HttpRequestId reply = m_http->request(QNetworkRequest(QUrl(album->url())));
+    m_bandcampAlbumQueries[reply] = album;
+    album->setStatus(Result::Querying);
+}
+
+void Query::requestBandcampBandInfo(BandcampArtistResult *artist)
+{
+    const std::string url = ScrapeBandcamp::bandInfoUrl(artist->url().toStdString());
+    HttpRequestId reply = m_http->request(QNetworkRequest(QUrl(QString::fromStdString(url))));
+    m_bandcampArtistQueries[reply] = artist;
+    artist->setStatus(Result::Querying);
+}
+
+void Query::requestYoutubeVideoInfo(YoutubeVideoResult *video)
+{
+    const QString beacon("watch?v=");
+    const QStringList parts = video->url().split(beacon);
+    if (parts.size() != 2) {
+        qWarning() << "Couldn't find video ID in Youtube URL:" << video->url();
+        return;
+    }
+
+    const QString videoId = parts[1];
+    HttpRequestId reply = m_http->requestFromServer("/get-youtube-url.do", QString("v=") + videoId);
+    m_youtubeVideoQueries[reply] = video;
+    video->setStatus(Result::Querying);
+}
+
+BandcampAlbumResult *Query::createBandcampAlbumResult(const ScrapeBandcamp::Result &result)
+{
+    const QString artist = QString::fromStdString(result.bandName);
+    const QString name = QString::fromStdString(result.albumName);
+    const QString url = QString::fromStdString(result.url);
+    const QString icon = QString::fromStdString(result.artUrl);
+
     BandcampAlbumResult *album = new BandcampAlbumResult(artist, name, url, icon, this);
-
-    connect(album, &Result::queryInfoRequested, this, [=]() {
-        if (album->status() != Result::Querying && album->status() != Result::Done) {
-            HttpRequestId reply = requestAlbumSearch(url);
-            m_albumQueries[reply] = album;
-            album->setStatus(Result::Querying);
-        }
-    });
-
+    connect(album, &Result::queryInfoRequested, this, [=]() { requestBandcampAlbumInfo(album); });
     requestIcon(album);
 
     return album;
 }
 
-BandcampArtistResult *Query::createArtistResult(const QString &name, const QString &url, const QString &icon)
+BandcampArtistResult *Query::createBandcampArtistResult(const ScrapeBandcamp::Result &result)
 {
+    const QString name = QString::fromStdString(result.bandName);
+    const QString url = QString::fromStdString(result.url);
+    const QString icon = QString::fromStdString(result.artUrl);
+
     BandcampArtistResult *artist = new BandcampArtistResult(name, url, icon, this);
-
-    connect(artist, &Result::queryInfoRequested, this, [=]() {
-        if (artist->status() != Result::Querying && artist->status() != Result::Done) {
-            HttpRequestId reply = requestArtistSearch(url);
-            m_artistQueries[reply] = artist;
-            artist->setStatus(Result::Querying);
-        }
-    });
-
+    connect(artist, &Result::queryInfoRequested, this, [=]() { requestBandcampBandInfo(artist); });
     requestIcon(artist);
 
     return artist;
 }
 
-YoutubeVideoResult *Query::createYoutubeVideoResult(const QString &artist, const QString &name, const QString &audioUrl, const QString &url, const QString &icon, int secs)
+YoutubeVideoResult *Query::createYoutubeVideoResult(const QString &title, const QString &url, const QString &icon)
 {
-    YoutubeVideoResult *video = new YoutubeVideoResult(name, audioUrl, url, icon, secs, this);
+    YoutubeVideoResult *video = new YoutubeVideoResult(title, url, icon, this);
+    connect(video, &Result::queryInfoRequested, this, [=]() { requestYoutubeVideoInfo(video); });
     requestIcon(video);
+
     return video;
 }
 

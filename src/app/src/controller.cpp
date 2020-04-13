@@ -89,8 +89,18 @@ void Controller::addSearchResultToPlaylist(Search::Result *result, bool append)
     }
     case Search::Result::YoutubeVideo: {
         Search::YoutubeVideoResult *video = qobject_cast<Search::YoutubeVideoResult*>(result);
-        if (video)
+        if (!video) return;
+
+        // if we don't know the audio URL yet, request it, and queue it afterwards
+        if (video->audioUrl().isEmpty()) {
+            video->queryInfo();
+            connect(video, &Search::YoutubeVideoResult::hasDetails, this, [=]() {
+                queueYoutubeVideo(video, append);
+            });
+        }
+        else {
             queueYoutubeVideo(video, append);
+        }
         return;
     }
     case Search::Result::BandcampArtist:
@@ -143,7 +153,7 @@ void Controller::download(Search::Result *result)
         Q_ASSERT(yt);
         request = NetCommon::DownloadRequest {
             NetCommon::DownloadRequest::YoutubeVideo,
-            yt->videoUrl(), 0, "", yt->title(), 0
+            yt->url(), 0, "", yt->title(), 0
         };
         break;
     }
@@ -184,7 +194,7 @@ void Controller::queueBandcampTrack(Search::BandcampTrackResult *track, bool app
 void Controller::queueYoutubeVideo(Search::YoutubeVideoResult *video, bool append)
 {
     m_playlist->addFromInternet(
-        Playlist::Entry::Youtube, video->url(),
+        Playlist::Entry::Youtube, video->audioUrl(),
         "", "", video->title(), video->secs(), video->iconUrl(), append
     );
 }

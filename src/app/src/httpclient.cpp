@@ -99,8 +99,18 @@ void HttpClient::setPass(const QString &pass)
 
 void HttpClient::abortAll(HttpRequester *requester)
 {
-    Q_UNUSED(requester)
-    Q_ASSERT(false); // TODO
+    for (auto it = m_runningRequests.begin(); it != m_runningRequests.end(); /*empty*/) {
+        if (it->requester == requester) {
+            QNetworkReply *reply = it->currentReply;
+            it = m_runningRequests.erase(it);
+            if (reply) {
+                reply->abort();
+                reply->deleteLater();
+            }
+        } else {
+            ++it;
+        }
+    }
 }
 
 HttpRequestId HttpClient::request(HttpRequester *requester, const QNetworkRequest &request)
@@ -356,6 +366,7 @@ void HttpClient::onNetworkReplyFinished(QNetworkReply *reply)
         // if this is a server request and the host can't be reached,
         // prompt the user again for the host name
         if (isHostOffline(error)) {
+            qWarning() << "Failed to get" << runningRequest.serverPath << runningRequest.serverQuery << error;
             m_hostValid = false;
             emit hostValidChanged(false);
             return;
