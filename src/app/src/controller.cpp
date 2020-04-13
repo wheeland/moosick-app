@@ -50,6 +50,13 @@ Controller::~Controller()
 {
     if (m_database->hasLibrary())
         m_storage->writeLibrary(m_database->library());
+
+    // order please!
+    delete m_audio;
+    delete m_search;
+    delete m_playlist;
+    delete m_httpClient;
+    delete m_storage;
 }
 
 void Controller::addSearchResultToPlaylist(Search::Result *result, bool append)
