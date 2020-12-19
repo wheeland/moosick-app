@@ -84,7 +84,7 @@ void Database::onNewLibrary(const QJsonObject &json)
 
 void Database::onNewRemoteId(const QByteArray &data)
 {
-    if (m_remoteId.fromString(data)) {
+    if (m_remoteId.fromString(data.trimmed())) {
         m_hasRemoteLibraryId = true;
 
         // wrong library ID? -> request fresh one
