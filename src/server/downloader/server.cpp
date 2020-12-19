@@ -53,6 +53,7 @@ quint32 Server::startDownload(const NetCommon::DownloadRequest &request)
 
     QProcess *proc = new QProcess(this);
     proc->setProgram(m_program);
+    proc->setWorkingDirectory(m_temp);
     proc->setArguments({ "--download", request.toBase64() });
     proc->setProcessEnvironment(QProcessEnvironment::systemEnvironment());
     proc->start();

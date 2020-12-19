@@ -246,19 +246,18 @@ QVector<Moosick::CommittedLibraryChange> youtubeDownload(
     REQUIRE(request.tp == NetCommon::DownloadRequest::YoutubeVideo);
 
     // download video into temp. file
+    const QStringList args{"--quiet", "--ignore-errors", "--extract-audio", "--exec", "echo {}", request.url};
     QByteArray dstFileName;
-    int status = runProcess(toolDir + "/youtube-dl",
-                        {"--quiet", "--ignore-errors", "--extract-audio", "--exec", "echo {}", request.url},
-                        &dstFileName, &err, 120000);
-    dstFileName = dstFileName.split('\n').first().trimmed();
+    int status = runProcess(toolDir + "/youtube-dl", args, &dstFileName, &err, 120000);
     if (status != 0) {
-        qWarning() << "youtube-dl failed, status =" << status;
+        qWarning() << "youtube-dl failed, status =" << status << "args =" << args.join(" ");
         qWarning() << "stdout:";
         qWarning().noquote() << out;
         qWarning() << "stderr:";
         qWarning().noquote() << err;
         return {};
     }
+    dstFileName = dstFileName.split('\n').first().trimmed();
     REQUIRE(QFile::exists(dstFileName));
     const QString ending = dstFileName.split('.').last();
 
