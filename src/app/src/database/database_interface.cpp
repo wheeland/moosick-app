@@ -147,11 +147,11 @@ void DatabaseInterface::editItem(DbItem *item)
     Q_ASSERT(m_editItemType == EditNone);
     Q_ASSERT(m_editItemSource == SourceNone);
 
-    if (DbArtist *artist = qobject_cast<DbArtist*>(item)) {
+    if (qobject_cast<DbArtist*>(item)) {
         m_editItemType = EditArtist;
-    } else if (DbAlbum *album = qobject_cast<DbAlbum*>(item)) {
+    } else if (qobject_cast<DbAlbum*>(item)) {
         m_editItemType = EditAlbum;
-    } else if (DbSong *song = qobject_cast<DbSong*>(item)) {
+    } else if (qobject_cast<DbSong*>(item)) {
         m_editItemType = EditSong;
     } else if (DbTag *tag = qobject_cast<DbTag*>(item)) {
         m_editItemType = EditTag;
@@ -336,6 +336,7 @@ void DatabaseInterface::editOkClicked()
                 (m_editItemType == EditAlbum) ? m_db->setAlbumDetails(m_editedItemId, enteredName, selectedTags) :
                 (m_editItemType == EditSong) ? m_db->setSongDetails(m_editedItemId, enteredName, selectedTags) :
                 (m_editItemType == EditTag) ? m_db->setTagDetails(m_editedItemId, enteredName, selectedTags.value(0, 0)) : 0;
+            Q_UNUSED(reply)
         }
 
         m_editItemType = EditNone;

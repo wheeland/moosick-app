@@ -1,7 +1,6 @@
 #pragma once
 
-#include "type_ids.hpp"
-#include "itemcollection.hpp"
+#include "library_types.hpp"
 
 #include <QHash>
 #include <QDataStream>

@@ -1,11 +1,11 @@
 TEMPLATE = subdirs
 
-CONFIG += ordered
-
-SUBDIRS = \
-    common \
-    app \
+SUBDIRS = app
 
 !android {
-    SUBDIRS += server testclient
+    SUBDIRS += \
+        server_cgi \
+        server_library \
+        server_downloader \
+        #testclient \
 }

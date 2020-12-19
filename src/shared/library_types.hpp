@@ -2,6 +2,7 @@
 
 #include <QtGlobal>
 #include <QVector>
+#include <QHash>
 
 namespace Moosick {
 
@@ -94,6 +95,52 @@ struct TagId : public detail::FromU32
     SongIdList songs(const Library &library) const;
 
     QString name(const Library &library) const;
+};
+
+template <class T, class IntType = quint32>
+class ItemCollection : public QHash<IntType, T>
+{
+public:
+    ItemCollection() {}
+    ~ItemCollection() {}
+
+    void add(IntType id, const T &value)
+    {
+        this->insert(id, value);
+        m_nextId = qMax(m_nextId, id + 1);
+    }
+
+    T *findItem(IntType id)
+    {
+        const auto it = this->find(id);
+        return (it != this->end()) ? (&it.value()) : nullptr;
+    }
+
+    const T *findItem(IntType id) const
+    {
+        const auto it = this->find(id);
+        return (it != this->end()) ? (&it.value()) : nullptr;
+    }
+
+    QPair<IntType, T*> create()
+    {
+        const auto it = this->insert(m_nextId, T());
+        m_nextId += 1;
+        return qMakePair(m_nextId - 1, &it.value());
+    }
+
+    template <class IntLike>
+    QVector<IntLike> ids() const
+    {
+        QVector<IntLike> ret;
+        for (auto it = this->begin(); it != this->end(); ++it) {
+            ret << it.key();
+        }
+        return ret;
+    }
+
+private:
+    IntType m_nextId = 1;
 };
 
 } // namespace Moosick

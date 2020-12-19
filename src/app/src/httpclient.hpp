@@ -9,6 +9,9 @@ class HttpClient;
 using HttpRequestId = quint64;
 constexpr static HttpRequestId HTTP_NULL_REQUEST = 0;
 
+// todo: subclass HttpRequester to handle specifically musikator-related stuff
+// (library shizzles, download, songs, etc.)
+
 class HttpRequester : public QObject
 {
     Q_OBJECT

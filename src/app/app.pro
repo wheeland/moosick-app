@@ -30,20 +30,27 @@ SOURCES += \
     src/util/qmlutil.cpp \
     src/util/modeladapter.cpp \
     \
-    src/gumbo/attribute.c \
-    src/gumbo/char_ref.c \
-    src/gumbo/error.c \
-    src/gumbo/parser.c \
-    src/gumbo/string_buffer.c \
-    src/gumbo/string_piece.c \
-    src/gumbo/tag.c \
-    src/gumbo/tokenizer.c \
-    src/gumbo/utf8.c \
-    src/gumbo/util.c \
-    src/gumbo/vector.c \
+    ../shared/jsonconv.cpp \
+    ../shared/library.cpp \
+    ../shared/library_serialize.cpp \
+    ../shared/messages.cpp \
+    ../shared/requests.cpp \
+    ../shared/serversettings.cpp \
+    ../shared/tcpserver.cpp \
     \
-    src/musicscrape/musicscrape.cpp \
-    src/musicscrape/qmusicscrape.cpp \
+    ../../3rdparty/gumbo-parser/src/attribute.c \
+    ../../3rdparty/gumbo-parser/src/char_ref.c \
+    ../../3rdparty/gumbo-parser/src/error.c \
+    ../../3rdparty/gumbo-parser/src/parser.c \
+    ../../3rdparty/gumbo-parser/src/string_buffer.c \
+    ../../3rdparty/gumbo-parser/src/string_piece.c \
+    ../../3rdparty/gumbo-parser/src/tag.c \
+    ../../3rdparty/gumbo-parser/src/tokenizer.c \
+    ../../3rdparty/gumbo-parser/src/utf8.c \
+    ../../3rdparty/gumbo-parser/src/util.c \
+    ../../3rdparty/gumbo-parser/src/vector.c \
+    \
+    ../../3rdparty/cpp-musicscrape/musicscrape/musicscrape.cpp \
 
 HEADERS += \
     src/audio.hpp \
@@ -62,20 +69,27 @@ HEADERS += \
     src/util/qmlutil.hpp \
     src/util/modeladapter.hpp \
     \
+    ../shared/flatmap.hpp \
+    ../shared/jsonconv.hpp \
+    ../shared/library.hpp \
+    ../shared/library_types.hpp \
+    ../shared/messages.hpp \
+    ../shared/requests.hpp \
+    ../shared/serversettings.hpp \
+    ../shared/tcpserver.hpp \
+    \
     src/musicscrape/musicscrape.hpp \
-    src/musicscrape/qmusicscrape.hpp \
 
 RESOURCES += \
     qml.qrc \
     data.qrc \
 
 INCLUDEPATH += \
-    ../common/include/ \
-    src/gumbo/ \
     src/ \
-
-LIBS += \
-    -L../bin/ -lcommon
+    ../shared/ \
+    ../../3rdparty/gumbo-parser/src/ \
+    ../../3rdparty/rapidjson/include/ \
+    ../../3rdparty/cpp-musicscrape/ \
 
 DESTDIR = ../bin/
 

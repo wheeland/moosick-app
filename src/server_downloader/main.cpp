@@ -3,6 +3,8 @@
 #include <QProcess>
 #include <QJsonDocument>
 #include <QDir>
+#include <QDebug>
+
 #include <iostream>
 
 #include "server.hpp"

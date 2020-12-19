@@ -1,5 +1,4 @@
 #include "download.hpp"
-#include "util.hpp"
 #include "jsonconv.hpp"
 
 #include <QFile>
@@ -7,12 +6,85 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QProcess>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+
+#include "musicscrape/musicscrape.hpp"
+
+static bool sendChanges(
+        const ClientCommon::ServerConfig &config,
+        const QVector<Moosick::LibraryChange> &changes,
+        QVector<Moosick::CommittedLibraryChange> &answers)
+{
+    // try to connect to TCP server
+    QTcpSocket sock;
+    sock.connectToHost(config.hostName, config.port);
+    if (!sock.waitForConnected(config.timeout)) {
+        qWarning() << "Unable to connect to" << config.hostName << ", port =" << config.port;
+        return false;
+    }
+
+    // build message
+    QByteArray data;
+    QDataStream writer(&data, QIODevice::WriteOnly);
+    writer << changes;
+    ClientCommon::Message msg{ ClientCommon::ChangesRequest, data };
+
+    // send
+    ClientCommon::Message answer;
+    ClientCommon::send(&sock, msg);
+    if (!ClientCommon::receive(&sock, answer, config.timeout))
+        return false;
+
+    if (answer.tp != ClientCommon::ChangesResponse)
+        return false;
+
+    return fromJson(parseJsonArray(answer.data), answers);
+}
+
+static int runProcess(
+        const QString &program,
+        const QStringList &args,
+        QByteArray *out,
+        QByteArray *err,
+        int timeout,
+        const QByteArray &inputData = QByteArray())
+{
+    QProcess process;
+    process.setProgram(program);
+    process.setArguments(args);
+    process.start();
+
+    process.write(inputData);
+
+    int retCode = 0;
+
+    if (!process.waitForFinished(timeout)) {
+        qWarning() << "Process" << program << "didn't finish:" << process.error() << process.state() << process.exitStatus();
+        retCode = -1;
+    } else {
+        retCode = process.exitCode();
+    }
+
+    if (out) {
+        out->clear();
+        *out = process.readAllStandardOutput();
+    }
+    if (err) {
+        err->clear();
+        *err= process.readAllStandardError();
+    }
+
+    return retCode;
+}
 
 static QString createTempDir(const QString &dir)
 {
     QProcess::execute("mkdir -p " + dir);
     QByteArray out;
-    ClientCommon::runProcess("mktemp", {"-d", "-p", dir}, &out, nullptr, 1000);
+    runProcess("mktemp", {"-d", "-p", dir}, &out, nullptr, 1000);
     return QString(out).trimmed();
 }
 
@@ -20,7 +92,7 @@ static QString createTempFile(const QString &dir, const QString &suffix = QStrin
 {
     QProcess::execute("mkdir -p " + dir);
     QByteArray out;
-    ClientCommon::runProcess("tempfile", {"-d", dir, "-s", suffix}, &out, nullptr, 1000);
+    runProcess("tempfile", {"-d", dir, "-s", suffix}, &out, nullptr, 1000);
     return QString(out).trimmed();
 }
 
@@ -38,11 +110,11 @@ struct YoutubeInfo
     QVector<YoutubeChapter> chapters;
 };
 
-YoutubeInfo parseInfo(const QString &url, const QString &toolDir, const QString &tempDir)
+YoutubeInfo parseInfo(const QString &url, const QString &toolDir)
 {
     const QString youtubeId = url.split("=").last();
     QByteArray out, err;
-    int status = ClientCommon::runProcess(toolDir + "/youtube-dl", {"-j", url}, &out, &err, 60000);
+    runProcess(toolDir + "/youtube-dl", {"-j", url}, &out, &err, 60000);
 
     const QJsonDocument doc = QJsonDocument::fromJson(out);
     const QJsonObject root = doc.object();
@@ -110,32 +182,8 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
 
     REQUIRE(request.tp == NetCommon::DownloadRequest::BandcampAlbum);
 
-    // get info about downloads
     QByteArray out, err;
-    int status = runProcess(toolDir + "/node", {toolDir + "/bandcamp-album-info.js", request.url}, &out, &err, 20000);
-    if (status != 0) {
-        qWarning() << "Node.js failed:";
-        qWarning() << "stdout:";
-        qWarning().noquote() << out;
-        qWarning() << "stderr:";
-        qWarning().noquote() << err;
-        return {};
-    }
-
-    QJsonParseError jsonError;
-    const QJsonDocument albumInfoJsonDoc = QJsonDocument::fromJson(out, &jsonError);
-    if (albumInfoJsonDoc.isNull()) {
-        qWarning() << "Failed to parse JSON:";
-        qWarning().noquote() << out;
-        qWarning() << "Error:";
-        qWarning().noquote() << jsonError.errorString();
-        return {};
-    }
-
-    NetCommon::BandcampAlbumInfo albumInfo;
-    REQUIRE(albumInfo.fromJson(albumInfoJsonDoc.object()));
-
-    const int numSongs = albumInfo.tracks.size();
+    int status = 0;
 
     // download album into temp. directory
     const QString dstDir = createTempDir(tempDir) + "/";
@@ -156,9 +204,15 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
         return {};
     }
 
-    // check if the files are there
+    // get album info
+    QNetworkAccessManager network;
+    QNetworkReply *albumHtml = network.get(QNetworkRequest(request.url));
+    while (!albumHtml->isFinished())
+        albumHtml->waitForBytesWritten(100);
+    ScrapeBandcamp::ResultList albumInfo = ScrapeBandcamp::albumInfo(std::string(albumHtml->readAll().data()));
     QStringList tempFilePaths;
-    for (int i = 1; i <= numSongs; ++i) {
+    uint numSongs = albumInfo.size();
+    for (uint i = 1; i <= numSongs; ++i) {
         const QString tempFilePath = dstDir + QString::asprintf("/%02d.mp3", i);
         tempFilePaths << tempFilePath;
         REQUIRE(QFile::exists(tempFilePath));
@@ -188,8 +242,8 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
 
     // add songs to database
     QVector<Moosick::LibraryChange> songChanges;
-    for (const NetCommon::BandcampSongInfo &song : albumInfo.tracks)
-        songChanges << Moosick::LibraryChange(Moosick::LibraryChange::SongAdd, albumId, 0, song.name);
+    for (const ScrapeBandcamp::Result &song : albumInfo)
+        songChanges << Moosick::LibraryChange(Moosick::LibraryChange::SongAdd, albumId, 0, QString::fromStdString(song.trackName));
     REQUIRE(sendChanges(server, songChanges, resultChanges));
     REQUIRE(resultChanges.size() == songChanges.size());
     for (const Moosick::CommittedLibraryChange &result : resultChanges) {
@@ -199,7 +253,7 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
     ret << resultChanges;
 
     // move songs to media directory
-    for (int i = 0; i < numSongs; ++i) {
+    for (uint i = 0; i < numSongs; ++i) {
         const QString newFilePath = mediaDir + QString::asprintf("/%d.mp3", resultChanges[i].change.detail);
         QFile(tempFilePaths[i]).rename(newFilePath);
     }
@@ -209,10 +263,10 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
 
     // set library information for all new files
     QVector<Moosick::LibraryChange> songDetails;
-    for (int i = 0; i < numSongs; ++i) {
+    for (uint i = 0; i < numSongs; ++i) {
         const quint32 id = resultChanges[i].change.detail;
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetFileEnding, id, 0, ".mp3");
-        songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetLength, id, albumInfo.tracks[i].secs, "");
+        songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetLength, id, albumInfo[i].mp3duration, "");
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetPosition, id, i+1, "");
     }
     REQUIRE(sendChanges(server, songDetails, resultChanges));
@@ -270,7 +324,7 @@ QVector<Moosick::CommittedLibraryChange> youtubeDownload(
     QVector<ResultSong> resultSongs;
 
     // get meta-info, and maybe split file into multiple chapters
-    const YoutubeInfo videoInfo = parseInfo(request.url, toolDir, tempDir);
+    const YoutubeInfo videoInfo = parseInfo(request.url, toolDir);
     bool hasChapters = !videoInfo.chapters.isEmpty();
     for (const YoutubeChapter &chapter : videoInfo.chapters) {
         const QString chapterFile = createTempFile(tempDir, QString(".") + ending);

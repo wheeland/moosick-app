@@ -2,7 +2,6 @@
 
 #include "library.hpp"
 #include "messages.hpp"
-#include "json.hpp"
 #include "requests.hpp"
 
 #include <QTcpSocket>

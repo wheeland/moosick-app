@@ -6,8 +6,6 @@
 #include "library.hpp"
 #include "messages.hpp"
 #include "requests.hpp"
-#include "download.hpp"
-#include "json.hpp"
 #include "jsonconv.hpp"
 #include "serversettings.hpp"
 

@@ -3,6 +3,8 @@
 #include "jsonconv.hpp"
 
 #include <QJsonDocument>
+#include <QProcess>
+#include <QDebug>
 #include <QtGlobal>
 
 Server::Server(const QString &argv0, const QString &media, const QString &tool, const QString temp, quint16 port)

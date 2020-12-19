@@ -413,6 +413,10 @@ bool Database::applyLibraryChanges(const QByteArray &changesJsonData)
             hasChanged = true;
             ++it;
         } else {
+            qWarning() << "Database invalid, need to do a full sync";
+            m_hasLibrary = false;
+            m_library = Moosick::Library();
+            sync();
             break;
         }
     }

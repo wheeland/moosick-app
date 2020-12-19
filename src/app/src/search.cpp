@@ -1,5 +1,4 @@
 #include "search.hpp"
-#include "json.hpp"
 #include "jsonconv.hpp"
 #include "util/qmlutil.hpp"
 

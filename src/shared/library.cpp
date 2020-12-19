@@ -251,7 +251,7 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
                 break;
             }
         }
-        // fall-through to ArtistAdd
+        // fall through
     }
     case Moosick::LibraryChange::ArtistAdd: {
         auto artist = m_artists.create();
