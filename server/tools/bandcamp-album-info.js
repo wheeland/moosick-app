@@ -1,1 +1,0 @@
-scrapers/bandcamp-album-info.js

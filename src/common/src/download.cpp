@@ -38,10 +38,11 @@ struct YoutubeInfo
     QVector<YoutubeChapter> chapters;
 };
 
-YoutubeInfo parseInfo(const QString &url, const QString &toolDir)
+YoutubeInfo parseInfo(const QString &url, const QString &toolDir, const QString &tempDir)
 {
+    const QString youtubeId = url.split("=").last();
     QByteArray out, err;
-    int status = ClientCommon::runProcess(toolDir + "/node", {toolDir + "/get-youtube-info.js", url}, &out, &err, 60000);
+    int status = ClientCommon::runProcess(toolDir + "/youtube-dl", {"-j", url}, &out, &err, 60000);
 
     const QJsonDocument doc = QJsonDocument::fromJson(out);
     const QJsonObject root = doc.object();
@@ -269,7 +270,7 @@ QVector<Moosick::CommittedLibraryChange> youtubeDownload(
     QVector<ResultSong> resultSongs;
 
     // get meta-info, and maybe split file into multiple chapters
-    const YoutubeInfo videoInfo = parseInfo(request.url, toolDir);
+    const YoutubeInfo videoInfo = parseInfo(request.url, toolDir, tempDir);
     bool hasChapters = !videoInfo.chapters.isEmpty();
     for (const YoutubeChapter &chapter : videoInfo.chapters) {
         const QString chapterFile = createTempFile(tempDir, QString(".") + ending);
