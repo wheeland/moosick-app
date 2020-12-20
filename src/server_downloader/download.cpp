@@ -10,6 +10,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
+#include <QEventLoop>
 
 #include "musicscrape/musicscrape.hpp"
 
@@ -142,7 +143,6 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
         const ServerConfig &server,
         const NetCommon::DownloadRequest &request,
         const QString &mediaDir,
-        const QString &toolDir,
         const QString &tempDir);
 
 QVector<Moosick::CommittedLibraryChange> youtubeDownload(
@@ -161,7 +161,7 @@ QVector<Moosick::CommittedLibraryChange> download(
 {
     switch (request.tp) {
     case NetCommon::DownloadRequest::BandcampAlbum:
-        return bandcampDownload(server, request, mediaDir, toolDir, tempDir);
+        return bandcampDownload(server, request, mediaDir, tempDir);
     case NetCommon::DownloadRequest::YoutubeVideo:
         return youtubeDownload(server, request, mediaDir, toolDir, tempDir);
     default:
@@ -169,11 +169,21 @@ QVector<Moosick::CommittedLibraryChange> download(
     }
 }
 
+static QByteArray download(QNetworkAccessManager &network, const QByteArray &url)
+{
+    QNetworkReply *reply = network.get(QNetworkRequest(QUrl(url)));
+    QEventLoop loop;
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+    const QByteArray data = reply->readAll();
+    delete reply;
+    return data;
+}
+
 QVector<Moosick::CommittedLibraryChange> bandcampDownload(
         const ServerConfig &server,
         const NetCommon::DownloadRequest &request,
         const QString &mediaDir,
-        const QString &toolDir,
         const QString &tempDir)
 {
     QVector<Moosick::CommittedLibraryChange> ret;
@@ -183,39 +193,22 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
     REQUIRE(request.tp == NetCommon::DownloadRequest::BandcampAlbum);
 
     QByteArray out, err;
-    int status = 0;
-
-    // download album into temp. directory
-    const QString dstDir = createTempDir(tempDir) + "/";
-    REQUIRE(!dstDir.isEmpty());
-    status = runProcess(toolDir + "/bandcamp-dl", {
-                   QString("--base-dir=") + dstDir,
-                   "--overwrite",
-                   "--template=%{track}",
-                   request.url
-               }, &out, &err, 120000, "yes");
-
-    if (status != 0) {
-        qWarning() << "bandcamp-dl failed, status =" << status;
-        qWarning() << "stdout:";
-        qWarning().noquote() << out;
-        qWarning() << "stderr:";
-        qWarning().noquote() << err;
-        return {};
-    }
 
     // get album info
     QNetworkAccessManager network;
-    QNetworkReply *albumHtml = network.get(QNetworkRequest(request.url));
-    while (!albumHtml->isFinished())
-        albumHtml->waitForBytesWritten(100);
-    ScrapeBandcamp::ResultList albumInfo = ScrapeBandcamp::albumInfo(std::string(albumHtml->readAll().data()));
-    QStringList tempFilePaths;
-    uint numSongs = albumInfo.size();
-    for (uint i = 1; i <= numSongs; ++i) {
-        const QString tempFilePath = dstDir + QString::asprintf("/%02d.mp3", i);
-        tempFilePaths << tempFilePath;
-        REQUIRE(QFile::exists(tempFilePath));
+    const QByteArray albumHtml = download(network, request.url.toUtf8());
+    qWarning() << albumHtml;
+    ScrapeBandcamp::ResultList albumInfo = ScrapeBandcamp::albumInfo(std::string(albumHtml.data()));
+
+    // download tracks into mp3 files
+    const QString dstDir = createTempDir(tempDir) + "/";
+    QStringList mp3TempFiles;
+    for (size_t i = 0; i < albumInfo.size(); ++i) {
+        const QByteArray mp3 = download(network, QByteArray(albumInfo[i].mp3url.data()));
+        QFile file(dstDir + QString::number(i) + ".mp3");
+        REQUIRE(file.open(QIODevice::WriteOnly));
+        REQUIRE(file.write(mp3) == mp3.size());
+        mp3TempFiles << file.fileName();
     }
 
     // add artist, if not yet existing
@@ -253,17 +246,17 @@ QVector<Moosick::CommittedLibraryChange> bandcampDownload(
     ret << resultChanges;
 
     // move songs to media directory
-    for (uint i = 0; i < numSongs; ++i) {
+    for (uint i = 0; i < albumInfo.size(); ++i) {
         const QString newFilePath = mediaDir + QString::asprintf("/%d.mp3", resultChanges[i].change.detail);
-        QFile(tempFilePaths[i]).rename(newFilePath);
+        QFile(mp3TempFiles[i]).rename(newFilePath);
     }
 
     // remove temp. directory
-    QProcess::execute(toolDir + "/rm", {"-rf", dstDir});
+    QDir().rmdir(dstDir);
 
     // set library information for all new files
     QVector<Moosick::LibraryChange> songDetails;
-    for (uint i = 0; i < numSongs; ++i) {
+    for (uint i = 0; i < albumInfo.size(); ++i) {
         const quint32 id = resultChanges[i].change.detail;
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetFileEnding, id, 0, ".mp3");
         songDetails << Moosick::LibraryChange(Moosick::LibraryChange::SongSetLength, id, albumInfo[i].mp3duration, "");

@@ -16,6 +16,11 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
 
+    NetCommon::DownloadRequest req;
+    req.tp = NetCommon::DownloadRequest::BandcampAlbum;
+    req.url = "https://annacoddington.bandcamp.com/album/beams";
+    ClientCommon::download(ClientCommon::ServerConfig(), req, "/home/hagen", "/home/hagen", "/home/hagen");
+
     const ServerSettings settings;
     if (!settings.isValid()) {
         qWarning() << "Settings file not valid";
