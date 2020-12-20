@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QDataStream>
 #include <QJsonObject>
+#include <QJsonArray>
 
 namespace Moosick {
 
@@ -109,7 +110,7 @@ public:
     QStringList dumpToStringList() const;
 
     QJsonObject serializeToJson() const;
-    bool deserializeFromJson(const QJsonObject &json);
+    bool deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &logJson = QJsonArray());
 
     QByteArray serialize() const;
     void deserialize(const QByteArray &bytes);

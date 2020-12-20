@@ -6,8 +6,8 @@
 
 #define JSON_REQUIRE_VALUE(NAME, OBJ, TAG, TYPE) \
     const QJsonValue NAME##_jsonvalue = OBJ.value(TAG); \
-    if (NAME##_jsonvalue.isUndefined()) return false; \
-    if (NAME##_jsonvalue.type() != TYPE) return false;
+    if (NAME##_jsonvalue.isUndefined()) { qWarning() << "Not found in JSON:" << TAG; return false; } \
+    if (NAME##_jsonvalue.type() != TYPE) { qWarning() << "Invalid type in JSON:" << TAG; return false; } \
 
 #define JSON_REQUIRE_INT(NAME, OBJ, TAG) \
     JSON_REQUIRE_VALUE(NAME, OBJ, TAG, QJsonValue::Double); \
@@ -224,13 +224,15 @@ static bool readJsonCollection(const QJsonValue &val, ItemCollection<T, IntType>
     return true;
 }
 
-bool Library::deserializeFromJson(const QJsonObject &json)
+bool Library::deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &logJson)
 {
-    JSON_REQUIRE_INT(revision, json, "revision");
-    JSON_REQUIRE_STRING(id, json, "id");
+    JSON_REQUIRE_INT(revision, libraryJson, "revision");
+    JSON_REQUIRE_STRING(id, libraryJson, "id");
 
-    if (!m_id.fromString(id.toLocal8Bit()))
+    if (!m_id.fromString(id.toLocal8Bit())) {
+        qWarning() << "Failed to deserialize Library: invalid ID";
         return false;
+    }
 
     ItemCollection<Song> songs;
     ItemCollection<Album> albums;
@@ -240,7 +242,7 @@ bool Library::deserializeFromJson(const QJsonObject &json)
     QVector<TagId> rootTags;
     bool success = true;
 
-    success &= readJsonCollection<Library::Tag, quint32>(json["tags"], tags, [&](const QJsonObject &obj, quint32, Tag &tag) {
+    success &= readJsonCollection<Library::Tag, quint32>(libraryJson["tags"], tags, [&](const QJsonObject &obj, quint32, Tag &tag) {
         JSON_REQUIRE_STRING(name, obj, "name");
         JSON_REQUIRE_INT(parent, obj, "parent");
         tag.name = name;
@@ -271,7 +273,7 @@ bool Library::deserializeFromJson(const QJsonObject &json)
             rootTags << it.key();
     }
 
-    success &= readJsonCollection<QString, quint32>(json["fileEndings"], fileEndings,
+    success &= readJsonCollection<QString, quint32>(libraryJson["fileEndings"], fileEndings,
             [&](const QJsonObject &obj, quint32, QString &ending) {
         JSON_REQUIRE_STRING(name, obj, "ending");
         ending = name;
@@ -279,7 +281,7 @@ bool Library::deserializeFromJson(const QJsonObject &json)
     });
 
     // read artists
-    success &= readJsonCollection<Library::Artist, quint32>(json["artists"], artists,
+    success &= readJsonCollection<Library::Artist, quint32>(libraryJson["artists"], artists,
             [&](const QJsonObject &obj, quint32 id, Library::Artist &artist) {
         JSON_REQUIRE_STRING(name, obj, "name");
         JSON_REQUIRE_TAGS(aTags, obj);
@@ -290,7 +292,7 @@ bool Library::deserializeFromJson(const QJsonObject &json)
     });
 
     // read albums
-    success &= readJsonCollection<Library::Album, quint32>(json["albums"], albums,
+    success &= readJsonCollection<Library::Album, quint32>(libraryJson["albums"], albums,
             [&](const QJsonObject &obj, quint32 id, Library::Album &album) {
         JSON_REQUIRE_STRING(name, obj, "name");
         JSON_REQUIRE_INT(artist, obj, "artist");
@@ -305,7 +307,7 @@ bool Library::deserializeFromJson(const QJsonObject &json)
     });
 
     // read songs
-    success &= readJsonCollection<Library::Song, quint32>(json["songs"], songs,
+    success &= readJsonCollection<Library::Song, quint32>(libraryJson["songs"], songs,
             [&](const QJsonObject &obj, quint32 id, Library::Song &song) {
         JSON_REQUIRE_STRING(name, obj, "name");
         JSON_REQUIRE_INT(album, obj, "album");
@@ -328,6 +330,18 @@ bool Library::deserializeFromJson(const QJsonObject &json)
 #undef TAG_PUSH_ID
 #undef TAG_PUSH_IDS
 
+    // Read history of committed changes
+    QVector<CommittedLibraryChange> committedChanges;
+    for (int i = 0; i < logJson.size(); ++i) {
+        CommittedLibraryChange change;
+        if (!fromJson(logJson[i], change)) {
+            qWarning() << "Failed to deserialize Library: invalid log entry";
+            success = false;
+            break;
+        }
+        committedChanges << change;
+    }
+
     if (!success)
         return false;
 
@@ -338,6 +352,14 @@ bool Library::deserializeFromJson(const QJsonObject &json)
     m_artists = artists;
     m_fileEndings = fileEndings;
     m_rootTags = rootTags;
+    m_committedChanges = committedChanges;
+
+    qDebug() << "Deserialized Library:";
+    qDebug() << ".." << m_artists.size() << "artists";
+    qDebug() << ".." << m_albums.size() << "albums";
+    qDebug() << ".." << m_songs.size() << "songs";
+    qDebug() << ".." << m_tags.size() << "tags";
+    qDebug() << ".." << m_committedChanges.size() << "committed change log entries";
 
     return true;
 }

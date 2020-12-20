@@ -18,14 +18,18 @@ Server::Server(const QString &libraryPath,
 {
     // maybe load library file
     QFile libraryFile(libraryPath);
-    if (libraryFile.open(QIODevice::ReadOnly)) {
+    QFile libraryLogFile(logPath);
+    if (libraryFile.open(QIODevice::ReadOnly) && libraryLogFile.open(QIODevice::ReadOnly)) {
+        const QByteArray logData = "[\n" + libraryLogFile.readAll() + "\n]\n";
         const QJsonObject jsonRoot = parseJsonObject(libraryFile.readAll(), "Library");
-        if (m_library.deserializeFromJson(jsonRoot))
+        const QJsonArray logJsonArray = parseJsonArray(logData, "Library Log");
+
+        if (m_library.deserializeFromJson(jsonRoot, logJsonArray))
             qDebug() << "Parsed library from" << libraryPath;
         else
             qDebug() << "Failed parsing library from" << libraryPath;
     } else {
-        qDebug() << "Could not read file" << libraryPath;
+        qDebug() << "Could not read library files" << libraryPath << logPath;
     }
 
     // check if we can open log file
@@ -131,12 +135,21 @@ void Server::saveLibrary() const
 
     save(m_libraryPath);
 
-    // check if back-up for today already exists
+    // check if back-ups for today already exists
     const QDate today = QDate::currentDate();
     const QString dateString = QString::asprintf("%d_%02d_%02d", today.year(), today.month(), today.day());
+
+    // backup library
     const QString backupPath = m_backupBasePath + "." + dateString + ".json";
     if (!QFile::exists(backupPath) && !QFile::exists(backupPath + ".gz")) {
         save(backupPath);
         QProcess::execute("gzip", { backupPath });
+    }
+
+    // backup log
+    const QString logBackupPath = m_backupBasePath + "." + dateString + ".log.json";
+    if (!QFile::exists(backupPath) && !QFile::exists(backupPath + ".gz")) {
+        QFile(m_logPath).copy(logBackupPath);
+        QProcess::execute("gzip", { logBackupPath });
     }
 }
