@@ -87,10 +87,9 @@ namespace Moosick {
 
 LibraryId LibraryId::generate()
 {
-    static QRandomGenerator random;
     LibraryId ret;
     for (int i = 0; i < LENGTH; ++i)
-        ret.m_bytes[i] = random.generate();
+        ret.m_bytes[i] = QRandomGenerator::global()->generate();
     return ret;
 }
 
