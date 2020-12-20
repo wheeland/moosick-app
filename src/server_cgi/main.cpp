@@ -115,7 +115,7 @@ int main(int argc, char **argv)
     }
 
     // extract command
-    const QList<QByteArray> parts = request.mid(1).split('?');
+    const QList<QByteArray> parts = request.mid(7).split('?');
     const QByteArray command = getCommand(parts[0]);
 
     // extract key-value pairs, if this is not a POST
