@@ -232,7 +232,7 @@ void Playlist::addFromLibrary(const QString &fileName, const QString &artist, co
     url.setScheme("https");
     url.setHost(m_http->host());
     url.setPort(m_http->port());
-    url.setPath(QString("/") + fileName);
+    url.setPath(QString("/music/") + fileName);
     url.setUserName(m_http->user());
     url.setPassword(m_http->pass());
 
