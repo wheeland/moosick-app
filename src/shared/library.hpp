@@ -112,9 +112,6 @@ public:
     QJsonObject serializeToJson() const;
     bool deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &logJson = QJsonArray());
 
-    QByteArray serialize() const;
-    void deserialize(const QByteArray &bytes);
-
 private:
     struct Song
     {

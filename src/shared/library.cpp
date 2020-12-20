@@ -70,20 +70,6 @@ QVector<ArtistId> Library::artistsByName() const
     return ret;
 }
 
-QByteArray Library::serialize() const
-{
-    QByteArray ret;
-    QDataStream out(&ret, QIODevice::WriteOnly);
-    out << *this;
-    return ret;
-}
-
-void Library::deserialize(const QByteArray &bytes)
-{
-    QDataStream in(bytes);
-    in >> *this;
-}
-
 quint32 Library::getFileEnding(const QString &ending)
 {
     for (auto it = m_fileEndings.begin(); it != m_fileEndings.end(); ++it) {
