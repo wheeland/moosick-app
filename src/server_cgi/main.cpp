@@ -109,8 +109,10 @@ int main(int argc, char **argv)
     }
 
     const QByteArray request = qgetenv("REQUEST_URI");
-    if (request.isEmpty() || !request.startsWith("/"))
+    if (request.isEmpty() || !request.startsWith("/music/")) {
+        qWarning() << "REQUEST_URI invalid:" << request;
         return 0;
+    }
 
     // extract command
     const QList<QByteArray> parts = request.mid(1).split('?');

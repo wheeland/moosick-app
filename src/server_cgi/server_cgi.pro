@@ -31,7 +31,6 @@ SOURCES += \
     ../../3rdparty/cpp-musicscrape/musicscrape/musicscrape.cpp \
 
 HEADERS += \
-    main.cpp \
     ../shared/flatmap.hpp \
     ../shared/jsonconv.hpp \
     ../shared/library.hpp \

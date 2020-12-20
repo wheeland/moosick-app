@@ -49,18 +49,18 @@ HttpRequestId Database::sync()
     HttpRequestId reply;
 
     if (!m_hasLibrary) {
-        reply = m_http->requestFromServer("/lib.do", "");
+        reply = m_http->requestFromServer("/music/lib.do", "");
         m_requests[reply] = LibraryGet;
     }
     // if we don't yet know the remote library ID, make sure to get that one first
     else if (!m_hasRemoteLibraryId) {
-        reply = m_http->requestFromServer("/id.do", "");
+        reply = m_http->requestFromServer("/music/id.do", "");
         m_requests[reply] = LibraryId;
     }
     // do a partial update if we already have a library
     else {
         const int lastRev = m_library.revision();
-        reply = m_http->requestFromServer("/get-change-list.do", QString::asprintf("v=%d", lastRev));
+        reply = m_http->requestFromServer("/music/get-change-list.do", QString::asprintf("v=%d", lastRev));
         m_requests[reply] = LibraryUpdate;
     }
 
@@ -108,13 +108,13 @@ HttpRequestId Database::download(NetCommon::DownloadRequest request, const Moosi
     switch (request.tp) {
     case NetCommon::DownloadRequest::BandcampAlbum: {
         const QString query = QString("v=") + request.toBase64();
-        reply = m_http->requestFromServer("/download.do", query);
+        reply = m_http->requestFromServer("/music/download.do", query);
         m_requests[reply] = BandcampDownload;
         break;
     }
     case NetCommon::DownloadRequest::YoutubeVideo: {
         const QString query = QString("v=") + request.toBase64();
-        reply = m_http->requestFromServer("/download.do", query);
+        reply = m_http->requestFromServer("/music/download.do", query);
         m_requests[reply] = YoutubeDownload;
         break;
     }
@@ -249,7 +249,7 @@ HttpRequestId Database::sendChangeRequests(const QVector<LibraryChange> &changes
     writer << changes;
 
     const QString query = QString("v=") + data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-    HttpRequestId reply = m_http->requestFromServer("/request-changes.do", query);
+    HttpRequestId reply = m_http->requestFromServer("/music/request-changes.do", query);
     m_requests[reply] = LibraryChanges;
 
     m_changesPending = true;
@@ -343,7 +343,7 @@ void Database::onDownloadQueryTimer()
     Q_ASSERT(!m_downloadQuery);
 
     // start a new query for the currently running downloads at the server
-    m_downloadQuery = m_http->requestFromServer("/running-downloads.do", "");
+    m_downloadQuery = m_http->requestFromServer("/music/running-downloads.do", "");
     m_requests[m_downloadQuery] = DownloadQuery;
 }
 
