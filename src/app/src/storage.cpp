@@ -54,13 +54,16 @@ bool Storage::readLibrary(Moosick::Library &library) const
 
     const QByteArray data = file.readAll();
     const QByteArray json = qUncompress(data);
-    const QJsonObject jsonObj = parseJsonObject(json, "Library");
-    if (jsonObj.isEmpty()) {
-        qWarning() << "Failed to parse JSON from" << file.fileName();
+    auto result = jsonDeserializeObject(json);
+    if (result.hasError()) {
+        qWarning().noquote().nospace() << "Failed to parse JSON from " << file.fileName() << ": " << result.takeError().toString();
         return false;
     }
-    if (!library.deserializeFromJson(jsonObj)) {
-        qWarning() << "Failed to parse Library from" << file.fileName();
+
+    const QJsonObject jsonObj = result.takeValue();
+    JsonifyError error = library.deserializeFromJson(jsonObj);
+    if (error.isError()) {
+        qWarning().noquote().nospace() << "Failed to parse Library from " << file.fileName() << ": " << error.toString();
         return false;
     }
     return true;

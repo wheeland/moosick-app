@@ -1,20 +1,18 @@
 #include <QCoreApplication>
 #include <QProcess>
 #include <QJsonDocument>
+#include <QDebug>
+#include <QTcpSocket>
 #include <iostream>
 
 #include "library.hpp"
-#include "messages.hpp"
-#include "requests.hpp"
+#include "library_messages.hpp"
 #include "jsonconv.hpp"
 #include "serversettings.hpp"
+#include "tcpclientserver.hpp"
+#include "logger.hpp"
 
-static QByteArray getCommand(QByteArray request)
-{
-    while (!request.isEmpty() && request[0] == '/')
-        request.remove(0, 1);
-    return request;
-}
+using namespace MoosickMessage;
 
 bool execute(const QString &program, const QStringList &args, QByteArray &out)
 {
@@ -36,21 +34,21 @@ bool execute(const QString &program, const QStringList &args, QByteArray &out)
     }
 }
 
-bool printYoutubeUrl(const QString &toolDir, const QString &videoId)
+Message getYoutubeUrl(const QString &toolDir, const QString &videoId)
 {
     const QString url = QString("https://www.youtube.com/watch?v=") + videoId;
     QByteArray youtubeDlOut;
     if (!execute(toolDir + "/youtube-dl", {"-j", url}, youtubeDlOut))
-        return false;
+        return new Error("Internal Error");
 
     const QJsonDocument jsonDoc = QJsonDocument::fromJson(youtubeDlOut);
     if (!jsonDoc.isObject())
-        return false;
+        return new Error("Internal Error");
     const QJsonObject json = jsonDoc.object();
 
     const auto formatsIt = json.find("formats");
     if (formatsIt == json.end() || !formatsIt->isArray())
-        return false;
+        return new Error("Internal Error");
     const QJsonArray formats = formatsIt->toArray();
 
     // find best audio URL among formats: no DASH, 'audio only', and largest file size
@@ -75,16 +73,77 @@ bool printYoutubeUrl(const QString &toolDir, const QString &videoId)
     }
 
     if (bestUrl.isEmpty())
-        return false;
+        return new Error("Internal Error");
 
-    QJsonObject out;
-    out["title"] = json["title"].toString();
-    out["duration"] = json["duration"].toInt();
-    out["chapters"] = json["chapters"].toArray();
-    out["url"] = bestUrl;
+    YoutubeUrlResponse *response = new YoutubeUrlResponse();
+    response->title = json["title"].toString();
+    response->duration = json["duration"].toInt();
+    response->chapters = json["chapters"].toArray();
+    response->url = bestUrl;
+    return response;
+}
 
-    std::cout << QJsonDocument(out).toJson().data() << std::endl;
-    return true;
+static Message sendMessage(const QString &host, quint16 port, const Message &message)
+{
+    QTcpSocket tcpSocket;
+    tcpSocket.connectToHost(host, port);
+    if (!tcpSocket.waitForConnected(1000)) {
+        qWarning().noquote() << "Can't connect to" << host << port;
+        return new Error("Internal error");
+    }
+
+    const QByteArray messageJson = message.toJson();
+    auto result = TcpClient::sendMessage(tcpSocket, messageJson, 1000);
+    if (!result) {
+        qWarning().noquote() << "Failed to send/recv TCP message:" << result.takeError();
+        return new Error("Internal error");
+    }
+
+    const QByteArray resultData = result.takeValue();
+    Result<Message, JsonifyError> resultMessage = Message::fromJson(resultData);
+    if (!resultMessage) {
+        qWarning().noquote() << "Failed to parse JSON response from" << host;
+        qWarning().noquote() << "Error:" << resultMessage.takeError().toString();
+        qWarning().noquote() << "Sent message:";
+        qWarning().noquote() << messageJson;
+        qWarning().noquote() << "Received message:";
+        qWarning().noquote() << resultData;
+        return new Error("Internal error");
+    }
+
+    return resultMessage.takeValue();
+}
+
+static Message handleMessage(const ServerSettings &settings, const Message &message)
+{
+    const QString toolDir = settings.toolsDir();
+    const QString tmpDir = settings.tempDir();
+    const QString mediaDir = settings.mediaBaseDir();
+
+    switch (message.getType()) {
+    case Type::Ping: {
+        return new Pong();
+    }
+    // forward messages to DB server
+    case Type::LibraryRequest:
+    case Type::IdRequest:
+    case Type::ChangesRequest:
+    case Type::ChangeListRequest: {
+        return sendMessage(settings.dbserverHost(), settings.dbserverPort(), message);
+    }
+    // forward messages to Downloader
+    case Type::DownloadRequest:
+    case Type::DownloadQuery: {
+        return sendMessage(settings.downloaderHost(), settings.downloaderPort(), message);
+    }
+    case Type::YoutubeUrlQuery: {
+        const YoutubeUrlQuery *query = message.as<YoutubeUrlQuery>();
+        return getYoutubeUrl(toolDir, query->videoId);
+    }
+    default: {
+        return new Error("Unhandled message type");
+    }
+    }
 }
 
 int main(int argc, char **argv)
@@ -95,6 +154,11 @@ int main(int argc, char **argv)
     if (!settings.isValid()) {
         qWarning() << "Settings file not valid";
         return 1;
+    }
+
+    if (!settings.cgiLogFile().isEmpty()) {
+        Logger::setLogFile(settings.cgiLogFile());
+        Logger::install();
     }
 
     QByteArray contentBytes;
@@ -108,108 +172,21 @@ int main(int argc, char **argv)
         }
     }
 
-    const QByteArray request = qgetenv("REQUEST_URI");
-    if (request.isEmpty() || !request.startsWith("/music/")) {
-        qWarning() << "REQUEST_URI invalid:" << request;
+    Result<Message, JsonifyError> messageParsingResult = Message::fromJson(contentBytes);
+
+    if (messageParsingResult.hasError()) {
+        Error error;
+        error.errorMessage = "Failed to parse message";
+        qWarning() << "Failed to parse message:";
+        qWarning().noquote() << contentBytes;
+        std::cout << Message(error).toJson().constData() << std::endl;
         return 0;
     }
 
-    // extract command
-    const QList<QByteArray> parts = request.mid(7).split('?');
-    const QByteArray command = getCommand(parts[0]);
+    Message message = messageParsingResult.takeValue();
+    Message response = handleMessage(settings, message);
 
-    // extract key-value pairs, if this is not a POST
-    const QByteArray keyValueString = contentBytes.isEmpty() ? parts.value(1) : contentBytes;
-    QHash<QByteArray, QByteArray> values;
-    for (const QByteArray &keyValue : keyValueString.split('&')) {
-        const QList<QByteArray> kvPair = keyValue.split('=');
-        if (kvPair.size() == 2)
-            values[kvPair[0]] = kvPair[1];
-    }
-
-    const QString rootDir = settings.serverRoot();
-    const QString toolDir = settings.toolsDir();
-    const QString jsDir = toolDir + "scrapers/";
-    const QString tmpDir = settings.tempDir();
-    const QString mediaDir = settings.serverRoot();
-
-    ClientCommon::ServerConfig libraryServer{ "localhost", settings.dbserverPort(), 1000 };
-    ClientCommon::ServerConfig downloadServer{ "localhost", settings.downloaderPort(), 1000 };
-
-    if (command == "lib.do") {
-        ClientCommon::Message answer;
-        sendRecv(libraryServer, ClientCommon::Message{ ClientCommon::LibraryRequest }, answer);
-
-        std::cout << answer.data.constData() << "\n";
-
-        return 0;
-    }
-    else if (command == "id.do") {
-        ClientCommon::Message answer;
-        sendRecv(libraryServer, ClientCommon::Message{ ClientCommon::IdRequest }, answer);
-
-        std::cout << answer.data.constData() << "\n";
-
-        return 0;
-    }
-    else if (command == "get-change-list.do") {
-        if (values.contains("v") && !values["v"].isEmpty()) {
-            const ClientCommon::Message request{ ClientCommon::ChangeListRequest, values["v"] };
-            ClientCommon::Message answer;
-            sendRecv(libraryServer, request, answer);
-
-            std::cout << answer.data.constData() << "\n";
-        } else {
-            std::cout << "[]" << std::endl;
-        }
-
-        return 0;
-    }
-    else if (command == "request-changes.do") {
-        if (values.contains("v") && !values["v"].isEmpty()) {
-            QVector<Moosick::LibraryChange> changes;
-
-            // parse changes
-            QDataStream reader(QByteArray::fromBase64(values["v"], QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals));
-            reader >> changes;
-
-            ClientCommon::Message request{ ClientCommon::ChangesRequest };
-            QDataStream writer(&request.data, QIODevice::WriteOnly);
-            writer << changes;
-
-            ClientCommon::Message answer;
-            sendRecv(libraryServer, request, answer);
-
-            std::cout << answer.data.constData() << "\n";
-        } else {
-            std::cout << "[]" << std::endl;
-        }
-
-        return 0;
-    }
-    else if (command == "get-youtube-url.do") {
-        if (!values.contains("v") || values["v"].isEmpty())
-            return 0;
-
-        if (!printYoutubeUrl(toolDir, values["v"]))
-            std::cout << "{}" << std::endl;
-        return 0;
-    }
-    else if (command == "download.do") {
-        if (!values.contains("v") || values["v"].isEmpty())
-            return 0;
-
-        ClientCommon::Message answer, request{ ClientCommon::DownloadRequest, values["v"] };
-        sendRecv(downloadServer, request, answer);
-        std::cout << answer.data.constData() << "\n";
-        return 0;
-    }
-    else if (command == "running-downloads.do") {
-        ClientCommon::Message answer, request{ ClientCommon::DownloadQuery, "" };
-        sendRecv(downloadServer, request, answer);
-        std::cout << answer.data.constData() << "\n";
-        return 0;
-    }
+    std::cout << response.toJson().constData() << std::endl;
 
     return 0;
 }

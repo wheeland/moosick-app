@@ -136,25 +136,24 @@ void Controller::addLibraryItemToPlaylist(DbItem *item, bool append)
 
 void Controller::download(Search::Result *result)
 {
-    NetCommon::DownloadRequest request;
+    MoosickMessage::DownloadRequest request;
 
     switch (result->resultType()) {
     case Search::Result::BandcampAlbum: {
         Search::BandcampAlbumResult *bc = qobject_cast<Search::BandcampAlbumResult*>(result);
         Q_ASSERT(bc);
-        request = NetCommon::DownloadRequest {
-            NetCommon::DownloadRequest::BandcampAlbum,
-            bc->url(), 0, bc->artist(), bc->title(), 0
-        };
+        request.requestType = MoosickMessage::DownloadRequestType::BandcampAlbum;
+        request.url = bc->url();
+        request.artistName = bc->artist();
+        request.albumName = bc->title();
         break;
     }
     case Search::Result::YoutubeVideo: {
         Search::YoutubeVideoResult *yt = qobject_cast<Search::YoutubeVideoResult*>(result);
         Q_ASSERT(yt);
-        request = NetCommon::DownloadRequest {
-            NetCommon::DownloadRequest::YoutubeVideo,
-            yt->url(), 0, "", yt->title(), 0
-        };
+        request.requestType = MoosickMessage::DownloadRequestType::YoutubeVideo;
+        request.url = yt->url();
+        request.albumName = yt->title();
         break;
     }
     default:

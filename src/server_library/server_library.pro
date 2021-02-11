@@ -13,10 +13,9 @@ SOURCES += \
     ../shared/jsonconv.cpp \
     ../shared/library.cpp \
     ../shared/library_serialize.cpp \
-    ../shared/messages.cpp \
-    ../shared/requests.cpp \
+    ../shared/logger.cpp \
     ../shared/serversettings.cpp \
-    ../shared/tcpserver.cpp \
+    ../shared/tcpclientserver.cpp \
 
 HEADERS += \
     server.hpp \
@@ -26,10 +25,10 @@ HEADERS += \
     ../shared/jsonconv.hpp \
     ../shared/library.hpp \
     ../shared/library_types.hpp \
-    ../shared/messages.hpp \
-    ../shared/requests.hpp \
+    ../shared/library_messages.hpp \
+    ../shared/logger.hpp \
     ../shared/serversettings.hpp \
-    ../shared/tcpserver.hpp \
+    ../shared/tcpclientserver.hpp \
 
 INCLUDEPATH += \
     ../shared/

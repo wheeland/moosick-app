@@ -1,6 +1,7 @@
 #include "search.hpp"
 #include "jsonconv.hpp"
 #include "util/qmlutil.hpp"
+#include "library_messages.hpp"
 
 #include <QtGlobal>
 #include <QNetworkAccessManager>
@@ -294,20 +295,18 @@ void Query::populateYoutubeSearchResults(const QByteArray &html)
     }
 }
 
-void Query::populateYoutubeVideo(YoutubeVideoResult *video, const QByteArray &html)
+void Query::populateYoutubeVideo(YoutubeVideoResult *video, const QByteArray &json)
 {
-    const QJsonObject json = parseJsonObject(html, "youtube-info");
-    const auto durationIt = json.find("duration");
-    const auto urlIt = json.find("url");
-
-    if (durationIt != json.end() && urlIt != json.end()) {
-        video->setDetails(urlIt->toString(), durationIt->toInt());
-        video->setStatus(Result::Done);
-    }
-    else {
-        qWarning() << "Failed to parse youtube video info:" << json;
+    auto result = dejsonFromString<MoosickMessage::YoutubeUrlResponse>(json);
+    if (result.hasError()) {
+        qWarning().noquote() << "Failed to parse youtube results:" << result.takeError().toString();
         video->setStatus(Result::Error);
+        return;
     }
+
+    MoosickMessage::YoutubeUrlResponse response = result.takeValue();
+    video->setDetails(response.url, response.duration);
+    video->setStatus(Result::Done);
 }
 
 void Query::onReply(HttpRequestId requestId, const QByteArray &data)
@@ -394,8 +393,10 @@ void Query::requestYoutubeVideoInfo(YoutubeVideoResult *video)
         return;
     }
 
-    const QString videoId = parts[1];
-    HttpRequestId reply = m_http->requestFromServer("/get-youtube-url.do", QString("v=") + videoId);
+    MoosickMessage::YoutubeUrlQuery query;
+    query.videoId = parts[1];
+
+    HttpRequestId reply = m_http->requestFromServer(MoosickMessage::Message(query).toJson());
     m_youtubeVideoQueries[reply] = video;
     video->setStatus(Result::Querying);
 }

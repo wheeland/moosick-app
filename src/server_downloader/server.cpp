@@ -1,91 +1,114 @@
 #include "server.hpp"
 #include "download.hpp"
 #include "jsonconv.hpp"
+#include "library_messages.hpp"
 
 #include <QJsonDocument>
 #include <QProcess>
 #include <QDebug>
 #include <QtGlobal>
 
-Server::Server(const QString &argv0, const QString &media, const QString &tool, const QString temp, quint16 port)
-    : NetCommon::TcpServer()
-    , m_program(argv0)
-    , m_media(media)
-    , m_tool(tool)
-    , m_temp(temp)
+using namespace Moosick;
+using namespace MoosickMessage;
+
+DownloaderThread::DownloaderThread(const DownloadRequest &request, Server *server)
+    : m_request(request)
+    , m_server(server)
 {
-    listen(port);
+}
+
+DownloaderThread::~DownloaderThread()
+{
+}
+
+void DownloaderThread::run()
+{
+    const QString toolDir = m_server->m_settings.toolsDir();
+    const QString tmpDir = m_server->m_settings.tempDir();
+    const QString mediaDir = m_server->m_settings.mediaBaseDir();
+
+    QTcpSocket tcpSocket;
+    tcpSocket.connectToHost("localhost", m_server->m_settings.dbserverPort());
+    if (!tcpSocket.waitForConnected(1000)) {
+        qCritical() << "Unable to connect to" << tcpSocket.peerName() << ", port =" << tcpSocket.peerPort();
+        return;
+    }
+
+    auto result = download(tcpSocket, m_request, mediaDir, toolDir, tmpDir);
+    if (!result) {
+        qWarning().noquote() << "Error while downloading:" << result.takeError();
+        return ;
+    }
+
+    QVector<Moosick::CommittedLibraryChange> changes = result.takeValue();
+    qCritical().noquote() << "Download finished, results:" << changes.size();
+
+    emit done(this);
+}
+
+Server::Server(const ServerSettings &settings)
+    : TcpServer()
+    , m_settings(settings)
+{
+    listen(settings.downloaderPort());
 }
 
 Server::~Server()
 {
 }
 
-bool Server::handleMessage(const ClientCommon::Message &message, ClientCommon::Message &response)
+QByteArray Server::handleMessage(const QByteArray &data)
 {
-    switch (message.tp) {
-    case ClientCommon::DownloadRequest: {
-        NetCommon::DownloadRequest request;
-        if (!request.fromBase64(message.data)) {
-            qWarning() << "Failed parsing the base64 download request";
-            response = { ClientCommon::DownloadResponse, "" };
-        }
-        else {
-            const quint32 id = startDownload(request);
-            response = { ClientCommon::DownloadResponse, QByteArray::number(id) };
-        }
-        return true;
+    Result<Message, JsonifyError> messageParsingResult = Message::fromJson(data);
+    if (messageParsingResult.hasError()) {
+        qWarning().noquote() << "Error parsing message:" << messageParsingResult.takeError().toString();
+        return QByteArray();
     }
-    case ClientCommon::DownloadQuery: {
-        response = { ClientCommon::DownloadResponse, QJsonDocument(getRunningDownloadsInfo()).toJson() };
-        return true;
+
+    Message message = messageParsingResult.takeValue();
+
+    switch (message.getType()) {
+    case Type::DownloadRequest: {
+        const DownloadRequest *downloadRequest = message.as<DownloadRequest>();
+        const quint32 id = startDownload(*downloadRequest);
+        DownloadResponse response;
+        response.downloadId = id;
+        return messageToJson(response);
+    }
+    case Type::DownloadQuery: {
+        DownloadQueryResponse response;
+        for (auto it = m_downloads.begin(); it != m_downloads.end(); ++it)
+            response.activeRequests->append(DownloadQueryResponse::ActiveDownload{ it.key(), it.value().request });
+        return messageToJson(response);
     }
     default: {
-        response = {ClientCommon::Error, {}};
-        return true;
+        return messageToJson(Error());
     }
     }
 }
 
-quint32 Server::startDownload(const NetCommon::DownloadRequest &request)
+quint32 Server::startDownload(const MoosickMessage::DownloadRequest &request)
 {
     const quint32 id = m_nextDownloadId++;
 
-    qDebug() << "Starting download" << id << ":" << request.tp << request.url << request.albumName << request.artistId << request.artistName;
+    qDebug() << "Starting download" << id << ":" << (int) *request.requestType << *request.url << *request.albumName << *request.artistId << *request.artistName;
 
-    QProcess *proc = new QProcess(this);
-    proc->setProgram(m_program);
-    proc->setWorkingDirectory(m_temp);
-    proc->setArguments({ "--download", request.toBase64() });
-    proc->setProcessEnvironment(QProcessEnvironment::systemEnvironment());
-    proc->start();
-    m_downloads[id] = RunningDownload { request, proc };
+    DownloaderThread *thread = new DownloaderThread(request, this);
+    m_downloads[id] = RunningDownload { request, thread };
+    connect(thread, &DownloaderThread::done, this, &Server::onDownloadFinished);
 
-    const auto handler = [=](int exitCode, QProcess::ExitStatus status) {
-        if (exitCode != 0 || status == QProcess::CrashExit) {
-            qWarning() << "Download" << id << "Failed:";
-            qWarning().noquote() << proc->readAllStandardError();
-        }
-        else {
-            qDebug() << "Finished download" << id;
-        }
-        m_downloads.remove(id);
-        proc->deleteLater();
-    };
-
-    connect(proc, QOverload<int,QProcess::ExitStatus>::of(&QProcess::finished), this, handler);
+    thread->start();
 
     return id;
 }
 
-QJsonArray Server::getRunningDownloadsInfo() const
+void Server::onDownloadFinished(DownloaderThread *thread)
 {
-    QJsonArray ret;
     for (auto it = m_downloads.begin(); it != m_downloads.end(); ++it) {
-        QJsonObject obj;
-        obj["id"] = QJsonValue((int) it.key());
-        obj["request"] = QJsonValue(QString(it.value().request.toBase64()));
-        ret.append(obj);
+        if (it->thread == thread) {
+            m_downloads.erase(it);
+            break;
+        }
     }
-    return ret;
+    thread->deleteLater();
 }

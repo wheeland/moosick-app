@@ -12,6 +12,7 @@
 #include "server.hpp"
 #include "signalhandler.hpp"
 #include "serversettings.hpp"
+#include "logger.hpp"
 
 int main(int argc, char **argv)
 {
@@ -19,8 +20,13 @@ int main(int argc, char **argv)
 
     const ServerSettings settings;
     if (!settings.isValid()) {
-        qWarning() << "Settings file not valid";
+        qCritical() << "Settings file not valid";
         return 1;
+    }
+
+    if (!settings.dbserverLogFile().isEmpty()) {
+        Logger::setLogFile(settings.dbserverLogFile());
+        Logger::install();
     }
 
     // start TCP server
@@ -28,11 +34,16 @@ int main(int argc, char **argv)
     const QString logPath = settings.libraryLogFile();
     const QString backupPath = settings.libraryBackupDir();
 
-    qWarning() << "Library File =" << libraryPath;
-    qWarning() << "Log Path =" << logPath;
-    qWarning() << "Backup Base Path =" << backupPath;
+    qInfo() << "Library File =" << libraryPath;
+    qInfo() << "Log Path =" << logPath;
+    qInfo() << "Backup Base Path =" << backupPath;
 
-    Server server(libraryPath, logPath, backupPath);
+    Server server;
+    JsonifyError error = server.init(libraryPath, logPath, backupPath);
+    if (error.isError()) {
+        qCritical().noquote() << "Failed to initialize server:" << error.toString();
+        return 1;
+    }
     if (!server.listen(settings.dbserverPort()))
         return 1;
 

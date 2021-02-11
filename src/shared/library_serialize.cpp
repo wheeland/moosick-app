@@ -4,83 +4,68 @@
 #include <QDebug>
 #include <QRandomGenerator>
 
-#define JSON_REQUIRE_VALUE(NAME, OBJ, TAG, TYPE) \
-    const QJsonValue NAME##_jsonvalue = OBJ.value(TAG); \
-    if (NAME##_jsonvalue.isUndefined()) { qWarning() << "Not found in JSON:" << TAG; return false; } \
-    if (NAME##_jsonvalue.type() != TYPE) { qWarning() << "Invalid type in JSON:" << TAG; return false; } \
+namespace Moosick {
 
-#define JSON_REQUIRE_INT(NAME, OBJ, TAG) \
-    JSON_REQUIRE_VALUE(NAME, OBJ, TAG, QJsonValue::Double); \
-    const int NAME = (int) NAME##_jsonvalue.toDouble();
-
-#define JSON_REQUIRE_STRING(NAME, OBJ, TAG) \
-    JSON_REQUIRE_VALUE(NAME, OBJ, TAG, QJsonValue::String); \
-    const QString NAME = NAME##_jsonvalue.toString();
-
-QJsonValue toJson(const Moosick::LibraryChange &change)
+QJsonValue enjson(const Moosick::LibraryChangeRequest &change)
 {
     QJsonObject ret;
-    ret["type"] = toJson((int) change.changeType);
-    ret["subject"] = toJson((int) change.subject);
-    ret["detail"] = toJson((int) change.detail);
-    ret["name"] = toJson(change.name);
+    ret["type"] = ::enjson((int) change.changeType);
+    ret["targetId"] = ::enjson((int) change.targetId);
+    ret["detail"] = ::enjson((int) change.detail);
+    ret["name"] = ::enjson(change.name);
     return ret;
 }
 
-bool fromJson(const QJsonValue &json, Moosick::LibraryChange &change)
+void dejson(const QJsonValue &json, Result<Moosick::LibraryChangeRequest, JsonifyError> &result)
 {
-    if (json.type() != QJsonValue::Object)
-        return false;
+    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Object);
+    JSONIFY_DEJSON_GET_MEMBER(json, result, int, tp, "type");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, int, targetId, "targetId");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, int, detail, "detail");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
 
-    const QJsonObject obj = json.toObject();
-
-    JSON_REQUIRE_INT(jsTp, obj, "type");
-    JSON_REQUIRE_INT(jsSubject, obj, "subject");
-    JSON_REQUIRE_INT(jsDetail, obj, "detail");
-    JSON_REQUIRE_STRING(jsName, obj, "name");
-
-    change.changeType = static_cast<Moosick::LibraryChange::Type>(jsTp);
-    change.subject = jsSubject;
-    change.detail = jsDetail;
-    change.name = jsName;
-    return true;
+    Moosick::LibraryChangeRequest change;
+    change.changeType = static_cast<Moosick::LibraryChangeRequest::Type>(tp);
+    change.targetId = targetId;
+    change.detail = detail;
+    change.name = name;
+    result = change;
 }
 
-QJsonValue toJson(const Moosick::CommittedLibraryChange &change)
+QJsonValue enjson(const Moosick::CommittedLibraryChange &change)
 {
-    QJsonObject obj = toJson(change.change).toObject();
-    obj["revision"] = (int) change.revision;
+    QJsonObject obj = enjson(change.changeRequest).toObject();
+    obj["committedRevision"] = (int) change.committedRevision;
+    obj["createdId"] = (int) change.createdId;
     return obj;
 }
 
-bool fromJson(const QJsonValue &json, Moosick::CommittedLibraryChange &change)
+void dejson(const QJsonValue &json, Result<Moosick::CommittedLibraryChange, JsonifyError> &result)
 {
-    if (json.type() != QJsonValue::Object)
-        return false;
+    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Object);
 
-    Moosick::LibraryChange ch;
-    if (!fromJson(json, ch))
-        return false;
+    Result<Moosick::LibraryChangeRequest, JsonifyError> change = dejson<Moosick::LibraryChangeRequest>(json);
+    if (change.hasError())
+    {
+        result = change.takeError();
+        return;
+    }
 
-    const QJsonObject obj = json.toObject();
-    JSON_REQUIRE_INT(rev, obj, "revision");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, int, committedRevision, "committedRevision");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, int, createdId, "createdId");
 
-    change.change = ch;
-    change.revision = rev;
-    return true;
+    Moosick::CommittedLibraryChange ret;
+    ret.changeRequest = change.takeValue();
+    ret.committedRevision = committedRevision;
+    ret.createdId = createdId;
+    result = ret;
 }
 
-bool fromJson(const QJsonValue &json, Moosick::TagId &tag)
-{
-    int id;
-    if (!fromJson(json, id)) return false;
-    tag = id;
-    return true;
 }
 
-QJsonValue toJson(Moosick::TagId tag)
+QJsonValue enjson(Moosick::TagId tag)
 {
-    return toJson((int) tag);
+    return enjson((int) tag);
 }
 
 namespace Moosick {
@@ -145,403 +130,145 @@ bool LibraryId::operator==(const LibraryId &other) const
     return true;
 }
 
-template <class T, class IntType>
-static QJsonArray collectionToJsonArray(const ItemCollection<T, IntType> &col, const std::function<void(QJsonObject&, const T &)> &dumper)
+QJsonValue enjson(const Library::Song &song)
 {
-    QJsonArray array;
-    for (auto it = col.begin(), end = col.end(); it != end; ++it) {
-        QJsonObject newObj;
-        newObj["id"] = QJsonValue((qint64) it.key());
-        dumper(newObj, it.value());
-        array << newObj;
-    }
-    return array;
+    QJsonObject json;
+    json["name"] = QJsonValue(song.name);
+    json["album"] = QJsonValue((qint64) song.album);
+    json["fileEnding"] = QJsonValue((qint64) song.fileEnding);
+    json["position"] = QJsonValue((int) song.position);
+    json["secs"] = QJsonValue((int) song.secs);
+    json["tags"] = enjson(song.tags);
+    return json;
+}
+
+QJsonValue enjson(const Library::Album &album)
+{
+    QJsonObject json;
+    json["name"] = QJsonValue(album.name);
+    json["artist"] = QJsonValue((qint64) album.artist);
+    json["tags"] = enjson(album.tags);
+    return json;
+}
+
+QJsonValue enjson(const Library::Artist &artist)
+{
+    QJsonObject json;
+    json["name"] = QJsonValue(artist.name);
+    json["tags"] = enjson(artist.tags);
+    return json;
+}
+
+QJsonValue enjson(const Library::Tag &tag)
+{
+    QJsonObject json;
+    json["name"] = QJsonValue(tag.name);
+    json["parent"] = QJsonValue((int) tag.parent);
+    return json;
+}
+
+void dejson(const QJsonValue &json, Result<Library::Song, JsonifyError> &result)
+{
+    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, qint64, album, "album");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, qint64, fileEnding, "fileEnding");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, int, position, "position");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, int, secs, "secs");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
+    Library::Song song;
+    song.name = name;
+    song.album = album;
+    song.fileEnding = fileEnding;
+    song.position = position;
+    song.secs = secs;
+    song.tags = tags;
+    result = song;
+}
+
+void dejson(const QJsonValue &json, Result<Library::Album, JsonifyError> &result)
+{
+    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, qint64, artist, "artist");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
+    Library::Album album;
+    album.name = name;
+    album.artist = artist;
+    album.tags = tags;
+    result = album;
+}
+
+void dejson(const QJsonValue &json, Result<Library::Artist, JsonifyError> &result)
+{
+    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
+    Library::Artist artist;
+    artist.name = name;
+    artist.tags = tags;
+    result = artist;
+}
+
+void dejson(const QJsonValue &json, Result<Library::Tag, JsonifyError> &result)
+{
+    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, int, parent, "parent");
+    Library::Tag tag;
+    tag.name = name;
+    tag.parent = parent;
+    result = tag;
 }
 
 QJsonObject Library::serializeToJson() const
 {
     QJsonObject json;
 
-    json["revision"] = QJsonValue((int) m_revision);
-    json["id"] = QJsonValue(QString(m_id.toString()));
-
-    json["tags"] = collectionToJsonArray<Library::Tag>(m_tags, [&](QJsonObject &json, const Library::Tag &tag) {
-        json["name"] = QJsonValue(tag.name);
-        json["parent"] = QJsonValue((int) tag.parent);
-    });
-
-    json["fileEndings"] = collectionToJsonArray<QString>(m_fileEndings, [&](QJsonObject &json, const QString &fileEnding) {
-        json["ending"] = QJsonValue(fileEnding);
-    });
-
-    json["artists"] = collectionToJsonArray<Library::Artist>(m_artists, [&](QJsonObject &json, const Library::Artist &artist) {
-        json["name"] = QJsonValue(artist.name);
-        json["tags"] = toJson(artist.tags);
-    });
-
-    json["albums"] = collectionToJsonArray<Library::Album>(m_albums, [&](QJsonObject &json, const Library::Album &album) {
-        json["name"] = QJsonValue(album.name);
-        json["artist"] = QJsonValue((qint64) album.artist);
-        json["tags"] = toJson(album.tags);
-    });
-
-    json["songs"] = collectionToJsonArray<Library::Song>(m_songs, [&](QJsonObject &json, const Library::Song &song) {
-        json["name"] = QJsonValue(song.name);
-        json["album"] = QJsonValue((qint64) song.album);
-        json["fileEnding"] = QJsonValue((qint64) song.fileEnding);
-        json["position"] = QJsonValue((int) song.position);
-        json["secs"] = QJsonValue((int) song.secs);
-        json["tags"] = toJson(song.tags);
-    });
+    json["revision"] = ::enjson(m_revision);
+    json["id"] = enjson(QString::fromUtf8(m_id.toString()));
+    json["tags"] = enjson(m_tags);
+    json["artists"] = enjson(m_artists);
+    json["albums"] = enjson(m_albums);
+    json["songs"] = enjson(m_songs);
+    json["fileEndings"] = enjson(m_fileEndings);
 
     return json;
 }
 
-template <class T, class IntType>
-static bool readJsonCollection(const QJsonValue &val, ItemCollection<T, IntType> &col, const std::function<bool(const QJsonObject &, IntType id, T &)> &reader)
+void Library::deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, JsonifyError> &result)
 {
-    if (val.type() != QJsonValue::Array)
-        return false;
+    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, quint32, revision, "revision");
+    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, QString, id, "id");
+    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Tag>, tags, "tags");
+    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Artist>, artists, "artists");
+    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Album>, albums, "albums");
+    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Song>, songs, "songs");
+    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<QString>, fileEndings, "fileEndings");
 
-    ItemCollection<T, IntType> ret;
-    const QJsonArray array = val.toArray();
-
-    for (const QJsonValue &value : array) {
-        if (value.type() != QJsonValue::Object)
-            return false;
-
-        const QJsonObject obj = value.toObject();
-        JSON_REQUIRE_INT(id, obj, "id");
-
-        T newItem;
-        if (!reader(obj, id, newItem))
-            return false;
-
-        ret.add(id, newItem);
+    auto changes = dejson<QVector<CommittedLibraryChange>>(committedChanges);
+    if (changes.hasError()) {
+        result = changes.takeError();
+        return;
     }
 
-    col = ret;
-    return true;
-}
-
-bool Library::deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &logJson)
-{
-    JSON_REQUIRE_INT(revision, libraryJson, "revision");
-    JSON_REQUIRE_STRING(id, libraryJson, "id");
-
-    if (!m_id.fromString(id.toLocal8Bit())) {
-        qWarning() << "Failed to deserialize Library: invalid ID";
-        return false;
+    if (!m_id.fromString(id.toUtf8())) {
+        result = JsonifyError::buildCustomError("'id' doesn't contain a valid ID");
+        return;
     }
-
-    ItemCollection<Song> songs;
-    ItemCollection<Album> albums;
-    ItemCollection<Artist> artists;
-    ItemCollection<Tag> tags;
-    ItemCollection<QString> fileEndings;
-    QVector<TagId> rootTags;
-    bool success = true;
-
-    success &= readJsonCollection<Library::Tag, quint32>(libraryJson["tags"], tags, [&](const QJsonObject &obj, quint32, Tag &tag) {
-        JSON_REQUIRE_STRING(name, obj, "name");
-        JSON_REQUIRE_INT(parent, obj, "parent");
-        tag.name = name;
-        tag.parent = parent;
-        return true;
-    });
-
-#define TAG_PUSH_ID(tagId, member, id) \
-    do { \
-        Library::Tag *tag = tags.findItem(tagId); \
-        if (tag) tag->member << (id); \
-    } while (0)
-
-#define TAG_PUSH_IDS(NEWTAGS, MEMBER, ID) \
-    do { \
-        for (quint32 tagId : NEWTAGS)  \
-            TAG_PUSH_ID(tagId, MEMBER, ID); \
-    } while (0)
-
-#define JSON_REQUIRE_TAGS(NAME, OBJ) \
-    TagIdList NAME; \
-    if (!fromJson(OBJ["tags"], NAME)) return false; \
-
-    // fix up tag child lists and fill root parent list
-    for (auto it = tags.begin(); it != tags.end(); ++it) {
-        TAG_PUSH_ID(it.value().parent, children, it.key());
-        if (it.value().parent == 0)
-            rootTags << it.key();
-    }
-
-    success &= readJsonCollection<QString, quint32>(libraryJson["fileEndings"], fileEndings,
-            [&](const QJsonObject &obj, quint32, QString &ending) {
-        JSON_REQUIRE_STRING(name, obj, "ending");
-        ending = name;
-        return true;
-    });
-
-    // read artists
-    success &= readJsonCollection<Library::Artist, quint32>(libraryJson["artists"], artists,
-            [&](const QJsonObject &obj, quint32 id, Library::Artist &artist) {
-        JSON_REQUIRE_STRING(name, obj, "name");
-        JSON_REQUIRE_TAGS(aTags, obj);
-        artist.name = name;
-        artist.tags = aTags;
-        TAG_PUSH_IDS(artist.tags, artists, id);
-        return true;
-    });
-
-    // read albums
-    success &= readJsonCollection<Library::Album, quint32>(libraryJson["albums"], albums,
-            [&](const QJsonObject &obj, quint32 id, Library::Album &album) {
-        JSON_REQUIRE_STRING(name, obj, "name");
-        JSON_REQUIRE_INT(artist, obj, "artist");
-        JSON_REQUIRE_TAGS(aTags, obj);
-        album.name = name;
-        album.artist = artist;
-        album.tags = aTags;
-        TAG_PUSH_IDS(album.tags, albums, id);
-        if (Library::Artist *artist = artists.findItem(album.artist))
-            artist->albums << id;
-        return true;
-    });
-
-    // read songs
-    success &= readJsonCollection<Library::Song, quint32>(libraryJson["songs"], songs,
-            [&](const QJsonObject &obj, quint32 id, Library::Song &song) {
-        JSON_REQUIRE_STRING(name, obj, "name");
-        JSON_REQUIRE_INT(album, obj, "album");
-        JSON_REQUIRE_INT(ending, obj, "fileEnding");
-        JSON_REQUIRE_INT(pos, obj, "position");
-        JSON_REQUIRE_INT(secs, obj, "secs");
-        JSON_REQUIRE_TAGS(aTags, obj);
-        song.name = name;
-        song.album = album;
-        song.fileEnding = ending;
-        song.position = pos;
-        song.secs = secs;
-        song.tags = aTags;
-        TAG_PUSH_IDS(song.tags, songs, id);
-        if (Library::Album *album = albums.findItem(song.album))
-            album->songs << id;
-        return true;
-    });
-
-#undef TAG_PUSH_ID
-#undef TAG_PUSH_IDS
-
-    // Read history of committed changes
-    QVector<CommittedLibraryChange> committedChanges;
-    for (int i = 0; i < logJson.size(); ++i) {
-        CommittedLibraryChange change;
-        if (!fromJson(logJson[i], change)) {
-            qWarning() << "Failed to deserialize Library: invalid log entry";
-            success = false;
-            break;
-        }
-        committedChanges << change;
-    }
-
-    if (!success)
-        return false;
 
     m_revision = revision;
     m_tags = tags;
-    m_songs = songs;
-    m_albums = albums;
     m_artists = artists;
+    m_albums = albums;
+    m_songs = songs;
     m_fileEndings = fileEndings;
-    m_rootTags = rootTags;
-    m_committedChanges = committedChanges;
+    m_committedChanges = changes.takeValue();
 
-    qDebug() << "Deserialized Library:";
-    qDebug() << ".." << m_artists.size() << "artists";
-    qDebug() << ".." << m_albums.size() << "albums";
-    qDebug() << ".." << m_songs.size() << "songs";
-    qDebug() << ".." << m_tags.size() << "tags";
-    qDebug() << ".." << m_committedChanges.size() << "committed change log entries";
-
-    return true;
+    result = 0;
 }
 
-static QString readUtf8(QDataStream &stream)
+JsonifyError Library::deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &committedChanges)
 {
-    QByteArray bytes;
-    stream >> bytes;
-    return QString::fromUtf8(bytes);
-}
-
-QDataStream &operator<<(QDataStream &stream, const LibraryChange &lch)
-{
-    stream << static_cast<quint32>(lch.changeType);
-    stream << lch.subject;
-    stream << lch.detail;
-    stream << lch.name.toUtf8();
-    return stream;
-}
-
-QDataStream &operator>>(QDataStream &stream, LibraryChange &lch)
-{
-    quint32 tp;
-    stream >> tp;
-    lch.changeType = static_cast<LibraryChange::Type>(tp);
-    stream >> lch.subject;
-    stream >> lch.detail;
-    lch.name = readUtf8(stream);
-    return stream;
-}
-
-template <class T, class IntType>
-static void dumpCollection(QDataStream &stream, const ItemCollection<T, IntType> &col, const std::function<void(const T&)> &dumper)
-{
-    stream << col.size();
-    for (auto it = col.begin(), end = col.end(); it != end; ++it) {
-        stream << it.key();
-        dumper(it.value());
-    }
-}
-
-QDataStream &operator<<(QDataStream &stream, const Library &lib)
-{
-    stream << lib.m_revision;
-    stream << lib.m_id.toString();
-
-    dumpCollection<Library::Tag>(stream, lib.m_tags, [&](const Library::Tag &tag) {
-        stream << tag.name.toUtf8();
-        stream << tag.parent;
-    });
-
-    dumpCollection<QString>(stream, lib.m_fileEndings, [&](const QString &fileEnding) {
-        stream << fileEnding.toUtf8();
-    });
-
-    dumpCollection<Library::Artist>(stream, lib.m_artists, [&](const Library::Artist &artist) {
-        stream << artist.name.toUtf8();
-        stream << artist.tags;
-    });
-
-    dumpCollection<Library::Album>(stream, lib.m_albums, [&](const Library::Album &album) {
-        stream << album.name.toUtf8();
-        stream << album.artist;
-        stream << album.tags;
-    });
-
-    dumpCollection<Library::Song>(stream, lib.m_songs, [&](const Library::Song &song) {
-        stream << song.name.toUtf8();
-        stream << song.album;
-        stream << song.fileEnding;
-        stream << song.position;
-        stream << song.secs;
-        stream << song.tags;
-    });
-
-    return stream;
-}
-
-template <class T, class IntType>
-static void readCollection(QDataStream &stream, ItemCollection<T, IntType> &col, const std::function<T(IntType)> &reader)
-{
-    quint32 sz;
-    stream >> sz;
-
-    for (quint32 i = 0; i < sz; ++i) {
-        IntType id;
-        stream >> id;
-
-        const T newItem = reader(id);
-        col.add(id, newItem);
-    }
-}
-
-template <class IntType>
-QDataStream &operator>>(QDataStream &stream, detail::FromInt<IntType> &dst) {
-    quint32 into;
-    stream >> into;
-    dst = into;
-    return stream;
-}
-
-QDataStream &operator>>(QDataStream &stream, Library &lib)
-{
-    lib.m_tags.clear();
-    lib.m_songs.clear();
-    lib.m_albums.clear();
-    lib.m_artists.clear();
-    lib.m_fileEndings.clear();
-
-    stream >> lib.m_revision;
-
-    QByteArray id;
-    stream >> id;
-    const bool success = lib.m_id.fromString(id);
-    Q_ASSERT(success);
-
-    readCollection<Library::Tag, quint32>(stream, lib.m_tags, [&](quint32) {
-        Library::Tag newTag;
-        newTag.name = readUtf8(stream);
-        stream >> newTag.parent;
-        return newTag;
-    });
-
-#define TAG_PUSH_ID(tagId, member, id) \
-    do { \
-        Library::Tag *tag = lib.m_tags.findItem(tagId); \
-        if (tag) tag->member << (id); \
-    } while (0)
-
-    // fix up tag child lists and fill root parent list
-    for (auto it = lib.m_tags.begin(); it != lib.m_tags.end(); ++it) {
-        TAG_PUSH_ID(it.value().parent, children, it.key());
-        if (it.value().parent == 0)
-            lib.m_rootTags << it.key();
-    }
-
-    readCollection<QString, quint32>(stream, lib.m_fileEndings, [&](quint32) {
-        return readUtf8(stream);
-    });
-
-    // read artists
-    readCollection<Library::Artist, quint32>(stream, lib.m_artists, [&](quint32 id) {
-        Library::Artist newArtist;
-        newArtist.name = readUtf8(stream);
-        stream >> newArtist.tags;
-        for (quint32 tagId : newArtist.tags)
-            TAG_PUSH_ID(tagId, artists, id);
-        return newArtist;
-    });
-
-    // read albums
-    readCollection<Library::Album, quint32>(stream, lib.m_albums, [&](quint32 id) {
-        Library::Album newAlbum;
-        newAlbum.name = readUtf8(stream);
-        stream >> newAlbum.artist;
-        stream >> newAlbum.tags;
-        for (quint32 tagId : newAlbum.tags)
-            TAG_PUSH_ID(tagId, albums, id);
-        if (Library::Artist *artist = lib.m_artists.findItem(newAlbum.artist))
-            artist->albums << id;
-        return newAlbum;
-    });
-
-    // read songs
-    readCollection<Library::Song, quint32>(stream, lib.m_songs, [&](quint32 id) {
-        Library::Song newSong;
-        newSong.name = readUtf8(stream);
-        stream >> newSong.album;
-        stream >> newSong.fileEnding;
-        stream >> newSong.position;
-        stream >> newSong.secs;
-        stream >> newSong.tags;
-        for (quint32 tagId : newSong.tags)
-            TAG_PUSH_ID(tagId, songs, id);
-        if (Library::Album *album = lib.m_albums.findItem(newSong.album))
-            album->songs << id;
-        return newSong;
-    });
-
-#undef TAG_PUSH_ID
-
-    return stream;
+    Result<int, JsonifyError> result;
+    deserializeFromJsonInternal(libraryJson, committedChanges, result);
+    return result.hasError() ? result.getError() : JsonifyError();
 }
 
 QStringList Library::dumpToStringList() const

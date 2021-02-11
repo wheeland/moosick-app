@@ -29,7 +29,9 @@ ServerSettings::ServerSettings()
 
     m_valid = true;
 
-    m_serverRoot = getOrCreate<QString>(*settings, m_valid, "SERVER_ROOT");
+    m_mediaBaseUrl = getOrCreate<QString>(*settings, m_valid, "MEDIA_BASE_URL");
+    m_mediaBaseDir = getOrCreate<QString>(*settings, m_valid, "MEDIA_BASE_DIR");
+
     m_tempDir = getOrCreate<QString>(*settings, m_valid, "TEMP_DIR");
     m_toolsDir = getOrCreate<QString>(*settings, m_valid, "TOOLS_DIR");
 
@@ -39,6 +41,13 @@ ServerSettings::ServerSettings()
 
     m_downloaderPort = getOrCreate<quint16>(*settings, m_valid, "DOWNLOADER_PORT");
     m_dbserverPort = getOrCreate<quint16>(*settings, m_valid, "DBSERVER_PORT");
+
+    m_downloaderHost = getOrCreate<QString>(*settings, m_valid, "DOWNLOADER_HOST");
+    m_dbserverHost = getOrCreate<QString>(*settings, m_valid, "DBSERVER_HOST");
+
+    m_cgiLogFile = getOrCreate<QString>(*settings, m_valid, "LOG_FILE_CGI");
+    m_dbserverLogFile = getOrCreate<QString>(*settings, m_valid, "LOG_FILE_DBSERVER");
+    m_downloaderLogFile = getOrCreate<QString>(*settings, m_valid, "LOG_FILE_DOWNLOADER");
 
     delete settings;
 }

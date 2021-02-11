@@ -3,8 +3,9 @@
 #include <QPointer>
 #include <QTimer>
 
+#include "option.hpp"
 #include "library.hpp"
-#include "requests.hpp"
+#include "library_messages.hpp"
 #include "flatmap.hpp"
 #include "../httpclient.hpp"
 
@@ -37,7 +38,7 @@ public:
     const Moosick::Library &library() const { return m_library; }
 
     HttpRequestId sync();
-    HttpRequestId download(NetCommon::DownloadRequest request, const Moosick::TagIdList &albumTags);
+    HttpRequestId download(MoosickMessage::DownloadRequest request, const Moosick::TagIdList &albumTags);
 
     HttpRequestId setArtistDetails(Moosick::ArtistId id, const QString &name, const Moosick::TagIdList &tags);
     HttpRequestId setAlbumDetails(Moosick::AlbumId id, const QString &name, const Moosick::TagIdList &tags);
@@ -64,38 +65,40 @@ signals:
     void downloadsPendingChanged(bool downloadsPending);
     void changesPendingChanged(bool changesPending);
     void isSyncingChanged();
-    void libraryError(const QString &error);
 
 private:
-    void onNewLibrary(const QJsonObject &json);
-    void onNewRemoteId(const QByteArray &data);
-    bool applyLibraryChanges(const QByteArray &changesJsonData);
+    // Methods to react on server response messages
+    Option<QString> onNewLibrary(const MoosickMessage::LibraryResponse *message);
+    Option<QString> onNewRemoteId(const MoosickMessage::IdResponse *message);
+    Option<QString> applyLibraryChanges(const QVector<Moosick::CommittedLibraryChange> &changes);
+    Option<QString> onDownloadResponse(HttpRequestId reply, const MoosickMessage::DownloadResponse *message);
+    Option<QString> onDownloadQueryResponse(const MoosickMessage::DownloadQueryResponse *message);
 
-    HttpRequestId sendChangeRequests(const QVector<Moosick::LibraryChange> &changes);
+    HttpRequestId sendChangeRequests(const QVector<Moosick::LibraryChangeRequest> &changes);
 
     HttpRequestId setItemDetails(quint32 id,
                                  const QString &oldName, const Moosick::TagIdList &oldTags,
                                  const QString &newName, const Moosick::TagIdList &newTags,
-                                 Moosick::LibraryChange::Type setName,
-                                 Moosick::LibraryChange::Type addTag,
-                                 Moosick::LibraryChange::Type removeTag);
+                                 Moosick::LibraryChangeRequest::Type setName,
+                                 Moosick::LibraryChangeRequest::Type addTag,
+                                 Moosick::LibraryChangeRequest::Type removeTag);
 
-    void addRemoveArtist(QVector<Moosick::LibraryChange> &changes, Moosick::ArtistId id);
-    void addRemoveAlbum(QVector<Moosick::LibraryChange> &changes, Moosick::AlbumId id);
-    void addRemoveSong(QVector<Moosick::LibraryChange> &changes, Moosick::SongId id);
-
-    void onDownloadQueryResult(const QByteArray &data);
+    void addRemoveArtist(QVector<Moosick::LibraryChangeRequest> &changes, Moosick::ArtistId id);
+    void addRemoveAlbum(QVector<Moosick::LibraryChangeRequest> &changes, Moosick::AlbumId id);
+    void addRemoveSong(QVector<Moosick::LibraryChangeRequest> &changes, Moosick::SongId id);
 
     enum RequestType {
         None,
         LibraryId,
         LibraryGet,
-        LibraryUpdate,
+        LibraryPartialSync,
         LibraryChanges,
         BandcampDownload,
         YoutubeDownload,
         DownloadQuery,
     };
+
+    Option<QString> processServerResponse(HttpRequestId reply, RequestType requestType, const MoosickMessage::Message &msg);
 
     bool m_hasRemoteLibraryId = false;
     bool m_hasLibrary = false;
@@ -124,7 +127,7 @@ private:
      */
 
     struct Download {
-        NetCommon::DownloadRequest request;
+        MoosickMessage::DownloadRequest request;
         Moosick::TagIdList albumTags;
         HttpRequestId networkReply;
         quint32 id;

@@ -26,7 +26,7 @@ public:
     QString pass() const;
 
     HttpRequestId request(const QNetworkRequest &request);
-    HttpRequestId requestFromServer(const QString &path, const QString &query);
+    HttpRequestId requestFromServer(const QByteArray &postData);
 
     void abortAll();
 
@@ -57,11 +57,13 @@ public:
     ~HttpClient() override;
 
     void setHost(const QString &name);
+    void setHostPath(const QString &hostPath);
     void setPort(quint16 port);
     void setPass(const QString &pass);
     void setUser(const QString &user);
 
     QString host() const { return m_host; }
+    QString hostPath() const { return m_hostPath; }
     quint16 port() const { return m_port; }
     QString user() const { return m_user; }
     QString pass() const { return m_pass; }
@@ -77,6 +79,7 @@ public:
 signals:
     void hostValidChanged(bool hostValid);
     void hostChanged(QString host);
+    void hostPathChanged(QString hostPath);
     void portChanged(quint16 port);
     void passChanged(QString pass);
     void userChanged(QString user);
@@ -95,13 +98,12 @@ private:
         bool isGlobalRequest;
         bool hasPendingSslError = false;
         QNetworkRequest globalRequest;
-        QString serverPath;
-        QString serverQuery;
+        QByteArray postData;
         QPointer<HttpRequester> requester;
     };
 
     HttpRequestId request(HttpRequester *requester, const QNetworkRequest &request);
-    HttpRequestId requestFromServer(HttpRequester *requester, const QString &path, const QString &query);
+    HttpRequestId requestFromServer(HttpRequester *requester, const QByteArray &postData);
 
     QList<QSslError> ignoredSslErrors() const;
 
@@ -115,6 +117,7 @@ private:
     quint16 m_port;
     QString m_pass;
     QString m_user;
+    QString m_hostPath;
     QNetworkAccessManager *m_manager = nullptr;
 
     // all SSL errors that we encounter will be presented to the user

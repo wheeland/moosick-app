@@ -6,11 +6,13 @@
 #include <QDebug>
 
 #include <iostream>
+#include <string>
 
 #include "server.hpp"
 #include "download.hpp"
 #include "jsonconv.hpp"
 #include "serversettings.hpp"
+#include "logger.hpp"
 
 int main(int argc, char **argv)
 {
@@ -22,49 +24,20 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    QCommandLineParser parser;
-    parser.addHelpOption();
-    parser.addVersionOption();
-    parser.addOption(QCommandLineOption("server", "Run as server"));
-    parser.addOption({QStringList{"download"}, "Download given base64 DownloadRequest", "request", "."});
-    parser.process(app);
-
-    const bool isServer = parser.isSet("server");
-    const bool isDownload = parser.isSet("download");
-    if (isServer == isDownload) {
-        qCritical() << "Must be called with either 'server' or 'download'";
-        return 1;
+    if (!settings.downloaderLogFile().isEmpty()) {
+        Logger::setLogFile(settings.downloaderLogFile());
+        Logger::install();
     }
 
     const QString toolDir = settings.toolsDir();
     const QString tmpDir = settings.tempDir();
-    const QString mediaDir = settings.serverRoot();
+    const QString mediaDir = settings.mediaBaseDir();
 
     if (!QDir(toolDir).exists() || !QDir(tmpDir).exists() || !QDir(mediaDir).exists()) {
         qCritical() << "media, tool, and temp directories must exist";
         return 1;
     }
 
-    if (isServer) {
-        Server server(argv[0], mediaDir, toolDir, tmpDir, settings.downloaderPort());
-        return app.exec();
-    }
-
-    if (isDownload) {
-        NetCommon::DownloadRequest request;
-        const QString base64 = parser.value("download");
-        if (!request.fromBase64(base64.toLocal8Bit())) {
-            qCritical() << "Failed parsing the base64 download request";
-            return 1;
-        }
-
-        const ClientCommon::ServerConfig serverConfig{"localhost", settings.dbserverPort(), 1000};
-
-        const QVector<Moosick::CommittedLibraryChange> changes = ClientCommon::download(
-                    serverConfig, request, mediaDir, toolDir, tmpDir);
-
-        std::cout << QJsonDocument(toJson(changes).toArray()).toJson().constData() << std::endl;
-
-        return changes.isEmpty() ? 1 : 0;
-    }
+    Server server(settings);
+    return app.exec();
 }

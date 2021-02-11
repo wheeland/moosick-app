@@ -116,7 +116,7 @@ public:
     Q_INVOKABLE void editItem(DbItem *item);
     Q_INVOKABLE void editOkClicked();
     Q_INVOKABLE void editCancelClicked();
-    Q_INVOKABLE void requestDownload(const NetCommon::DownloadRequest &request, Search::Result *result);
+    Q_INVOKABLE void requestDownload(const MoosickMessage::DownloadRequest &request, Search::Result *result);
 
     Q_INVOKABLE void removeItem(DbItem *item);
 
@@ -194,7 +194,7 @@ private:
      * Runnning Downloads
      */
     struct DownloadRequest {
-        NetCommon::DownloadRequest request;
+        MoosickMessage::DownloadRequest request;
         Moosick::TagIdList albumTags;
         QPointer<Search::Result> searchResult;
     };

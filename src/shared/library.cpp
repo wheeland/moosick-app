@@ -1,4 +1,5 @@
 #include "library.hpp"
+#include "library_messages.hpp"
 
 #include <QDebug>
 #include <QJsonArray>
@@ -6,45 +7,12 @@
 
 namespace Moosick {
 
-LibraryChange::LibraryChange(LibraryChange::Type tp, quint32 subj, quint32 det, const QString &nm)
+LibraryChangeRequest::LibraryChangeRequest(LibraryChangeRequest::Type tp, quint32 id, quint32 det, const QString &nm)
     : changeType(tp)
-    , subject(subj)
+    , targetId(id)
     , detail(det)
     , name(nm)
 {
-}
-
-bool LibraryChange::isCreatingNewId(Type changeType)
-{
-    switch (changeType) {
-    case TagAdd:
-    case ArtistAdd:
-    case ArtistAddOrGet:
-    case AlbumAdd:
-    case SongAdd:
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool LibraryChange::hasStringArg(Type changeType)
-{
-    switch (changeType) {
-    case TagAdd:
-    case ArtistAdd:
-    case ArtistAddOrGet:
-    case AlbumAdd:
-    case SongAdd:
-    case SongSetFileEnding:
-    case TagSetName:
-    case ArtistSetName:
-    case AlbumSetName:
-    case SongSetName:
-        return true;
-    default:
-        return false;
-    }
 }
 
 Library::Library()
@@ -70,7 +38,7 @@ QVector<ArtistId> Library::artistsByName() const
     return ret;
 }
 
-quint32 Library::getFileEnding(const QString &ending)
+quint32 Library::getOrCreateFileEndingId(const QString &ending)
 {
     for (auto it = m_fileEndings.begin(); it != m_fileEndings.end(); ++it) {
         if (it.value() == ending)
@@ -81,225 +49,215 @@ quint32 Library::getFileEnding(const QString &ending)
     return newEntry.first;
 }
 
-quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
+Result<CommittedLibraryChange, QString> Library::commit(const LibraryChangeRequest &change)
 {
-    CommittedLibraryChange commit{change, 0};
-
 #define requireThat(condition, message) \
-    do { if (!(condition)) { qWarning() << (message); return 0; } } while (0)
+    do { if (!(condition)) return QString(message); } while (0)
 
 #define fetchItem(Collection, Name, id) \
     auto *Name = Collection.findItem(id); requireThat(Name, #Name " not found");
 
+    CommittedLibraryChange commit{change, 0, 0};
+
     switch (change.changeType) {
-    case Moosick::LibraryChange::SongAdd: {
-        fetchItem(m_albums, album, change.subject);
+    case Moosick::LibraryChangeRequest::SongAdd: {
+        fetchItem(m_albums, album, change.targetId);
 
         auto song = m_songs.create();
         song.second->name = change.name;
-        song.second->album = change.subject;
+        song.second->album = change.targetId;
         album->songs << song.first;
-        if (createdId)
-            *createdId = song.first;
-        commit.change.detail = song.first;
+        commit.createdId = song.first;
         break;
     }
-    case Moosick::LibraryChange::SongRemove: {
-        fetchItem(m_songs, song, change.subject);
+    case Moosick::LibraryChangeRequest::SongRemove: {
+        fetchItem(m_songs, song, change.targetId);
         fetchItem(m_albums, album, song->album);
         requireThat(song->tags.isEmpty(), "Song still has tags");
-        Q_ASSERT(album->songs.contains(change.subject));
+        Q_ASSERT(album->songs.contains(change.targetId));
 
-        album->songs.removeAll(change.subject);
-        m_songs.remove(change.subject);
+        album->songs.removeAll(change.targetId);
+        m_songs.remove(change.targetId);
         break;
     }
-    case Moosick::LibraryChange::SongSetName: {
-        fetchItem(m_songs, song, change.subject);
+    case Moosick::LibraryChangeRequest::SongSetName: {
+        fetchItem(m_songs, song, change.targetId);
 
         song->name = change.name;
         break;
     }
-    case Moosick::LibraryChange::SongSetPosition: {
-        fetchItem(m_songs, song, change.subject);
+    case Moosick::LibraryChangeRequest::SongSetPosition: {
+        fetchItem(m_songs, song, change.targetId);
 
         song->position = change.detail;
         break;
     }
-    case Moosick::LibraryChange::SongSetLength: {
-        fetchItem(m_songs, song, change.subject);
+    case Moosick::LibraryChangeRequest::SongSetLength: {
+        fetchItem(m_songs, song, change.targetId);
 
         song->secs = change.detail;
         break;
     }
-    case Moosick::LibraryChange::SongSetFileEnding: {
-        fetchItem(m_songs, song, change.subject);
+    case Moosick::LibraryChangeRequest::SongSetFileEnding: {
+        fetchItem(m_songs, song, change.targetId);
 
-        song->fileEnding = getFileEnding(change.name);
+        song->fileEnding = getOrCreateFileEndingId(change.name);
         break;
     }
-    case Moosick::LibraryChange::SongSetAlbum: {
-        fetchItem(m_songs, song, change.subject);
+    case Moosick::LibraryChangeRequest::SongSetAlbum: {
+        fetchItem(m_songs, song, change.targetId);
         fetchItem(m_albums, oldAlbum, song->album);
         fetchItem(m_albums, newAlbum, change.detail);
-        Q_ASSERT(oldAlbum->songs.contains(change.subject));
+        Q_ASSERT(oldAlbum->songs.contains(change.targetId));
 
         song->album = change.detail;
-        oldAlbum->songs.removeAll(change.subject);
-        newAlbum->songs << change.subject;
+        oldAlbum->songs.removeAll(change.targetId);
+        newAlbum->songs << change.targetId;
         break;
     }
-    case Moosick::LibraryChange::SongAddTag: {
-        fetchItem(m_songs, song, change.subject);
+    case Moosick::LibraryChangeRequest::SongAddTag: {
+        fetchItem(m_songs, song, change.targetId);
         fetchItem(m_tags, tag, change.detail);
         requireThat(!song->tags.contains(change.detail), "Tag already on song");
 
         song->tags << change.detail;
-        tag->songs << change.subject;
+        tag->songs << change.targetId;
         break;
     }
-    case Moosick::LibraryChange::SongRemoveTag: {
-        fetchItem(m_songs, song, change.subject);
+    case Moosick::LibraryChangeRequest::SongRemoveTag: {
+        fetchItem(m_songs, song, change.targetId);
         fetchItem(m_tags, tag, change.detail);
         requireThat(song->tags.contains(change.detail), "Tag not on Song");
-        Q_ASSERT(tag->songs.contains(change.subject));
+        Q_ASSERT(tag->songs.contains(change.targetId));
 
         song->tags.removeAll(change.detail);
-        tag->songs.removeAll(change.subject);
+        tag->songs.removeAll(change.targetId);
         break;
     }
-    case Moosick::LibraryChange::AlbumAdd: {
-        fetchItem(m_artists, artist, change.subject);
+    case Moosick::LibraryChangeRequest::AlbumAdd: {
+        fetchItem(m_artists, artist, change.targetId);
 
         auto album = m_albums.create();
-        album.second->artist = change.subject;
+        album.second->artist = change.targetId;
         album.second->name = change.name;
         artist->albums << album.first;
-        if (createdId)
-            *createdId = album.first;
-        commit.change.detail = album.first;
+        commit.createdId = album.first;
         break;
     }
-    case Moosick::LibraryChange::AlbumRemove: {
-        fetchItem(m_albums, album, change.subject);
+    case Moosick::LibraryChangeRequest::AlbumRemove: {
+        fetchItem(m_albums, album, change.targetId);
         fetchItem(m_artists, artist, album->artist);
         requireThat(album->songs.isEmpty(), "Album still contains songs");
         requireThat(album->tags.isEmpty(), "Album still has tags");
-        Q_ASSERT(artist->albums.contains(change.subject));
+        Q_ASSERT(artist->albums.contains(change.targetId));
 
-        artist->albums.removeAll(change.subject);
-        m_albums.remove(change.subject);
+        artist->albums.removeAll(change.targetId);
+        m_albums.remove(change.targetId);
         break;
     }
-    case Moosick::LibraryChange::AlbumSetName: {
-        fetchItem(m_albums, album, change.subject);
+    case Moosick::LibraryChangeRequest::AlbumSetName: {
+        fetchItem(m_albums, album, change.targetId);
 
         album->name = change.name;
         break;
     }
-    case Moosick::LibraryChange::AlbumSetArtist: {
-        fetchItem(m_albums, album, change.subject);
+    case Moosick::LibraryChangeRequest::AlbumSetArtist: {
+        fetchItem(m_albums, album, change.targetId);
         fetchItem(m_artists, oldArtist, album->artist);
         fetchItem(m_artists, newArtist, change.detail);
-        Q_ASSERT(oldArtist->albums.contains(change.subject));
+        Q_ASSERT(oldArtist->albums.contains(change.targetId));
 
         album->artist = change.detail;
-        oldArtist->albums.removeAll(change.subject);
-        newArtist->albums << change.subject;
+        oldArtist->albums.removeAll(change.targetId);
+        newArtist->albums << change.targetId;
         break;
     }
-    case Moosick::LibraryChange::AlbumAddTag: {
-        fetchItem(m_albums, album, change.subject);
+    case Moosick::LibraryChangeRequest::AlbumAddTag: {
+        fetchItem(m_albums, album, change.targetId);
         fetchItem(m_tags, tag, change.detail);
         requireThat(!album->tags.contains(change.detail), "Tag already on album");
 
         album->tags << change.detail;
-        tag->albums << change.subject;
+        tag->albums << change.targetId;
         break;
     }
-    case Moosick::LibraryChange::AlbumRemoveTag: {
-        fetchItem(m_albums, album, change.subject);
+    case Moosick::LibraryChangeRequest::AlbumRemoveTag: {
+        fetchItem(m_albums, album, change.targetId);
         fetchItem(m_tags, tag, change.detail);
         requireThat(album->tags.contains(change.detail), "Tag not on Album");
-        Q_ASSERT(tag->albums.contains(change.subject));
+        Q_ASSERT(tag->albums.contains(change.targetId));
 
         album->tags.removeAll(change.detail);
-        tag->albums.removeAll(change.subject);
+        tag->albums.removeAll(change.targetId);
         break;
     }
-    case Moosick::LibraryChange::ArtistAddOrGet: {
+    case Moosick::LibraryChangeRequest::ArtistAddOrGet: {
         // See if the artist with that name already exists
         for (ArtistId artistId : m_artists.ids<ArtistId>()) {
             if (artistId.name(*this) == change.name) {
-                if (createdId)
-                    *createdId = artistId;
-                commit.change.detail = artistId;
+                commit.createdId = artistId;
                 break;
             }
         }
         // fall through
     }
-    case Moosick::LibraryChange::ArtistAdd: {
+    case Moosick::LibraryChangeRequest::ArtistAdd: {
         auto artist = m_artists.create();
         artist.second->name = change.name;
-        if (createdId)
-            *createdId = artist.first;
-        commit.change.detail = artist.first;
+        commit.createdId = artist.first;
 
         break;
     }
-    case Moosick::LibraryChange::ArtistRemove: {
-        fetchItem(m_artists, artist, change.subject);
+    case Moosick::LibraryChangeRequest::ArtistRemove: {
+        fetchItem(m_artists, artist, change.targetId);
         requireThat(artist->albums.isEmpty(), "Artist still has albums");
         requireThat(artist->tags.isEmpty(), "Artist still has tags");
 
-        m_artists.remove(change.subject);
+        m_artists.remove(change.targetId);
         break;
     }
-    case Moosick::LibraryChange::ArtistSetName: {
-        fetchItem(m_artists, artist, change.subject);
+    case Moosick::LibraryChangeRequest::ArtistSetName: {
+        fetchItem(m_artists, artist, change.targetId);
         artist->name = change.name;
         break;
     }
-    case Moosick::LibraryChange::ArtistAddTag: {
-        fetchItem(m_artists, artist, change.subject);
+    case Moosick::LibraryChangeRequest::ArtistAddTag: {
+        fetchItem(m_artists, artist, change.targetId);
         fetchItem(m_tags, tag, change.detail);
         requireThat(!artist->tags.contains(change.detail), "Tag already on artist");
 
         artist->tags << change.detail;
-        tag->artists << change.subject;
+        tag->artists << change.targetId;
         break;
     }
-    case Moosick::LibraryChange::ArtistRemoveTag: {
-        fetchItem(m_artists, artist, change.subject);
+    case Moosick::LibraryChangeRequest::ArtistRemoveTag: {
+        fetchItem(m_artists, artist, change.targetId);
         fetchItem(m_tags, tag, change.detail);
         requireThat(artist->tags.contains(change.detail), "Tag not on Artist");
-        Q_ASSERT(tag->artists.contains(change.subject));
+        Q_ASSERT(tag->artists.contains(change.targetId));
 
         artist->tags.removeAll(change.detail);
-        tag->artists.removeAll(change.subject);
+        tag->artists.removeAll(change.targetId);
         break;
     }
-    case Moosick::LibraryChange::TagAdd: {
-        auto parentTag = m_tags.findItem(change.subject);
-        requireThat(parentTag || (change.subject == 0), "Parent tag not found");
+    case Moosick::LibraryChangeRequest::TagAdd: {
+        auto parentTag = m_tags.findItem(change.targetId);
+        requireThat(parentTag || (change.targetId == 0), "Parent tag not found");
 
         auto tag = m_tags.create();
         tag.second->name = change.name;
-        tag.second->parent = change.subject;
+        tag.second->parent = change.targetId;
         if (parentTag)
             parentTag->children << tag.first;
         else
             m_rootTags << tag.first;
 
-        if (createdId)
-            *createdId = tag.first;
-        commit.change.detail = tag.first;
+        commit.createdId = tag.first;
 
         break;
     }
-    case Moosick::LibraryChange::TagRemove: {
-        fetchItem(m_tags, tag, change.subject);
+    case Moosick::LibraryChangeRequest::TagRemove: {
+        fetchItem(m_tags, tag, change.targetId);
         requireThat(tag->children.isEmpty(), "Tag still contains children");
         requireThat(tag->songs.isEmpty(), "Tag still used for songs");
         requireThat(tag->albums.isEmpty(), "Tag still used for albums");
@@ -307,25 +265,25 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
 
         auto parentTag = m_tags.findItem(tag->parent);
         if (parentTag) {
-            Q_ASSERT(parentTag->children.contains(change.subject));
-            parentTag->children.removeAll(change.subject);
+            Q_ASSERT(parentTag->children.contains(change.targetId));
+            parentTag->children.removeAll(change.targetId);
         } else {
-            Q_ASSERT(m_rootTags.contains(change.subject));
-            m_rootTags.removeAll(change.subject);
+            Q_ASSERT(m_rootTags.contains(change.targetId));
+            m_rootTags.removeAll(change.targetId);
         }
 
-        m_tags.remove(change.subject);
+        m_tags.remove(change.targetId);
         break;
     }
-    case Moosick::LibraryChange::TagSetName: {
-        fetchItem(m_tags, tag, change.subject);
+    case Moosick::LibraryChangeRequest::TagSetName: {
+        fetchItem(m_tags, tag, change.targetId);
         tag->name = change.name;
         break;
     }
-    case Moosick::LibraryChange::TagSetParent: {
-        fetchItem(m_tags, tag, change.subject);
+    case Moosick::LibraryChangeRequest::TagSetParent: {
+        fetchItem(m_tags, tag, change.targetId);
         requireThat(change.detail != tag->parent, "Parent is the same");
-        requireThat(change.subject != change.detail, "Can't be your own parent");
+        requireThat(change.targetId != change.detail, "Can't be your own parent");
 
         Tag *oldParent = m_tags.findItem(tag->parent);
         Tag *newParent = m_tags.findItem(change.detail);
@@ -336,9 +294,8 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
         // make sure we don't introduce circularity
         TagId parentsId = change.detail;
         while (parentsId) {
-            if (parentsId == change.subject) {
-                qWarning() << "Detected circular tag parenting";
-                return 0;
+            if (parentsId == change.targetId) {
+                return QString("Detected circular tag parenting");
             }
             Tag *parent = m_tags.findItem(parentsId);
             parentsId = parent ? parent->parent : TagId();
@@ -346,30 +303,30 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
 
         if (tag->parent == 0) {
             Q_ASSERT(!oldParent);
-            Q_ASSERT(m_rootTags.contains(change.subject));
-            m_rootTags.removeAll(change.subject);
+            Q_ASSERT(m_rootTags.contains(change.targetId));
+            m_rootTags.removeAll(change.targetId);
         }
         else {
             Q_ASSERT(oldParent);
-            Q_ASSERT(oldParent->children.contains(change.subject));
-            oldParent->children.removeAll(change.subject);
+            Q_ASSERT(oldParent->children.contains(change.targetId));
+            oldParent->children.removeAll(change.targetId);
         }
 
         if (change.detail == 0) {
             Q_ASSERT(!newParent);
-            m_rootTags << change.subject;
+            m_rootTags << change.targetId;
         } else {
             Q_ASSERT(newParent);
-            newParent->children << change.subject;
+            newParent->children << change.targetId;
         }
 
         tag->parent = change.detail;
 
         break;
     }
-    case Moosick::LibraryChange::Invalid:
+    case Moosick::LibraryChangeRequest::Invalid:
     default: {
-        return 0;
+        return QString("No such LibraryChangeRequest");
     }
     }
 
@@ -377,18 +334,19 @@ quint32 Library::commit(const LibraryChange &change, quint32 *createdId)
 #undef fetchItem
 
     m_revision += 1;
-    commit.revision = m_revision;
+    commit.committedRevision = m_revision;
     m_committedChanges << commit;
 
-    return m_revision;
+    return commit;
 }
 
 void Library::commit(const QVector<CommittedLibraryChange> &changes)
 {
     for (const CommittedLibraryChange &change : changes) {
-        if (change.revision == m_revision + 1) {
-            const quint32 expectedRevision = commit(change.change);
-            Q_ASSERT(expectedRevision == change.revision);
+        if (change.committedRevision == m_revision + 1) {
+            Result<CommittedLibraryChange, QString> committed = commit(change.changeRequest);
+            Q_ASSERT(committed.hasValue());
+            Q_ASSERT(committed.getValue().committedRevision == change.committedRevision);
         }
     }
 }
@@ -399,7 +357,7 @@ QVector<CommittedLibraryChange> Library::committedChangesSince(quint32 revision)
     ret.reserve(m_committedChanges.size());
 
     for (const CommittedLibraryChange &committed : m_committedChanges) {
-        if (committed.revision >= revision)
+        if (committed.committedRevision >= revision)
             ret << committed;
     }
 
@@ -555,3 +513,101 @@ QString TagId::name(const Library &library) const
 #undef FETCH
 
 } // namespace Moosick
+
+namespace MoosickMessage {
+
+QByteArray messageToJson(const MessageBase &message)
+{
+    QJsonObject obj;
+    obj["id"] = message.getMessageTypeString();
+    obj["data"] = enjson(message);
+    return jsonSerializeObject(obj);
+}
+
+QByteArray Message::toJson() const
+{
+    return m_msg ? messageToJson(*m_msg) : QByteArray();
+}
+
+QString typeString(Type messageType)
+{
+    switch (messageType) {
+    case Type::Error: return "Error";
+    case Type::Ping: return "Ping";
+    case Type::Pong: return "Pong";
+    case Type::LibraryRequest: return "LibraryRequest";
+    case Type::LibraryResponse: return "LibraryResponse";
+    case Type::IdRequest: return "IdRequest";
+    case Type::IdResponse: return "IdResponse";
+    case Type::ChangesRequest: return "ChangesRequest";
+    case Type::ChangesResponse: return "ChangesResponse";
+    case Type::ChangeListRequest: return "ChangeListRequest";
+    case Type::ChangeListResponse: return "ChangeListResponse";
+    case Type::DownloadRequest: return "DownloadRequest";
+    case Type::DownloadResponse: return "DownloadResponse";
+    case Type::DownloadQuery: return "DownloadQuery";
+    case Type::DownloadQueryResponse: return "DownloadQueryResponse";
+    case Type::YoutubeUrlQuery: return "YoutubeUrlQuery";
+    case Type::YoutubeUrlResponse: return "YoutubeUrlResponse";
+    default:
+        qFatal("No such Message Type");
+    }
+}
+
+Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
+{
+    Result<QJsonObject, JsonifyError> json = jsonDeserializeObject(message);
+    if (!json)
+        return json.takeError();
+
+    // Read ID
+    const QJsonObject jsonObj = json.takeValue();
+    const auto idIt = jsonObj.find("id");
+    if (idIt == jsonObj.end())
+        return JsonifyError::buildMissingMemberError("id");
+    if (idIt->type() != QJsonValue::String)
+        return JsonifyError::buildTypeError(QJsonValue::String, idIt->type());
+    const QString id = idIt->toString();
+
+    // Read Data Object
+    const auto dataIt = jsonObj.find("data");
+    if (dataIt == jsonObj.end())
+        return JsonifyError::buildMissingMemberError("data");
+    if (dataIt->type() != QJsonValue::Object)
+        return JsonifyError::buildTypeError(QJsonValue::Object, dataIt->type());
+    const QJsonObject data = dataIt->toObject();
+
+    // See if we find a matching message
+    #define CHECK_MESSAGE_TYPE(TYPE) \
+    if (id == typeString(TYPE::MESSAGE_TYPE)) { \
+        Result<TYPE, JsonifyError> result = ::dejson<TYPE>(data); \
+        if (!result) \
+            return result.takeError(); \
+        return Message(new TYPE(std::move(result.takeValue()))); \
+    }
+
+    CHECK_MESSAGE_TYPE(Error)
+    CHECK_MESSAGE_TYPE(Ping)
+    CHECK_MESSAGE_TYPE(Pong)
+
+    CHECK_MESSAGE_TYPE(LibraryRequest)
+    CHECK_MESSAGE_TYPE(LibraryResponse)
+
+    CHECK_MESSAGE_TYPE(IdRequest)
+    CHECK_MESSAGE_TYPE(IdResponse)
+
+    CHECK_MESSAGE_TYPE(ChangesRequest)
+    CHECK_MESSAGE_TYPE(ChangesResponse)
+
+    CHECK_MESSAGE_TYPE(ChangeListRequest)
+    CHECK_MESSAGE_TYPE(ChangeListResponse)
+
+    CHECK_MESSAGE_TYPE(DownloadRequest)
+    CHECK_MESSAGE_TYPE(DownloadResponse)
+    CHECK_MESSAGE_TYPE(DownloadQuery)
+    CHECK_MESSAGE_TYPE(DownloadQueryResponse)
+
+    return JsonifyError::buildCustomError(QString("No such message ID: ") + id);
+}
+
+}

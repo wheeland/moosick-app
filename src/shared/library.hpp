@@ -1,5 +1,7 @@
 #pragma once
 
+#include "result.hpp"
+#include "jsonconv.hpp"
 #include "library_types.hpp"
 
 #include <QHash>
@@ -9,7 +11,7 @@
 
 namespace Moosick {
 
-struct LibraryChange
+struct LibraryChangeRequest
 {
     enum Type : quint32 {
         Invalid,
@@ -43,23 +45,27 @@ struct LibraryChange
         TagSetParent,
     };
 
-    LibraryChange() = default;
-    LibraryChange(const LibraryChange &other) = default;
-    LibraryChange(Type tp, quint32 subj, quint32 det, const QString &nm);
+    LibraryChangeRequest() = default;
+    LibraryChangeRequest(const LibraryChangeRequest &other) = default;
+    LibraryChangeRequest(Type tp, quint32 id, quint32 det, const QString &nm);
 
     Type changeType = Invalid;
-    quint32 subject = 0;
+    quint32 targetId = 0;
     quint32 detail = 0;
     QString name;
 
-    static bool isCreatingNewId(Type changeType);
-    static bool hasStringArg(Type changeType);
+    friend QJsonValue enjson(const Moosick::LibraryChangeRequest &change);
+    friend void dejson(const QJsonValue &json, Result<Moosick::LibraryChangeRequest, JsonifyError> &result);
 };
 
 struct CommittedLibraryChange
 {
-    LibraryChange change;
-    quint32 revision;
+    LibraryChangeRequest changeRequest;
+    quint32 committedRevision;
+    quint32 createdId;
+
+    friend QJsonValue enjson(const Moosick::CommittedLibraryChange &change);
+    friend void dejson(const QJsonValue &json, Result<Moosick::CommittedLibraryChange, JsonifyError> &result);
 };
 
 class LibraryId
@@ -96,23 +102,37 @@ public:
     QVector<ArtistId> artistsByName() const;
 
     /**
-     * Upon success, it returns the new revision of the database, otherwise 0
+     * Tries to commit the given change, returns an error string if something went wrong
      */
-    quint32 commit(const LibraryChange &change, quint32 *createdId = nullptr);
+    Result<CommittedLibraryChange, QString> commit(const LibraryChangeRequest &change);
 
     /**
-     * Applies those changes that are from the future (i.e. the DB server)
+     * Applies those changes that are from the future (i.e. the DB server).
      */
     void commit(const QVector<CommittedLibraryChange> &changes);
 
+    /**
+     * Retrieves all changes that have been committed since the given revision.
+     * (This must not necessarily contain all changes ever made, and can be empty)
+     */
     QVector<CommittedLibraryChange> committedChangesSince(quint32 revision) const;
 
+    /**
+     * For debugging purposes, dump into human-readable listing
+     */
     QStringList dumpToStringList() const;
 
     QJsonObject serializeToJson() const;
-    bool deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &logJson = QJsonArray());
+
+    /**
+     * Tries to read the whole library from JSON data.
+     * If committedChanges is not empty, try to read a history of committed changes from this array.
+     */
+    JsonifyError deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &committedChanges = QJsonArray());
 
 private:
+    void deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, JsonifyError> &result);
+
     struct Song
     {
         QString name;
@@ -148,7 +168,17 @@ private:
         ArtistIdList artists;
     };
 
-    quint32 getFileEnding(const QString &ending);
+    friend QJsonValue enjson(const Song &song);
+    friend QJsonValue enjson(const Album &album);
+    friend QJsonValue enjson(const Artist &artist);
+    friend QJsonValue enjson(const Tag &tag);
+
+    friend void dejson(const QJsonValue &json, Result<Song, JsonifyError> &result);
+    friend void dejson(const QJsonValue &json, Result<Album, JsonifyError> &result);
+    friend void dejson(const QJsonValue &json, Result<Artist, JsonifyError> &result);
+    friend void dejson(const QJsonValue &json, Result<Tag, JsonifyError> &result);
+
+    quint32 getOrCreateFileEndingId(const QString &ending);
 
     quint32 m_revision = 0;
     LibraryId m_id = LibraryId::generate();
@@ -166,21 +196,6 @@ private:
     friend struct AlbumId;
     friend struct ArtistId;
     friend struct TagId;
-
-    friend QDataStream &operator<<(QDataStream &stream, const Library &lib);
-    friend QDataStream &operator>>(QDataStream &stream, Library &lib);
 };
 
-QDataStream &operator<<(QDataStream &stream, const Library &lib);
-QDataStream &operator>>(QDataStream &stream, Library &lib);
-
-QDataStream &operator<<(QDataStream &stream, const LibraryChange &lch);
-QDataStream &operator>>(QDataStream &stream, LibraryChange &lch);
-
 } // namespace Moosick
-
-QJsonValue toJson(const Moosick::LibraryChange &change);
-bool fromJson(const QJsonValue &json, Moosick::LibraryChange &change);
-
-QJsonValue toJson(const Moosick::CommittedLibraryChange &change);
-bool fromJson(const QJsonValue &json, Moosick::CommittedLibraryChange &change);

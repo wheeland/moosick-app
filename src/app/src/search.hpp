@@ -215,7 +215,7 @@ private:
     void populateBandcampArtist(BandcampArtistResult *artist, const QByteArray &html);
     void populateBandcampAlbum(BandcampAlbumResult *album,const QByteArray &html);
     void populateYoutubeSearchResults(const QByteArray &html);
-    void populateYoutubeVideo(YoutubeVideoResult *video, const QByteArray &html);
+    void populateYoutubeVideo(YoutubeVideoResult *video, const QByteArray &json);
 
     HttpRequester * const m_http;
     QString m_searchString;

@@ -1,37 +1,59 @@
 #pragma once
 
-#include <QProcess>
+#include <QThread>
 
-#include "tcpserver.hpp"
-#include "messages.hpp"
+#include "tcpclientserver.hpp"
+#include "library_messages.hpp"
 #include "download.hpp"
+#include "serversettings.hpp"
 
-class Server : public NetCommon::TcpServer
+class Server;
+
+class DownloaderThread : public QThread
 {
     Q_OBJECT
 
 public:
-    Server(const QString &argv0, const QString &media, const QString &tool, const QString temp, quint16 port);
+    DownloaderThread(const MoosickMessage::DownloadRequest &request, Server *server);
+    ~DownloaderThread();
+
+    void run() override;
+
+signals:
+    void done(DownloaderThread *thread);
+
+private:
+    MoosickMessage::DownloadRequest m_request;
+    Server *m_server;
+};
+
+class Server : public TcpServer
+{
+    Q_OBJECT
+
+public:
+    Server(const ServerSettings &settings);
     ~Server();
 
 protected:
-    bool handleMessage(const ClientCommon::Message &message, ClientCommon::Message &response) override;
+    QByteArray handleMessage(const QByteArray &data) override;
 
 private:
-    quint32 startDownload(const NetCommon::DownloadRequest &request);
-    QJsonArray getRunningDownloadsInfo() const;
+    quint32 startDownload(const MoosickMessage::DownloadRequest &request);
+
+private slots:
+    void onDownloadFinished(DownloaderThread *thread);
 
 private:
-    const QString m_program;
-    const QString m_media;
-    const QString m_tool;
-    const QString m_temp;
+    const ServerSettings m_settings;
 
     struct RunningDownload {
-        NetCommon::DownloadRequest request;
-        QProcess *process;
+        MoosickMessage::DownloadRequest request;
+        DownloaderThread *thread;
     };
 
     QHash<quint32, RunningDownload> m_downloads;
     quint32 m_nextDownloadId = 1;
+
+    friend class DownloaderThread;
 };

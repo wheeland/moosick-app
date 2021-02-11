@@ -4,6 +4,8 @@
 #include <QVector>
 #include <QHash>
 
+#include "jsonconv.hpp"
+
 namespace Moosick {
 
 class Library;
@@ -97,6 +99,11 @@ struct TagId : public detail::FromU32
     QString name(const Library &library) const;
 };
 
+JSONIFY_DECLARE_PROXY_ENJSON(SongId, quint32)
+JSONIFY_DECLARE_PROXY_ENJSON(ArtistId, quint32)
+JSONIFY_DECLARE_PROXY_ENJSON(AlbumId, quint32)
+JSONIFY_DECLARE_PROXY_ENJSON(TagId, quint32)
+
 template <class T, class IntType = quint32>
 class ItemCollection : public QHash<IntType, T>
 {
@@ -140,7 +147,41 @@ public:
     }
 
 private:
+    template <class TT, class II>
+    friend QJsonValue enjson(const ItemCollection<TT, II> &collection);
+
+    template <class TT, class II>
+    friend void dejson(const QJsonValue &json, Result<ItemCollection<TT, II>, JsonifyError> &result);
+
     IntType m_nextId = 1;
 };
+
+template <class T, class IntType>
+QJsonValue enjson(const ItemCollection<T, IntType> &collection)
+{
+    QJsonArray entries;
+    for (auto it = collection.begin(); it != collection.end(); ++it)
+        entries.append(enjson(qMakePair(it.key(), it.value())));
+
+    QJsonObject json;
+    json["nextId"] = ::enjson(collection.m_nextId);
+    json["entries"] = entries;
+    return json;
+}
+
+template <class T, class IntType>
+void dejson(const QJsonValue &json, Result<ItemCollection<T, IntType>, JsonifyError> &result)
+{
+    using KeyValuePair = QPair<IntType, T>;
+    JSONIFY_DEJSON_GET_MEMBER(json, result, IntType, nextId, "nextId");
+    JSONIFY_DEJSON_GET_MEMBER(json, result, QVector<KeyValuePair>, entries, "entries");
+
+    ItemCollection<T, IntType> ret;
+    for (const KeyValuePair &kv : entries)
+        ret[kv.first] = kv.second;
+    ret.m_nextId = nextId;
+
+    result = ret;
+}
 
 } // namespace Moosick

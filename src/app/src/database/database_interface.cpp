@@ -172,7 +172,7 @@ void DatabaseInterface::editItem(DbItem *item)
     emit stateChanged();
 }
 
-void DatabaseInterface::requestDownload(const NetCommon::DownloadRequest &request, Search::Result *result)
+void DatabaseInterface::requestDownload(const MoosickMessage::DownloadRequest &request, Search::Result *result)
 {
     if (!m_requestedDownload.isNull() || (m_editItemType != EditNone) || (m_editItemSource != SourceNone))
         return;
@@ -180,7 +180,7 @@ void DatabaseInterface::requestDownload(const NetCommon::DownloadRequest &reques
     m_requestedDownload.reset(new DownloadRequest { request, Moosick::TagIdList(), result });
 
     m_editItemType = EditArtist;
-    m_editItemSource = (request.tp == NetCommon::DownloadRequest::BandcampAlbum) ? SourceBandcamp : SourceYoutube;
+    m_editItemSource = (request.requestType == MoosickMessage::DownloadRequestType::BandcampAlbum) ? SourceBandcamp : SourceYoutube;
     m_editedItemId = 0;
 
     m_editArtistStringList->popup(request.artistName);

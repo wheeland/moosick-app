@@ -1,18 +1,14 @@
 #pragma once
 
 #include "library.hpp"
-#include "messages.hpp"
-#include "requests.hpp"
+#include "library_messages.hpp"
+#include "library_messages.hpp"
 
 #include <QTcpSocket>
 
-namespace ClientCommon {
-
-QVector<Moosick::CommittedLibraryChange> download(
-        const ServerConfig &server,
-        const NetCommon::DownloadRequest &request,
+Result<QVector<Moosick::CommittedLibraryChange>, QString> download(
+        QTcpSocket &tcpSocket,
+        const MoosickMessage::DownloadRequest &downloadRequest,
         const QString &mediaDir,
         const QString &toolDir,
         const QString &tempDir);
-
-} //namespace ClientCommon

@@ -38,10 +38,9 @@ HttpRequestId HttpRequester::request(const QNetworkRequest &request)
     return m_httpClient->request(this, request);
 }
 
-HttpRequestId HttpRequester::requestFromServer(const QString &path, const QString &query)
+HttpRequestId HttpRequester::requestFromServer(const QByteArray &postData)
 {
-    const QString p = path.startsWith("/") ? path : QString("/") + path;
-    return m_httpClient->requestFromServer(this, p, query);
+    return m_httpClient->requestFromServer(this, postData);
 }
 
 void HttpRequester::abortAll()
@@ -55,6 +54,7 @@ HttpClient::HttpClient(QObject *parent)
 {
     connect(m_manager, &QNetworkAccessManager::finished, this, &HttpClient::onNetworkReplyFinished);
     connect(m_manager, &QNetworkAccessManager::networkAccessibleChanged, this, &HttpClient::maybeRelaunchRequests);
+    m_hostPath = "/moosick.do";
 }
 
 HttpClient::~HttpClient()
@@ -68,6 +68,14 @@ void HttpClient::setHost(const QString &name)
     QTimer::singleShot(0, this, &HttpClient::maybeRelaunchRequests);
     emit hostValidChanged(true);
     emit hostChanged(name);
+}
+
+void HttpClient::setHostPath(const QString &hostPath)
+{
+    m_hostPath = hostPath;
+    QTimer::singleShot(0, this, &HttpClient::maybeRelaunchRequests);
+    emit hostValidChanged(true);
+    emit hostPathChanged(hostPath);
 }
 
 void HttpClient::setPort(quint16 port)
@@ -129,15 +137,14 @@ HttpRequestId HttpClient::request(HttpRequester *requester, const QNetworkReques
     return newRequest.id;
 }
 
-HttpRequestId HttpClient::requestFromServer(HttpRequester *requester, const QString &path, const QString &query)
+HttpRequestId HttpClient::requestFromServer(HttpRequester *requester, const QByteArray &postData)
 {
     Q_ASSERT(requester);
 
     RunningRequest newRequest;
     newRequest.id = m_nextRequestId++;
     newRequest.requester = requester;
-    newRequest.serverPath = path;
-    newRequest.serverQuery = query;
+    newRequest.postData = postData;
     newRequest.isGlobalRequest = false;
 
     launchRequest(newRequest);
@@ -269,14 +276,13 @@ void HttpClient::launchRequest(HttpClient::RunningRequest &request)
         url.setPort(m_port);
         url.setUserName(m_user);
         url.setPassword(m_pass);
-        url.setPath(request.serverPath);
-        if (request.serverQuery.size() < 64) {
-            url.setQuery(request.serverQuery, QUrl::StrictMode);
+        url.setPath(m_hostPath);
+        if (request.postData.isEmpty()) {
             request.currentReply = m_manager->get(QNetworkRequest(url));
         } else {
             QNetworkRequest req(url);
             req.setHeader(QNetworkRequest::ContentTypeHeader, "text/plain");
-            request.currentReply = m_manager->post(req, request.serverQuery.toLocal8Bit());
+            request.currentReply = m_manager->post(req, request.postData);
         }
 
         request.currentReply->ignoreSslErrors(ignoredSslErrors());
@@ -366,7 +372,8 @@ void HttpClient::onNetworkReplyFinished(QNetworkReply *reply)
         // if this is a server request and the host can't be reached,
         // prompt the user again for the host name
         if (isHostOffline(error)) {
-            qWarning() << "Failed to get" << runningRequest.serverPath << runningRequest.serverQuery << error;
+            qWarning() << "Failed to get" << m_hostPath
+                       << "with" << runningRequest.postData.size() << "bytes of POST data:" << error;
             m_hostValid = false;
             emit hostValidChanged(false);
             return;

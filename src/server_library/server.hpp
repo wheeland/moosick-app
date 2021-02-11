@@ -2,27 +2,29 @@
 
 #include <QTcpServer>
 
-#include "tcpserver.hpp"
+#include "tcpclientserver.hpp"
 #include "library.hpp"
-#include "messages.hpp"
+#include "library_messages.hpp"
 
-class Server : public NetCommon::TcpServer
+class Server : public TcpServer
 {
 public:
-    Server(const QString &libraryPath,
-           const QString &logPath,
-           const QString &m_backupBasePath);
+    Server();
     ~Server();
 
+    JsonifyError init(const QString &libraryPath,
+                      const QString &logPath,
+                      const QString &backupBasePath);
+
 protected:
-    bool handleMessage(const ClientCommon::Message &message, ClientCommon::Message &response) override;
+    QByteArray handleMessage(const QByteArray &data) override;
 
 private:
     void saveLibrary() const;
 
-    const QString m_libraryPath;
-    const QString m_logPath;
-    const QString m_backupBasePath;
+    QString m_libraryPath;
+    QString m_logPath;
+    QString m_backupBasePath;
 
     Moosick::Library m_library;
 };
