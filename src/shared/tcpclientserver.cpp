@@ -110,7 +110,9 @@ void TcpServer::onNewDataReady(QTcpSocket *socket)
 
     const QByteArray response = handleMessage(msg->data);
     Q_ASSERT(response.size() <= m_maxMessageSize);
-    sendData(*socket, response);
+    if (!sendData(*socket, response)) {
+        qWarning() << "Error while sending response over TCP";
+    }
 
     // clean up
     m_incomingMessages.erase(msg);
