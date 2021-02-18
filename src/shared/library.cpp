@@ -583,7 +583,7 @@ Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
         Result<TYPE, JsonifyError> result = ::dejson<TYPE>(data); \
         if (!result) \
             return result.takeError(); \
-        return Message(new TYPE(std::move(result.takeValue()))); \
+        return Message(new TYPE(result.takeValue())); \
     }
 
     CHECK_MESSAGE_TYPE(Error)
@@ -606,6 +606,9 @@ Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
     CHECK_MESSAGE_TYPE(DownloadResponse)
     CHECK_MESSAGE_TYPE(DownloadQuery)
     CHECK_MESSAGE_TYPE(DownloadQueryResponse)
+
+    CHECK_MESSAGE_TYPE(YoutubeUrlQuery)
+    CHECK_MESSAGE_TYPE(YoutubeUrlResponse)
 
     return JsonifyError::buildCustomError(QString("No such message ID: ") + id);
 }
