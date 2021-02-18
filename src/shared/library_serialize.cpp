@@ -261,6 +261,41 @@ void Library::deserializeFromJsonInternal(const QJsonObject &libraryJson, const 
     m_fileEndings = fileEndings;
     m_committedChanges = changes.takeValue();
 
+    #define TAG_PUSH_ID(TAG, MEMBER, ID) do { \
+        Library::Tag *tag = tags.findItem(TAG); \
+        if (tag) tag->MEMBER << (ID); \
+    } while (0)
+
+    #define TAG_PUSH_IDS(TAGS, MEMBER, ID) do { \
+        for (quint32 tagId : TAGS)  \
+            TAG_PUSH_ID(tagId, MEMBER, ID); \
+    } while (0)
+
+    // Fill tag parent/child relationships
+    for (auto it = m_tags.begin(); it != m_tags.end(); ++it) {
+        TAG_PUSH_ID(it.value().parent, children, it.key());
+        if (it.value().parent == 0)
+            m_rootTags << it.key();
+    }
+
+    // Fill relationships for artists/albums/songs
+    for (auto it = m_artists.begin(); it != m_artists.end(); ++it) {
+        TAG_PUSH_IDS(it->tags, artists, it.key());
+    }
+    for (auto it = m_albums.begin(); it != m_albums.end(); ++it) {
+        TAG_PUSH_IDS(it->tags, albums, it.key());
+        if (Artist *artist = m_artists.findItem(it->artist))
+            artist->albums << it.key();
+    }
+    for (auto it = m_songs.begin(); it != m_songs.end(); ++it) {
+        TAG_PUSH_IDS(it->tags, songs, it.key());
+        if (Album *album = m_albums.findItem(it->album))
+            album->songs << it.key();
+    }
+
+    #undef TAG_PUSH_IDS
+    #undef TAG_PUSH_ID
+
     result = 0;
 }
 
