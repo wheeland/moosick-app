@@ -74,7 +74,10 @@ void Logger::setLogFile(const QString &path)
 {
     ms_logFilePath = path;
     ms_logFile.setFileName(path);
-    ms_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
+    if (ms_logFile.exists())
+        ms_logFile.open(QIODevice::WriteOnly | QIODevice::Append);
+    else
+        ms_logFile.open(QIODevice::WriteOnly);
 }
 
 void Logger::setStderrFilter(QtMsgType firstVisibleCategory)
