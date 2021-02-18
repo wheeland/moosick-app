@@ -20,6 +20,8 @@ static bool sendData(QTcpSocket &socket, const QByteArray &data)
         written += sent;
     }
 
+    socket.flush();
+
     return true;
 }
 
