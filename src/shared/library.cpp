@@ -539,6 +539,8 @@ QString typeString(Type messageType)
     case Type::LibraryResponse: return "LibraryResponse";
     case Type::IdRequest: return "IdRequest";
     case Type::IdResponse: return "IdResponse";
+    case Type::MediaUrlRequest: return "MediaUrlRequest";
+    case Type::MediaUrlResponse: return "MediaUrlResponse";
     case Type::ChangesRequest: return "ChangesRequest";
     case Type::ChangesResponse: return "ChangesResponse";
     case Type::ChangeListRequest: return "ChangeListRequest";
@@ -549,9 +551,8 @@ QString typeString(Type messageType)
     case Type::DownloadQueryResponse: return "DownloadQueryResponse";
     case Type::YoutubeUrlQuery: return "YoutubeUrlQuery";
     case Type::YoutubeUrlResponse: return "YoutubeUrlResponse";
-    default:
-        qFatal("No such Message Type");
     }
+    qFatal("No such Message Type");
 }
 
 Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
