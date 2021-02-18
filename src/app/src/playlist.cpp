@@ -1,4 +1,5 @@
 #include "playlist.hpp"
+#include "library_messages.hpp"
 #include "util/qmlutil.hpp"
 
 namespace Playlist {
@@ -50,6 +51,9 @@ Playlist::Playlist(HttpClient *httpClient, QObject *parent)
     m_entries.addValueAccessor("entry");
     connect(m_http, &HttpRequester::receivedReply, this, &Playlist::onNetworkReplyFinished);
     connect(m_http, &HttpRequester::networkError, this, &Playlist::onNetworkError);
+
+    MoosickMessage::Message mediaUrlQuery(new MoosickMessage::MediaUrlRequest());
+    m_mediaBaseUrl.setError(m_http->requestFromServer(mediaUrlQuery.toJson()));
 }
 
 Playlist::~Playlist()
@@ -130,6 +134,15 @@ void Playlist::currentSongMaybeChanged()
 
 void Playlist::onNetworkReplyFinished(HttpRequestId requestId, const QByteArray &data)
 {
+    if (m_mediaBaseUrl.hasError() && m_mediaBaseUrl.getError() == requestId) {
+        auto response = MoosickMessage::Message::fromJsonAs<MoosickMessage::MediaUrlResponse>(data);
+        if (response.hasError())
+            qWarning() << "Error while parsing MediaBaseUrl response:" << response.takeError().toString();
+        else
+            m_mediaBaseUrl = response.getValue().url;
+        return;
+    }
+
     // get URL for this query
     QString url;
     for (auto it = m_iconQueries.cbegin(); it != m_iconQueries.cend(); ++it) {
@@ -228,11 +241,13 @@ void Playlist::addFromInternet(
 
 void Playlist::addFromLibrary(const QString &fileName, const QString &artist, const QString &album, const QString &title, int duration, bool append)
 {
+    const QString baseUrl = m_mediaBaseUrl.hasValue() ? m_mediaBaseUrl.getValue() : QString();
+
     QUrl url;
     url.setScheme("https");
     url.setHost(m_http->host());
     url.setPort(m_http->port());
-    url.setPath(QString("/music/") + fileName);
+    url.setPath(baseUrl + fileName);
     url.setUserName(m_http->user());
     url.setPassword(m_http->pass());
 

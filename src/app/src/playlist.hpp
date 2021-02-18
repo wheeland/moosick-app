@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/modeladapter.hpp"
+#include "result.hpp"
 #include "httpclient.hpp"
 
 namespace Playlist {
@@ -122,6 +123,8 @@ private:
     ModelAdapter::Adapter<Entry*> m_entries;
     QHash<QString, QString> m_iconUrlToDataString;
     QHash<QString, HttpRequestId> m_iconQueries;
+
+    Result<QString, HttpRequestId> m_mediaBaseUrl;
 
     // -1 if we are at the end of the playlist
     int m_currentEntry = -1;
