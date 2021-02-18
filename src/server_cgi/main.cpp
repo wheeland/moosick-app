@@ -178,7 +178,7 @@ int main(int argc, char **argv)
     if (messageParsingResult.hasError()) {
         Error error;
         error.errorMessage = "Failed to parse message";
-        qWarning() << "Failed to parse message:";
+        qWarning().noquote() << "Failed to parse message:" << messageParsingResult.getError().toString();
         qWarning().noquote() << contentBytes;
         std::cout << Message(error).toJson().constData() << std::endl;
         return 0;
