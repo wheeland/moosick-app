@@ -110,5 +110,6 @@ void Server::onDownloadFinished(DownloaderThread *thread)
             break;
         }
     }
+    thread->wait();
     thread->deleteLater();
 }
