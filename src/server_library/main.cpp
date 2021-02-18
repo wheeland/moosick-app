@@ -26,6 +26,7 @@ int main(int argc, char **argv)
 
     if (!settings.dbserverLogFile().isEmpty()) {
         Logger::setLogFile(settings.dbserverLogFile());
+        Logger::setLogFileFilter(settings.dbserverLogLevel());
         Logger::install();
     }
 

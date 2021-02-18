@@ -26,6 +26,7 @@ int main(int argc, char **argv)
 
     if (!settings.downloaderLogFile().isEmpty()) {
         Logger::setLogFile(settings.downloaderLogFile());
+        Logger::setLogFileFilter(settings.downloaderLogLevel());
         Logger::install();
     }
 

@@ -39,6 +39,10 @@ public:
     QString dbserverLogFile() const { return m_dbserverLogFile; }
     QString downloaderLogFile() const { return m_downloaderLogFile; }
 
+    QtMsgType cgiLogLevel() const { return m_cgiLogLevel; }
+    QtMsgType dbserverLogLevel() const { return m_dbserverLogLevel; }
+    QtMsgType downloaderLogLevel() const { return m_downloaderLogLevel; }
+
 private:
     bool m_valid;
 
@@ -61,4 +65,8 @@ private:
     QString m_cgiLogFile;
     QString m_dbserverLogFile;
     QString m_downloaderLogFile;
+
+    QtMsgType m_cgiLogLevel;
+    QtMsgType m_dbserverLogLevel;
+    QtMsgType m_downloaderLogLevel;
 };

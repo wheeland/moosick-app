@@ -158,6 +158,7 @@ int main(int argc, char **argv)
 
     if (!settings.cgiLogFile().isEmpty()) {
         Logger::setLogFile(settings.cgiLogFile());
+        Logger::setLogFileFilter(settings.cgiLogLevel());
         Logger::install();
     }
 
