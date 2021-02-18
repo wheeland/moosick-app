@@ -221,10 +221,35 @@ public:
     QByteArray toJson()  const;
     static Result<Message, JsonifyError> fromJson(const QByteArray &message);
 
+    template <class T>
+    static Result<T, JsonifyError> fromJsonAs(const QByteArray &message);
+
 private:
     QScopedPointer<MessageBase> m_msg;
 };
 
 QByteArray messageToJson(const MessageBase &message);
+
+template <class T>
+Result<T, JsonifyError> Message::fromJsonAs(const QByteArray &message)
+{
+    Result<T, JsonifyError> ret;
+
+    Result<Message, JsonifyError> error = Message::fromJson(message);
+    if (error.hasError()) {
+        ret.setError(error.takeError());
+    }
+    else {
+        Message msg = error.takeValue();
+        if (T *val = msg.as<T>()) {
+            ret.setValue(T(std::move(*val)));
+        }
+        else {
+            ret.setError(JsonifyError::buildCustomError(QString("Wrong message type: ") + msg->getMessageTypeString()));
+        }
+    }
+
+    return ret;
+}
 
 } //namespace MoosickMessage
