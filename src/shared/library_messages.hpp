@@ -187,6 +187,7 @@ public:
     }
 
     Type getType() const { return m_msg ? m_msg->getMessageType() : Type::Error; }
+    QString getTypeString() const { return m_msg ? m_msg->getMessageTypeString() : QString("null"); }
 
     template <class T> T *as()
     {

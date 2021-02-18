@@ -297,15 +297,21 @@ void Query::populateYoutubeSearchResults(const QByteArray &html)
 
 void Query::populateYoutubeVideo(YoutubeVideoResult *video, const QByteArray &json)
 {
-    auto result = dejsonFromString<MoosickMessage::YoutubeUrlResponse>(json);
+    auto result = MoosickMessage::Message::fromJson(json);
     if (result.hasError()) {
         qWarning().noquote() << "Failed to parse youtube results:" << result.takeError().toString();
         video->setStatus(Result::Error);
         return;
     }
 
-    MoosickMessage::YoutubeUrlResponse response = result.takeValue();
-    video->setDetails(response.url, response.duration);
+    const MoosickMessage::YoutubeUrlResponse *response = result->as<MoosickMessage::YoutubeUrlResponse>();
+    if (!response) {
+        qWarning().noquote() << "Failed to parse youtube results, wrong message type" << result->getTypeString();
+        video->setStatus(Result::Error);
+        return;
+    }
+
+    video->setDetails(response->url, response->duration);
     video->setStatus(Result::Done);
 }
 
