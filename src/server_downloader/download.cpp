@@ -278,11 +278,13 @@ Result<QVector<CommittedLibraryChange>, QString> bandcampDownload(
     // move songs to media directory
     for (uint i = 0; i < albumInfo.size(); ++i) {
         const QString newFilePath = mediaDir + QString::asprintf("/%d.mp3", songChangesResult->at(i).createdId);
-        QFile(mp3TempFiles[i]).rename(newFilePath);
+        if (!QFile(mp3TempFiles[i]).rename(newFilePath))
+            qCritical().noquote() << "Failed to move downloaded file to" << newFilePath;
     }
 
     // remove temp. directory
-    QDir().rmdir(dstDir);
+    if (!QDir().rmdir(dstDir))
+        qCritical().noquote() << "Failed to remove temp directory" << dstDir;
 
     // set library information for all new files
     QVector<LibraryChangeRequest> songDetails;
@@ -393,12 +395,13 @@ Result<QVector<CommittedLibraryChange>, QString> youtubeDownload(
     for (int i = 0; i < committedSongChanges.size(); ++i) {
         const quint32 songId = committedSongChanges[i].createdId;
         const QString newFilePath = mediaDir + "/" + QString::number(songId) + "." + ending;
-        QFile(resultSongs[i].file).rename(newFilePath);
+        if (!QFile(resultSongs[i].file).rename(newFilePath))
+            qCritical().noquote() << "Failed to move downloaded file to" << newFilePath;
     }
 
     // remove temp. file, if it still exists
-    if (hasChapters)
-        QFile(dstFileName).remove();
+    if (hasChapters && !QFile(dstFileName).remove())
+        qCritical().noquote() << "Failed to remove downloaded file" << dstFileName;
 
     // set library information for all new files
     QVector<LibraryChangeRequest> songDetails;
