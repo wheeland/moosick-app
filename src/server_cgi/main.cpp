@@ -140,6 +140,9 @@ static Message handleMessage(const ServerSettings &settings, const Message &mess
         const YoutubeUrlQuery *query = message.as<YoutubeUrlQuery>();
         return getYoutubeUrl(toolDir, query->videoId);
     }
+    case Type::MediaUrlRequest: {
+        return new MediaUrlResponse(settings.mediaBaseUrl());
+    }
     default: {
         return new Error("Unhandled message type");
     }

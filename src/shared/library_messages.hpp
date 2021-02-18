@@ -15,6 +15,10 @@ enum class Type : quint32
     LibraryRequest,
     LibraryResponse,
 
+    /** Retrieve base URL for media files */
+    MediaUrlRequest,
+    MediaUrlResponse,
+
     /** Retrieve library ID */
     IdRequest,
     IdResponse,
@@ -88,6 +92,19 @@ struct LibraryResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(LibraryResponse)
     JSONIFY_MEMBER(QJsonObject, libraryJson);
+};
+
+struct MediaUrlRequest : public MessageBase
+{
+    DEFINE_MESSAGE_TYPE(MediaUrlRequest)
+};
+
+struct MediaUrlResponse : public MessageBase
+{
+    MediaUrlResponse() = default;
+    MediaUrlResponse(const QString &u) { url = u; }
+    DEFINE_MESSAGE_TYPE(MediaUrlResponse)
+    JSONIFY_MEMBER(QString, url);
 };
 
 struct IdRequest : public MessageBase

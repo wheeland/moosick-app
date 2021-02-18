@@ -593,6 +593,9 @@ Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
     CHECK_MESSAGE_TYPE(LibraryRequest)
     CHECK_MESSAGE_TYPE(LibraryResponse)
 
+    CHECK_MESSAGE_TYPE(MediaUrlRequest)
+    CHECK_MESSAGE_TYPE(MediaUrlResponse)
+
     CHECK_MESSAGE_TYPE(IdRequest)
     CHECK_MESSAGE_TYPE(IdResponse)
 
