@@ -45,8 +45,6 @@ public:
     bool hasValue() const { return m_state == Value; }
     bool hasError() const { return m_state == Error; }
 
-    operator bool() const { return hasValue(); }
-
     const ValueType &getValue() const;
     ValueType takeValue();
 

@@ -558,7 +558,7 @@ QString typeString(Type messageType)
 Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
 {
     Result<QJsonObject, JsonifyError> json = jsonDeserializeObject(message);
-    if (!json)
+    if (!json.hasValue())
         return json.takeError();
 
     // Read ID
@@ -582,7 +582,7 @@ Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
     #define CHECK_MESSAGE_TYPE(TYPE) \
     if (id == typeString(TYPE::MESSAGE_TYPE)) { \
         Result<TYPE, JsonifyError> result = ::dejson<TYPE>(data); \
-        if (!result) \
+        if (!result.hasValue()) \
             return result.takeError(); \
         return Message(new TYPE(result.takeValue())); \
     }

@@ -368,7 +368,7 @@ struct MemberTraits
         JsonifyError ret;
         Result<T, JsonifyError> result;
         dejson(json, result);
-        if (result)
+        if (result.hasValue())
             value = result.takeValue();
         else
             ret = result.takeError();

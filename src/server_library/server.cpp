@@ -61,11 +61,11 @@ JsonifyError Server::init(const QString &libraryPath,
     }
 
     Result<QJsonObject, JsonifyError> libraryJson = loadLibraryJson(libraryPath);
-    if (!libraryJson)
+    if (!libraryJson.hasValue())
         return JsonifyError::buildCustomError(QString("Failed to load ") + libraryPath, libraryJson.takeError());
 
     Result<QJsonArray, JsonifyError> logJson = loadLibraryLogJson(logPath);
-    if (!logJson)
+    if (!logJson.hasValue())
         return JsonifyError::buildCustomError(QString("Failed to load ") + logPath, logJson.takeError());
 
     // check if we can open log file

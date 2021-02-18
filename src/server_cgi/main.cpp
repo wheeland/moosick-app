@@ -94,14 +94,14 @@ static Message sendMessage(const QString &host, quint16 port, const Message &mes
 
     const QByteArray messageJson = message.toJson();
     auto result = TcpClient::sendMessage(tcpSocket, messageJson, 1000);
-    if (!result) {
+    if (!result.hasValue()) {
         qWarning().noquote() << "Failed to send/recv TCP message:" << result.takeError();
         return new Error("Internal error");
     }
 
     const QByteArray resultData = result.takeValue();
     Result<Message, JsonifyError> resultMessage = Message::fromJson(resultData);
-    if (!resultMessage) {
+    if (!resultMessage.hasValue()) {
         qWarning().noquote() << "Failed to parse JSON response from" << host;
         qWarning().noquote() << "Error:" << resultMessage.takeError().toString();
         qWarning().noquote() << "Sent message:";

@@ -35,7 +35,7 @@ void DownloaderThread::run()
     }
 
     auto result = download(tcpSocket, m_request, mediaDir, toolDir, tmpDir);
-    if (!result) {
+    if (!result.hasValue()) {
         qWarning().noquote() << "Error while downloading:" << result.takeError();
         return ;
     }
