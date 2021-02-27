@@ -1,14 +1,43 @@
 #include "server.hpp"
 #include "jsonconv.hpp"
+#include "download.hpp"
 
 #include <QFile>
 #include <QTcpSocket>
 #include <QJsonDocument>
 #include <QDate>
 #include <QProcess>
+#include <QThread>
 
 using namespace Moosick;
 using namespace MoosickMessage;
+
+class DownloaderThread : public QThread
+{
+    Q_OBJECT
+
+public:
+    DownloaderThread(const MoosickMessage::DownloadRequest &request, Server *server)
+        : m_request(request)
+        , m_server(server)
+    {}
+    ~DownloaderThread() {}
+
+    void run() override
+    {
+        const QString tmpDir = m_server->m_settings.tempDir();
+        const QString toolDir = m_server->m_settings.toolsDir();
+
+        m_result = download(m_request, toolDir, tmpDir);
+    }
+
+private:
+    MoosickMessage::DownloadRequest m_request;
+    Server *m_server;
+    Result<DownloadResult, QString> m_result;
+
+    friend class Server;
+};
 
 static Result<SerializedLibrary, JsonifyError> loadLibraryJson(const QString &libraryPath)
 {
@@ -34,13 +63,12 @@ Server::Server()
 {
 }
 
-JsonifyError Server::init(const QString &libraryPath,
-                          const QString &logPath,
-                          const QString &backupBasePath)
+JsonifyError Server::init(const ServerSettings &settings)
 {
-    m_libraryPath = libraryPath;
-    m_logPath = logPath;
-    m_backupBasePath = backupBasePath;
+    m_settings = settings;
+
+    const QString libraryPath = settings.libraryFile();
+    const QString logPath = settings.libraryLogFile();
 
     const bool libraryExists = QFile::exists(libraryPath);
     const bool logExists = QFile::exists(logPath);
@@ -116,7 +144,7 @@ QByteArray Server::handleMessage(const QByteArray &data)
         qDebug() << "Applied" << appliedChanges.size() << "changes to Library";
 
         // append library log
-        QFile logFile(m_logPath);
+        QFile logFile(m_settings.libraryLogFile());
         const qint64 sz = logFile.exists() ? logFile.size() : 0;
         if (logFile.open(QIODevice::Append)) {
             bool first = (sz <= 0);
@@ -156,6 +184,19 @@ QByteArray Server::handleMessage(const QByteArray &data)
         response.changes = changes;
         return messageToJson(response);
     }
+    case Type::DownloadRequest: {
+        const DownloadRequest *downloadRequest = message.as<DownloadRequest>();
+        const quint32 id = startDownload(*downloadRequest);
+        DownloadResponse response;
+        response.downloadId = id;
+        return messageToJson(response);
+    }
+    case Type::DownloadQuery: {
+        DownloadQueryResponse response;
+        for (auto it = m_downloads.begin(); it != m_downloads.end(); ++it)
+            response.activeRequests->append(DownloadQueryResponse::ActiveDownload{ it.key(), it.value().request });
+        return messageToJson(response);
+    }
     default: {
         return messageToJson(Error());
     }
@@ -172,23 +213,91 @@ void Server::saveLibrary() const
         }
     };
 
-    save(m_libraryPath);
+    save(m_settings.libraryFile());
 
     // check if back-ups for today already exists
     const QDate today = QDate::currentDate();
     const QString dateString = QString::asprintf("%d_%02d_%02d", today.year(), today.month(), today.day());
 
     // backup library
-    const QString backupPath = m_backupBasePath + "." + dateString + ".json";
+    const QString backupPath = m_settings.libraryBackupDir() + "." + dateString + ".json";
     if (!QFile::exists(backupPath) && !QFile::exists(backupPath + ".gz")) {
         save(backupPath);
         QProcess::execute("gzip", { backupPath });
     }
 
     // backup log
-    const QString logBackupPath = m_backupBasePath + "." + dateString + ".log.json";
+    const QString logBackupPath = m_settings.libraryBackupDir() + "." + dateString + ".log.json";
     if (!QFile::exists(backupPath) && !QFile::exists(backupPath + ".gz")) {
-        QFile(m_logPath).copy(logBackupPath);
+        QFile(m_settings.libraryLogFile()).copy(logBackupPath);
         QProcess::execute("gzip", { logBackupPath });
     }
 }
+
+quint32 Server::startDownload(const MoosickMessage::DownloadRequest &request)
+{
+    const quint32 id = m_nextDownloadId++;
+
+    qDebug() << "Starting download" << id << ":" << (int) *request.requestType << *request.url << *request.albumName << *request.artistId << *request.artistName;
+
+    DownloaderThread *thread = new DownloaderThread(request, this);
+    m_downloads[id] = RunningDownload { request, thread };
+    connect(thread, &DownloaderThread::finished, this, [=]() {
+        onDownloaderThreadFinished(thread);
+    });
+
+    thread->start();
+
+    return id;
+}
+
+void Server::onDownloaderThreadFinished(DownloaderThread *thread)
+{
+    for (auto it = m_downloads.begin(); it != m_downloads.end(); ++it) {
+        if (it->thread == thread) {
+            m_downloads.erase(it);
+            break;
+        }
+    }
+
+    if (thread->m_result.hasError()) {
+        qWarning() << "Failed to download:" << thread->m_result.getError();
+    }
+    else {
+        finishDownload(thread->m_result.takeValue());
+    }
+
+    thread->wait();
+    delete thread;
+}
+
+void Server::finishDownload(const DownloadResult &result)
+{
+    // 1. Get or create artist
+    ArtistId artistId = result.artistId;
+    if (!artistId.isValid() || !artistId.exists(m_library)) {
+        artistId = m_library.commit(LibraryChangeRequest::CreateArtistAdd(0, 0, result.artistName))
+                .mapMember<ArtistId>(&CommittedLibraryChange::createdId)
+                .takeValue();
+    }
+
+    // 2. Create album
+    const AlbumId albumId = m_library.commit(LibraryChangeRequest::CreateAlbumAdd(artistId, 0, result.albumName))
+            .mapMember<AlbumId>(&CommittedLibraryChange::createdId)
+            .takeValue();
+
+    // 3. Add songs
+    for (const DownloadResult::File &file : result.files)
+    {
+        const SongId songId = m_library.commit(LibraryChangeRequest::CreateSongAdd(albumId, 0, file.title))
+                .mapMember<SongId>(&CommittedLibraryChange::createdId)
+                .takeValue();
+
+        m_library.commit(LibraryChangeRequest::CreateSongSetName(songId, 0, file.title));
+        m_library.commit(LibraryChangeRequest::CreateSongSetPosition(songId, file.albumPosition));
+        m_library.commit(LibraryChangeRequest::CreateSongSetLength(songId, file.duration));
+        m_library.commit(LibraryChangeRequest::CreateSongSetFileEnding(songId, 0, file.fileEnding));
+    }
+}
+
+#include "server.moc"

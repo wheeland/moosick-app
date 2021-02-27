@@ -7,6 +7,7 @@ QT += core network
 
 SOURCES += \
     main.cpp \
+    download.cpp \
     server.cpp \
     signalhandler.cpp \
     \
@@ -16,9 +17,24 @@ SOURCES += \
     ../shared/logger.cpp \
     ../shared/serversettings.cpp \
     ../shared/tcpclientserver.cpp \
+    \
+    ../../3rdparty/gumbo-parser/src/attribute.c \
+    ../../3rdparty/gumbo-parser/src/char_ref.c \
+    ../../3rdparty/gumbo-parser/src/error.c \
+    ../../3rdparty/gumbo-parser/src/parser.c \
+    ../../3rdparty/gumbo-parser/src/string_buffer.c \
+    ../../3rdparty/gumbo-parser/src/string_piece.c \
+    ../../3rdparty/gumbo-parser/src/tag.c \
+    ../../3rdparty/gumbo-parser/src/tokenizer.c \
+    ../../3rdparty/gumbo-parser/src/utf8.c \
+    ../../3rdparty/gumbo-parser/src/util.c \
+    ../../3rdparty/gumbo-parser/src/vector.c \
+    \
+    ../../3rdparty/cpp-musicscrape/musicscrape/musicscrape.cpp \
 
 HEADERS += \
     server.hpp \
+    download.hpp \
     signalhandler.hpp \
     \
     ../shared/flatmap.hpp \
@@ -31,6 +47,9 @@ HEADERS += \
     ../shared/tcpclientserver.hpp \
 
 INCLUDEPATH += \
-    ../shared/
+    ../shared/ \
+    ../../3rdparty/gumbo-parser/src/ \
+    ../../3rdparty/rapidjson/include/ \
+    ../../3rdparty/cpp-musicscrape/ \
 
 DESTDIR = ../../bin/

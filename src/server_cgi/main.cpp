@@ -128,13 +128,10 @@ static Message handleMessage(const ServerSettings &settings, const Message &mess
     case Type::LibraryRequest:
     case Type::IdRequest:
     case Type::ChangesRequest:
-    case Type::ChangeListRequest: {
-        return sendMessage(settings.dbserverHost(), settings.dbserverPort(), message);
-    }
-    // forward messages to Downloader
+    case Type::ChangeListRequest:
     case Type::DownloadRequest:
     case Type::DownloadQuery: {
-        return sendMessage(settings.downloaderHost(), settings.downloaderPort(), message);
+        return sendMessage(settings.dbserverHost(), settings.dbserverPort(), message);
     }
     case Type::YoutubeUrlQuery: {
         const YoutubeUrlQuery *query = message.as<YoutubeUrlQuery>();

@@ -6,6 +6,5 @@ SUBDIRS = app
     SUBDIRS += \
         server_cgi \
         server_library \
-        server_downloader \
         #testclient \
 }
