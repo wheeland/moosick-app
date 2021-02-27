@@ -323,7 +323,10 @@ void Database::onNetworkError(HttpRequestId requestId, QNetworkReply::NetworkErr
 
 Option<QString> Database::onNewLibrary(const LibraryResponse *message)
 {
-    JsonifyError error = m_library.deserializeFromJson(message->libraryJson.data());
+    Moosick::SerializedLibrary serialized;
+    serialized.libraryJson = message->libraryJson;
+    serialized.version = message->version;
+    JsonifyError error = m_library.deserializeFromJson(serialized);
     if (error.isError())
         return "Failed to parse LibraryResponse: " + error.toString();
     m_hasLibrary = true;

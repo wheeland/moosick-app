@@ -217,7 +217,7 @@ void dejson(const QJsonValue &json, Result<Library::Tag, JsonifyError> &result)
     result = tag;
 }
 
-QJsonObject Library::serializeToJson() const
+SerializedLibrary Library::serializeToJson() const
 {
     QJsonObject json;
 
@@ -229,7 +229,11 @@ QJsonObject Library::serializeToJson() const
     json["songs"] = enjson(m_songs);
     json["fileEndings"] = enjson(m_fileEndings);
 
-    return json;
+    SerializedLibrary ret;
+    ret.libraryJson = json;
+    ret.version = 1;
+
+    return ret;
 }
 
 void Library::deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, JsonifyError> &result)
@@ -299,10 +303,10 @@ void Library::deserializeFromJsonInternal(const QJsonObject &libraryJson, const 
     result = 0;
 }
 
-JsonifyError Library::deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &committedChanges)
+JsonifyError Library::deserializeFromJson(const SerializedLibrary &libraryJson, const QJsonArray &committedChanges)
 {
     Result<int, JsonifyError> result;
-    deserializeFromJsonInternal(libraryJson, committedChanges, result);
+    deserializeFromJsonInternal(libraryJson.libraryJson, committedChanges, result);
     return result.hasError() ? result.getError() : JsonifyError();
 }
 

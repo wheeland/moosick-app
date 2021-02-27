@@ -91,6 +91,7 @@ struct LibraryRequest : public MessageBase
 struct LibraryResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(LibraryResponse)
+    JSONIFY_MEMBER(quint32, version);
     JSONIFY_MEMBER(QJsonObject, libraryJson);
 };
 

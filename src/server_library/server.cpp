@@ -10,13 +10,13 @@
 using namespace Moosick;
 using namespace MoosickMessage;
 
-static Result<QJsonObject, JsonifyError> loadLibraryJson(const QString &libraryPath)
+static Result<SerializedLibrary, JsonifyError> loadLibraryJson(const QString &libraryPath)
 {
     QFile libraryFile(libraryPath);
     if (!libraryFile.open(QIODevice::ReadOnly))
         return JsonifyError::buildCustomError("Can't open file");
 
-    return jsonDeserializeObject(libraryFile.readAll());
+    return dejsonFromString<SerializedLibrary>(libraryFile.readAll());
 }
 
 static Result<QJsonArray, JsonifyError> loadLibraryLogJson(const QString &logPath)
@@ -60,7 +60,7 @@ JsonifyError Server::init(const QString &libraryPath,
         return {};
     }
 
-    Result<QJsonObject, JsonifyError> libraryJson = loadLibraryJson(libraryPath);
+    Result<SerializedLibrary, JsonifyError> libraryJson = loadLibraryJson(libraryPath);
     if (!libraryJson.hasValue())
         return JsonifyError::buildCustomError(QString("Failed to load ") + libraryPath, libraryJson.takeError());
 
@@ -138,7 +138,9 @@ QByteArray Server::handleMessage(const QByteArray &data)
     }
     case Type::LibraryRequest: {
         LibraryResponse response;
-        response.libraryJson = m_library.serializeToJson();
+        SerializedLibrary serialized = m_library.serializeToJson();
+        response.libraryJson = serialized.libraryJson;
+        response.version = serialized.version;
         return messageToJson(response);
     }
     case Type::IdRequest: {
@@ -165,8 +167,8 @@ void Server::saveLibrary() const
     const auto save = [&](const QString &path) {
         QFile libFile(path);
         if (libFile.open(QIODevice::WriteOnly)) {
-            const QJsonDocument doc(m_library.serializeToJson());
-            libFile.write(doc.toJson());
+            SerializedLibrary json = m_library.serializeToJson();
+            libFile.write(enjsonToString(json));
         }
     };
 

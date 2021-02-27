@@ -11,6 +11,12 @@
 
 namespace Moosick {
 
+struct SerializedLibrary : public JsonObject
+{
+    JSONIFY_MEMBER(int, version);
+    JSONIFY_MEMBER(QJsonObject, libraryJson);
+};
+
 struct LibraryChangeRequest
 {
     enum Type : quint32 {
@@ -159,13 +165,13 @@ public:
      */
     QStringList dumpToStringList() const;
 
-    QJsonObject serializeToJson() const;
+    SerializedLibrary serializeToJson() const;
 
     /**
      * Tries to read the whole library from JSON data.
      * If committedChanges is not empty, try to read a history of committed changes from this array.
      */
-    JsonifyError deserializeFromJson(const QJsonObject &libraryJson, const QJsonArray &committedChanges = QJsonArray());
+    JsonifyError deserializeFromJson(const SerializedLibrary &libraryJson, const QJsonArray &committedChanges = QJsonArray());
 
 private:
     void deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, JsonifyError> &result);
