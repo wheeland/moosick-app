@@ -272,8 +272,12 @@ Option<QString> Database::processServerResponse(HttpRequestId reply, Database::R
 {
     #define EXPECT_MESSAGE_TYPE(TYPE, NAME) \
     const TYPE *NAME = msg.as<TYPE>(); \
-    if (!NAME) \
-        return QString("Expected " #TYPE " message, instead got ") + msg->getMessageTypeString();
+    if (!NAME) { \
+        if (const Error *error = msg.as<Error>()) \
+            return QString("Expected " #TYPE " message, instead got Error: ") + *error->errorMessage; \
+        else \
+            return QString("Expected " #TYPE " message, instead got ") + msg->getMessageTypeString(); \
+    }
 
     switch (requestType) {
     case LibraryGet: {
