@@ -2,6 +2,7 @@
 
 #include <utility>
 #include <cassert>
+#include <functional>
 
 template <class ValueType, class ErrorType>
 class Result
@@ -23,6 +24,26 @@ public:
 
     static Result error(const ErrorType &error);
     static Result error(ErrorType &&error);
+
+    template <class OtherType, class Functor>
+    Result<OtherType, ErrorType> map(const Functor &functor) const
+    {
+        switch (m_state) {
+        case Null:
+            return Result<OtherType, ErrorType>();
+        case Value:
+            return Result<OtherType, ErrorType>::value(functor(m_value));
+        case Error:
+            return Result<OtherType, ErrorType>::error(m_error);
+        default:
+            assert(false);
+        }
+    }
+
+    template <class OtherType, class AliasedValueType, class AliasedMemberType>
+    Result<OtherType, ErrorType> mapMember(AliasedMemberType AliasedValueType::* memberPtr) {
+        return map<OtherType>([=](const ValueType &value) -> OtherType { return value.*memberPtr; });
+    }
 
     ~Result();
 
