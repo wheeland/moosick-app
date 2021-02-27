@@ -93,7 +93,7 @@ static Message sendMessage(const QString &host, quint16 port, const Message &mes
     }
 
     const QByteArray messageJson = message.toJson();
-    auto result = TcpClient::sendMessage(tcpSocket, messageJson, 1000);
+    auto result = TcpClient::sendMessage(tcpSocket, messageJson, 10000);
     if (!result.hasValue()) {
         qWarning().noquote() << "Failed to send/recv TCP message:" << result.takeError();
         return new Error("Internal error");

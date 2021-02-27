@@ -133,7 +133,7 @@ Result<QByteArray, QString> TcpClient::sendMessage(QTcpSocket &socket, const QBy
 
     socket.waitForReadyRead(timeout);
     if (socket.bytesAvailable() < 4)
-        return QString("Timeout while waiting for message header");
+        return QString("Timeout while waiting for message header (waited %1 msec)").arg(timeout);
 
     qint32 sz;
     QDataStream in(&socket);
