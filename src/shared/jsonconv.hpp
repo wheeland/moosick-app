@@ -210,19 +210,19 @@ Result<T, JsonifyError> dejson(const QJsonValue &json)
     return ret;
 }
 
-QByteArray jsonSerializeObject(const QJsonObject &jsonObject);
-QByteArray jsonSerializeArray(const QJsonArray &jsonArray);
+QByteArray jsonSerializeObject(const QJsonObject &jsonObject, QJsonDocument::JsonFormat format = QJsonDocument::Indented);
+QByteArray jsonSerializeArray(const QJsonArray &jsonArray, QJsonDocument::JsonFormat format = QJsonDocument::Indented);
 Result<QJsonValue, JsonifyError> jsonDeserialize(const QByteArray &json);
 Result<QJsonObject, JsonifyError> jsonDeserializeObject(const QByteArray &json);
 Result<QJsonArray, JsonifyError> jsonDeserializeArray(const QByteArray &json);
 
 
 template <class T>
-QByteArray enjsonToString(const T &value)
+QByteArray enjsonToString(const T &value, QJsonDocument::JsonFormat format = QJsonDocument::Indented)
 {
     const QJsonValue json = enjson(value);
     Q_ASSERT(json.isObject());
-    return jsonSerializeObject(json.toObject());
+    return jsonSerializeObject(json.toObject(), format);
 }
 
 template <class T>

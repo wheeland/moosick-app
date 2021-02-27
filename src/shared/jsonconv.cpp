@@ -379,14 +379,14 @@ JsonifyError JsonObject::deserialize(const QJsonValue &json)
     return error;
 }
 
-QByteArray jsonSerializeObject(const QJsonObject &jsonObject)
+QByteArray jsonSerializeObject(const QJsonObject &jsonObject, QJsonDocument::JsonFormat format)
 {
-    return QJsonDocument(jsonObject).toJson(QJsonDocument::Indented);
+    return QJsonDocument(jsonObject).toJson(format);
 }
 
-QByteArray jsonSerializeArray(const QJsonArray &jsonArray)
+QByteArray jsonSerializeArray(const QJsonArray &jsonArray, QJsonDocument::JsonFormat format)
 {
-    return QJsonDocument(jsonArray).toJson(QJsonDocument::Indented);
+    return QJsonDocument(jsonArray).toJson(format);
 }
 
 Result<QJsonValue, JsonifyError> jsonDeserialize(const QByteArray &json)
