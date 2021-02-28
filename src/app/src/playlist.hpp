@@ -124,7 +124,8 @@ private:
     QHash<QString, QString> m_iconUrlToDataString;
     QHash<QString, HttpRequestId> m_iconQueries;
 
-    Result<QString, HttpRequestId> m_mediaBaseUrl;
+    HttpRequestId m_mediaBaseUrlRequest;
+    QString m_mediaBaseUrl;
 
     // -1 if we are at the end of the playlist
     int m_currentEntry = -1;

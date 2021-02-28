@@ -53,7 +53,7 @@ Playlist::Playlist(HttpClient *httpClient, QObject *parent)
     connect(m_http, &HttpRequester::networkError, this, &Playlist::onNetworkError);
 
     MoosickMessage::Message mediaUrlQuery(new MoosickMessage::MediaUrlRequest());
-    m_mediaBaseUrl.setError(m_http->requestFromServer(mediaUrlQuery.toJson()));
+    m_mediaBaseUrlRequest = m_http->requestFromServer(mediaUrlQuery.toJson());
 }
 
 Playlist::~Playlist()
@@ -134,12 +134,13 @@ void Playlist::currentSongMaybeChanged()
 
 void Playlist::onNetworkReplyFinished(HttpRequestId requestId, const QByteArray &data)
 {
-    if (m_mediaBaseUrl.hasError() && m_mediaBaseUrl.getError() == requestId) {
+    if (m_mediaBaseUrlRequest == requestId) {
         auto response = MoosickMessage::Message::fromJsonAs<MoosickMessage::MediaUrlResponse>(data);
         if (response.hasError())
             qWarning() << "Error while parsing MediaBaseUrl response:" << response.takeError().toString();
         else
             m_mediaBaseUrl = response.getValue().url;
+        m_mediaBaseUrlRequest = HTTP_NULL_REQUEST;
         return;
     }
 
@@ -241,13 +242,11 @@ void Playlist::addFromInternet(
 
 void Playlist::addFromLibrary(const QString &fileName, const QString &artist, const QString &album, const QString &title, int duration, bool append)
 {
-    const QString baseUrl = m_mediaBaseUrl.hasValue() ? m_mediaBaseUrl.getValue() : QString();
-
     QUrl url;
     url.setScheme("https");
     url.setHost(m_http->host());
     url.setPort(m_http->port());
-    url.setPath(baseUrl + fileName);
+    url.setPath(m_mediaBaseUrl + fileName);
     url.setUserName(m_http->user());
     url.setPassword(m_http->pass());
 
