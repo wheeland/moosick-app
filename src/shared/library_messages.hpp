@@ -51,26 +51,34 @@ enum class DownloadRequestType
     YoutubePlaylist,
 };
 
-JSONIFY_DECLARE_PROXY_ENJSON(DownloadRequestType, int)
+} // namespace MoosickMessage
 
-struct MessageBase : public JsonObject
+// needs to be declared outside of namespace
+ENJSON_DECLARE_ALIAS(MoosickMessage::DownloadRequestType, quint32)
+
+namespace MoosickMessage {
+
+struct MessageBase
 {
     virtual ~MessageBase() {}
     virtual QString getMessageTypeString() const { return typeString(getMessageType()); }
     virtual Type getMessageType() const = 0;
+    virtual QJsonValue enjson() const = 0;
 };
 
 #define DEFINE_MESSAGE_TYPE(TYPE) \
+    ENJSON_OBJECT(TYPE) \
     static constexpr Type MESSAGE_TYPE = Type::TYPE; \
     struct MESSAGE_MARKER {}; \
     Type getMessageType() const override { return Type::TYPE; } \
+    QJsonValue enjson() const override { return ::enjson(*this); } \
 
 struct Error : public MessageBase
 {
     Error() = default;
     Error(const QString &msg) { errorMessage = msg; }
     DEFINE_MESSAGE_TYPE(Error)
-    JSONIFY_MEMBER(QString, errorMessage);
+    ENJSON_MEMBER(QString, errorMessage);
 };
 
 struct Ping : public MessageBase
@@ -91,8 +99,8 @@ struct LibraryRequest : public MessageBase
 struct LibraryResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(LibraryResponse)
-    JSONIFY_MEMBER(quint32, version);
-    JSONIFY_MEMBER(QJsonObject, libraryJson);
+    ENJSON_MEMBER(quint32, version);
+    ENJSON_MEMBER(QJsonObject, libraryJson);
 };
 
 struct MediaUrlRequest : public MessageBase
@@ -105,7 +113,7 @@ struct MediaUrlResponse : public MessageBase
     MediaUrlResponse() = default;
     MediaUrlResponse(const QString &u) { url = u; }
     DEFINE_MESSAGE_TYPE(MediaUrlResponse)
-    JSONIFY_MEMBER(QString, url);
+    ENJSON_MEMBER(QString, url);
 };
 
 struct IdRequest : public MessageBase
@@ -116,48 +124,48 @@ struct IdRequest : public MessageBase
 struct IdResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(IdResponse)
-    JSONIFY_MEMBER(QString, id);
+    ENJSON_MEMBER(QString, id);
 };
 
 struct ChangesRequest : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(ChangesRequest)
-    JSONIFY_MEMBER(QVector<Moosick::LibraryChangeRequest>, changes);
+    ENJSON_MEMBER(QVector<Moosick::LibraryChangeRequest>, changes);
 };
 
 struct ChangesResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(ChangesResponse)
-    JSONIFY_MEMBER(QVector<Moosick::CommittedLibraryChange>, changes);
+    ENJSON_MEMBER(QVector<Moosick::CommittedLibraryChange>, changes);
 };
 
 struct ChangeListRequest : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(ChangeListRequest)
-    JSONIFY_MEMBER(quint32, revision);
+    ENJSON_MEMBER(quint32, revision);
 };
 
 struct ChangeListResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(ChangeListResponse)
-    JSONIFY_MEMBER(QVector<Moosick::CommittedLibraryChange>, changes);
+    ENJSON_MEMBER(QVector<Moosick::CommittedLibraryChange>, changes);
 };
 
 struct DownloadRequest : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(DownloadRequest)
-    JSONIFY_MEMBER(DownloadRequestType, requestType);
-    JSONIFY_MEMBER(QString, url);
-    JSONIFY_MEMBER(quint32, artistId);
-    JSONIFY_MEMBER(QString, artistName);
-    JSONIFY_MEMBER(QString, albumName);
-    JSONIFY_MEMBER(quint32, currentRevision);
+    ENJSON_MEMBER(DownloadRequestType, requestType);
+    ENJSON_MEMBER(QString, url);
+    ENJSON_MEMBER(quint32, artistId);
+    ENJSON_MEMBER(QString, artistName);
+    ENJSON_MEMBER(QString, albumName);
+    ENJSON_MEMBER(quint32, currentRevision);
 };
 
 struct DownloadResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(DownloadResponse)
-    JSONIFY_MEMBER(quint32, downloadId);
+    ENJSON_MEMBER(quint32, downloadId);
 };
 
 struct DownloadQuery : public MessageBase
@@ -169,22 +177,22 @@ struct DownloadQueryResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(DownloadQueryResponse)
     using ActiveDownload = QPair<quint32, DownloadRequest>;
-    JSONIFY_MEMBER(QVector<ActiveDownload>, activeRequests);
+    ENJSON_MEMBER(QVector<ActiveDownload>, activeRequests);
 };
 
 struct YoutubeUrlQuery : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(YoutubeUrlQuery)
-    JSONIFY_MEMBER(QString, videoId)
+    ENJSON_MEMBER(QString, videoId)
 };
 
 struct YoutubeUrlResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(YoutubeUrlResponse)
-    JSONIFY_MEMBER(QString, title)
-    JSONIFY_MEMBER(int, duration)
-    JSONIFY_MEMBER(QJsonArray, chapters)
-    JSONIFY_MEMBER(QString, url)
+    ENJSON_MEMBER(QString, title)
+    ENJSON_MEMBER(int, duration)
+    ENJSON_MEMBER(QJsonArray, chapters)
+    ENJSON_MEMBER(QString, url)
 };
 
 #undef DEFINE_MESSAGE_TYPE
@@ -220,10 +228,10 @@ public:
     const MessageBase *operator->() const { return m_msg.data(); }
 
     QByteArray toJson()  const;
-    static Result<Message, JsonifyError> fromJson(const QByteArray &message);
+    static Result<Message, EnjsonError> fromJson(const QByteArray &message);
 
     template <class T>
-    static Result<T, JsonifyError> fromJsonAs(const QByteArray &message);
+    static Result<T, EnjsonError> fromJsonAs(const QByteArray &message);
 
 private:
     QScopedPointer<MessageBase> m_msg;
@@ -232,11 +240,11 @@ private:
 QByteArray messageToJson(const MessageBase &message);
 
 template <class T>
-Result<T, JsonifyError> Message::fromJsonAs(const QByteArray &message)
+Result<T, EnjsonError> Message::fromJsonAs(const QByteArray &message)
 {
-    Result<T, JsonifyError> ret;
+    Result<T, EnjsonError> ret;
 
-    Result<Message, JsonifyError> error = Message::fromJson(message);
+    Result<Message, EnjsonError> error = Message::fromJson(message);
     if (error.hasError()) {
         ret.setError(error.takeError());
     }
@@ -246,7 +254,7 @@ Result<T, JsonifyError> Message::fromJsonAs(const QByteArray &message)
             ret.setValue(T(std::move(*val)));
         }
         else {
-            ret.setError(JsonifyError::buildCustomError(QString("Wrong message type: ") + msg->getMessageTypeString()));
+            ret.setError(EnjsonError::buildCustomError(QString("Wrong message type: ") + msg->getMessageTypeString()));
         }
     }
 

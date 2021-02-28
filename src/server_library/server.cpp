@@ -39,20 +39,20 @@ private:
     friend class Server;
 };
 
-static Result<SerializedLibrary, JsonifyError> loadLibraryJson(const QString &libraryPath)
+static Result<SerializedLibrary, EnjsonError> loadLibraryJson(const QString &libraryPath)
 {
     QFile libraryFile(libraryPath);
     if (!libraryFile.open(QIODevice::ReadOnly))
-        return JsonifyError::buildCustomError("Can't open file");
+        return EnjsonError::buildCustomError("Can't open file");
 
     return dejsonFromString<SerializedLibrary>(libraryFile.readAll());
 }
 
-static Result<QJsonArray, JsonifyError> loadLibraryLogJson(const QString &logPath)
+static Result<QJsonArray, EnjsonError> loadLibraryLogJson(const QString &logPath)
 {
     QFile libraryLogFile(logPath);
     if (!libraryLogFile.open(QIODevice::ReadOnly))
-        return JsonifyError::buildCustomError("Can't open file");
+        return EnjsonError::buildCustomError("Can't open file");
 
     const QByteArray logData = "[\n" + libraryLogFile.readAll() + "\n]\n";
     return jsonDeserializeArray(logData);
@@ -63,7 +63,7 @@ Server::Server()
 {
 }
 
-JsonifyError Server::init(const ServerSettings &settings)
+EnjsonError Server::init(const ServerSettings &settings)
 {
     m_settings = settings;
 
@@ -74,37 +74,37 @@ JsonifyError Server::init(const ServerSettings &settings)
     const bool logExists = QFile::exists(logPath);
 
     if (logExists && !libraryExists)
-        return JsonifyError::buildCustomError("Log file exists, but library file doesn't");
+        return EnjsonError::buildCustomError("Log file exists, but library file doesn't");
     if (!logExists && libraryExists)
-        return JsonifyError::buildCustomError("Library file exists, but log file doesn't");
+        return EnjsonError::buildCustomError("Library file exists, but log file doesn't");
 
     if (!libraryExists) {
         if (!QFile(libraryPath).open(QIODevice::WriteOnly))
-            return JsonifyError::buildCustomError("Failed to create library file");
+            return EnjsonError::buildCustomError("Failed to create library file");
         if (!QFile(logPath).open(QIODevice::WriteOnly))
-            return JsonifyError::buildCustomError("Failed to create log file");
+            return EnjsonError::buildCustomError("Failed to create log file");
         saveLibrary();
         qWarning() << "Library doesn't yet exist, creating new one";
         return {};
     }
 
-    Result<SerializedLibrary, JsonifyError> libraryJson = loadLibraryJson(libraryPath);
+    Result<SerializedLibrary, EnjsonError> libraryJson = loadLibraryJson(libraryPath);
     if (!libraryJson.hasValue())
-        return JsonifyError::buildCustomError(QString("Failed to load ") + libraryPath, libraryJson.takeError());
+        return EnjsonError::buildCustomError(QString("Failed to load ") + libraryPath, libraryJson.takeError());
 
-    Result<QJsonArray, JsonifyError> logJson = loadLibraryLogJson(logPath);
+    Result<QJsonArray, EnjsonError> logJson = loadLibraryLogJson(logPath);
     if (!logJson.hasValue())
-        return JsonifyError::buildCustomError(QString("Failed to load ") + logPath, logJson.takeError());
+        return EnjsonError::buildCustomError(QString("Failed to load ") + logPath, logJson.takeError());
 
     // check if we can open log file
     if (!QFile(logPath).open(QIODevice::Append))
-        return JsonifyError::buildCustomError(QString("Failed to open ") + logPath + " for writing");
+        return EnjsonError::buildCustomError(QString("Failed to open ") + logPath + " for writing");
 
-    JsonifyError result = m_library.deserializeFromJson(libraryJson.takeValue(), logJson.takeValue());
+    EnjsonError result = m_library.deserializeFromJson(libraryJson.takeValue(), logJson.takeValue());
     if (result.isError())
-        return JsonifyError::buildCustomError("Error while parsing library", result);
+        return EnjsonError::buildCustomError("Error while parsing library", result);
 
-    return JsonifyError();
+    return EnjsonError();
 }
 
 Server::~Server()
@@ -114,7 +114,7 @@ Server::~Server()
 
 QByteArray Server::handleMessage(const QByteArray &data)
 {
-    Result<Message, JsonifyError> messageParsingResult = Message::fromJson(data);
+    Result<Message, EnjsonError> messageParsingResult = Message::fromJson(data);
     if (messageParsingResult.hasError()) {
         qWarning().noquote() << "Error parsing message:" << messageParsingResult.takeError().toString();
         return QByteArray();
@@ -131,7 +131,7 @@ QByteArray Server::handleMessage(const QByteArray &data)
         QVector<CommittedLibraryChange> appliedChanges;
 
         // apply changes
-        for (const LibraryChangeRequest &change : changesRequest->changes.data()) {
+        for (const LibraryChangeRequest &change : *changesRequest->changes) {
             Result<CommittedLibraryChange, QString> committed = m_library.commit(change);
             if (committed.hasError()) {
                 qWarning().noquote() << "Error applying changes:" << committed.takeError();

@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     qInfo() << "Backup Base Path =" << backupPath;
 
     Server server;
-    JsonifyError error = server.init(settings);
+    EnjsonError error = server.init(settings);
     if (error.isError()) {
         qCritical().noquote() << "Failed to initialize server:" << error.toString();
         return 1;

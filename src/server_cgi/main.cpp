@@ -100,7 +100,7 @@ static Message sendMessage(const QString &host, quint16 port, const Message &mes
     }
 
     const QByteArray resultData = result.takeValue();
-    Result<Message, JsonifyError> resultMessage = Message::fromJson(resultData);
+    Result<Message, EnjsonError> resultMessage = Message::fromJson(resultData);
     if (!resultMessage.hasValue()) {
         qWarning().noquote() << "Failed to parse JSON response from" << host;
         qWarning().noquote() << "Error:" << resultMessage.takeError().toString();
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
         }
     }
 
-    Result<Message, JsonifyError> messageParsingResult = Message::fromJson(contentBytes);
+    Result<Message, EnjsonError> messageParsingResult = Message::fromJson(contentBytes);
 
     if (messageParsingResult.hasError()) {
         Error error;

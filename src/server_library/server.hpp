@@ -17,7 +17,7 @@ public:
     Server();
     ~Server();
 
-    JsonifyError init(const ServerSettings &settings);
+    EnjsonError init(const ServerSettings &settings);
 
 protected:
     QByteArray handleMessage(const QByteArray &data) override;

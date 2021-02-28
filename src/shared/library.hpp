@@ -11,10 +11,11 @@
 
 namespace Moosick {
 
-struct SerializedLibrary : public JsonObject
+struct SerializedLibrary
 {
-    JSONIFY_MEMBER(int, version);
-    JSONIFY_MEMBER(QJsonObject, libraryJson);
+    ENJSON_OBJECT(SerializedLibrary)
+    ENJSON_MEMBER(int, version)
+    ENJSON_MEMBER(QJsonObject, libraryJson);
 };
 
 struct LibraryChangeRequest
@@ -98,7 +99,7 @@ struct LibraryChangeRequest
     QString name;
 
     friend QJsonValue enjson(const Moosick::LibraryChangeRequest &change);
-    friend void dejson(const QJsonValue &json, Result<Moosick::LibraryChangeRequest, JsonifyError> &result);
+    friend void dejson(const QJsonValue &json, Result<Moosick::LibraryChangeRequest, EnjsonError> &result);
 };
 
 struct CommittedLibraryChange
@@ -108,7 +109,7 @@ struct CommittedLibraryChange
     quint32 createdId;
 
     friend QJsonValue enjson(const Moosick::CommittedLibraryChange &change);
-    friend void dejson(const QJsonValue &json, Result<Moosick::CommittedLibraryChange, JsonifyError> &result);
+    friend void dejson(const QJsonValue &json, Result<Moosick::CommittedLibraryChange, EnjsonError> &result);
 };
 
 class LibraryId
@@ -171,10 +172,10 @@ public:
      * Tries to read the whole library from JSON data.
      * If committedChanges is not empty, try to read a history of committed changes from this array.
      */
-    JsonifyError deserializeFromJson(const SerializedLibrary &libraryJson, const QJsonArray &committedChanges = QJsonArray());
+    EnjsonError deserializeFromJson(const SerializedLibrary &libraryJson, const QJsonArray &committedChanges = QJsonArray());
 
 private:
-    void deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, JsonifyError> &result);
+    void deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, EnjsonError> &result);
 
     struct Song
     {
@@ -216,10 +217,10 @@ private:
     friend QJsonValue enjson(const Artist &artist);
     friend QJsonValue enjson(const Tag &tag);
 
-    friend void dejson(const QJsonValue &json, Result<Song, JsonifyError> &result);
-    friend void dejson(const QJsonValue &json, Result<Album, JsonifyError> &result);
-    friend void dejson(const QJsonValue &json, Result<Artist, JsonifyError> &result);
-    friend void dejson(const QJsonValue &json, Result<Tag, JsonifyError> &result);
+    friend void dejson(const QJsonValue &json, Result<Song, EnjsonError> &result);
+    friend void dejson(const QJsonValue &json, Result<Album, EnjsonError> &result);
+    friend void dejson(const QJsonValue &json, Result<Artist, EnjsonError> &result);
+    friend void dejson(const QJsonValue &json, Result<Tag, EnjsonError> &result);
 
     quint32 getOrCreateFileEndingId(const QString &ending);
 

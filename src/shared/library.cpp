@@ -520,7 +520,7 @@ QByteArray messageToJson(const MessageBase &message)
 {
     QJsonObject obj;
     obj["id"] = message.getMessageTypeString();
-    obj["data"] = enjson(message);
+    obj["data"] = message.enjson();
     return jsonSerializeObject(obj);
 }
 
@@ -555,9 +555,9 @@ QString typeString(Type messageType)
     qFatal("No such Message Type");
 }
 
-Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
+Result<Message, EnjsonError> Message::fromJson(const QByteArray &message)
 {
-    Result<QJsonObject, JsonifyError> json = jsonDeserializeObject(message);
+    Result<QJsonObject, EnjsonError> json = jsonDeserializeObject(message);
     if (!json.hasValue())
         return json.takeError();
 
@@ -565,23 +565,23 @@ Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
     const QJsonObject jsonObj = json.takeValue();
     const auto idIt = jsonObj.find("id");
     if (idIt == jsonObj.end())
-        return JsonifyError::buildMissingMemberError("id");
+        return EnjsonError::buildMissingMemberError("id");
     if (idIt->type() != QJsonValue::String)
-        return JsonifyError::buildTypeError(QJsonValue::String, idIt->type());
+        return EnjsonError::buildTypeError(QJsonValue::String, idIt->type());
     const QString id = idIt->toString();
 
     // Read Data Object
     const auto dataIt = jsonObj.find("data");
     if (dataIt == jsonObj.end())
-        return JsonifyError::buildMissingMemberError("data");
+        return EnjsonError::buildMissingMemberError("data");
     if (dataIt->type() != QJsonValue::Object)
-        return JsonifyError::buildTypeError(QJsonValue::Object, dataIt->type());
+        return EnjsonError::buildTypeError(QJsonValue::Object, dataIt->type());
     const QJsonObject data = dataIt->toObject();
 
     // See if we find a matching message
     #define CHECK_MESSAGE_TYPE(TYPE) \
     if (id == typeString(TYPE::MESSAGE_TYPE)) { \
-        Result<TYPE, JsonifyError> result = ::dejson<TYPE>(data); \
+        Result<TYPE, EnjsonError> result = ::dejson<TYPE>(data); \
         if (!result.hasValue()) \
             return result.takeError(); \
         return Message(new TYPE(result.takeValue())); \
@@ -614,7 +614,7 @@ Result<Message, JsonifyError> Message::fromJson(const QByteArray &message)
     CHECK_MESSAGE_TYPE(YoutubeUrlQuery)
     CHECK_MESSAGE_TYPE(YoutubeUrlResponse)
 
-    return JsonifyError::buildCustomError(QString("No such message ID: ") + id);
+    return EnjsonError::buildCustomError(QString("No such message ID: ") + id);
 }
 
 }

@@ -16,13 +16,13 @@ QJsonValue enjson(const Moosick::LibraryChangeRequest &change)
     return ret;
 }
 
-void dejson(const QJsonValue &json, Result<Moosick::LibraryChangeRequest, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<Moosick::LibraryChangeRequest, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Object);
-    JSONIFY_DEJSON_GET_MEMBER(json, result, int, tp, "type");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, int, targetId, "targetId");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, int, detail, "detail");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    DEJSON_EXPECT_TYPE(json, result, Object);
+    DEJSON_GET_MEMBER(json, result, int, tp, "type");
+    DEJSON_GET_MEMBER(json, result, int, targetId, "targetId");
+    DEJSON_GET_MEMBER(json, result, int, detail, "detail");
+    DEJSON_GET_MEMBER(json, result, QString, name, "name");
 
     Moosick::LibraryChangeRequest change;
     change.changeType = static_cast<Moosick::LibraryChangeRequest::Type>(tp);
@@ -40,19 +40,19 @@ QJsonValue enjson(const Moosick::CommittedLibraryChange &change)
     return obj;
 }
 
-void dejson(const QJsonValue &json, Result<Moosick::CommittedLibraryChange, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<Moosick::CommittedLibraryChange, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Object);
+    DEJSON_EXPECT_TYPE(json, result, Object);
 
-    Result<Moosick::LibraryChangeRequest, JsonifyError> change = dejson<Moosick::LibraryChangeRequest>(json);
+    Result<Moosick::LibraryChangeRequest, EnjsonError> change = dejson<Moosick::LibraryChangeRequest>(json);
     if (change.hasError())
     {
         result = change.takeError();
         return;
     }
 
-    JSONIFY_DEJSON_GET_MEMBER(json, result, int, committedRevision, "committedRevision");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, int, createdId, "createdId");
+    DEJSON_GET_MEMBER(json, result, int, committedRevision, "committedRevision");
+    DEJSON_GET_MEMBER(json, result, int, createdId, "createdId");
 
     Moosick::CommittedLibraryChange ret;
     ret.changeRequest = change.takeValue();
@@ -167,14 +167,14 @@ QJsonValue enjson(const Library::Tag &tag)
     return json;
 }
 
-void dejson(const QJsonValue &json, Result<Library::Song, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<Library::Song, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, qint64, album, "album");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, qint64, fileEnding, "fileEnding");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, int, position, "position");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, int, secs, "secs");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
+    DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    DEJSON_GET_MEMBER(json, result, qint64, album, "album");
+    DEJSON_GET_MEMBER(json, result, qint64, fileEnding, "fileEnding");
+    DEJSON_GET_MEMBER(json, result, int, position, "position");
+    DEJSON_GET_MEMBER(json, result, int, secs, "secs");
+    DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
     Library::Song song;
     song.name = name;
     song.album = album;
@@ -185,11 +185,11 @@ void dejson(const QJsonValue &json, Result<Library::Song, JsonifyError> &result)
     result = song;
 }
 
-void dejson(const QJsonValue &json, Result<Library::Album, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<Library::Album, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, qint64, artist, "artist");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
+    DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    DEJSON_GET_MEMBER(json, result, qint64, artist, "artist");
+    DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
     Library::Album album;
     album.name = name;
     album.artist = artist;
@@ -197,20 +197,20 @@ void dejson(const QJsonValue &json, Result<Library::Album, JsonifyError> &result
     result = album;
 }
 
-void dejson(const QJsonValue &json, Result<Library::Artist, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<Library::Artist, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
+    DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
     Library::Artist artist;
     artist.name = name;
     artist.tags = tags;
     result = artist;
 }
 
-void dejson(const QJsonValue &json, Result<Library::Tag, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<Library::Tag, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_GET_MEMBER(json, result, QString, name, "name");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, int, parent, "parent");
+    DEJSON_GET_MEMBER(json, result, QString, name, "name");
+    DEJSON_GET_MEMBER(json, result, int, parent, "parent");
     Library::Tag tag;
     tag.name = name;
     tag.parent = parent;
@@ -236,15 +236,15 @@ SerializedLibrary Library::serializeToJson() const
     return ret;
 }
 
-void Library::deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, JsonifyError> &result)
+void Library::deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, quint32, revision, "revision");
-    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, QString, id, "id");
-    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Tag>, tags, "tags");
-    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Artist>, artists, "artists");
-    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Album>, albums, "albums");
-    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Song>, songs, "songs");
-    JSONIFY_DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<QString>, fileEndings, "fileEndings");
+    DEJSON_GET_MEMBER(libraryJson, result, quint32, revision, "revision");
+    DEJSON_GET_MEMBER(libraryJson, result, QString, id, "id");
+    DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Tag>, tags, "tags");
+    DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Artist>, artists, "artists");
+    DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Album>, albums, "albums");
+    DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<Song>, songs, "songs");
+    DEJSON_GET_MEMBER(libraryJson, result, ItemCollection<QString>, fileEndings, "fileEndings");
 
     auto changes = dejson<QVector<CommittedLibraryChange>>(committedChanges);
     if (changes.hasError()) {
@@ -253,7 +253,7 @@ void Library::deserializeFromJsonInternal(const QJsonObject &libraryJson, const 
     }
 
     if (!m_id.fromString(id.toUtf8())) {
-        result = JsonifyError::buildCustomError("'id' doesn't contain a valid ID");
+        result = EnjsonError::buildCustomError("'id' doesn't contain a valid ID");
         return;
     }
 
@@ -303,11 +303,11 @@ void Library::deserializeFromJsonInternal(const QJsonObject &libraryJson, const 
     result = 0;
 }
 
-JsonifyError Library::deserializeFromJson(const SerializedLibrary &libraryJson, const QJsonArray &committedChanges)
+EnjsonError Library::deserializeFromJson(const SerializedLibrary &libraryJson, const QJsonArray &committedChanges)
 {
-    Result<int, JsonifyError> result;
+    Result<int, EnjsonError> result;
     deserializeFromJsonInternal(libraryJson.libraryJson, committedChanges, result);
-    return result.hasError() ? result.getError() : JsonifyError();
+    return result.hasError() ? result.getError() : EnjsonError();
 }
 
 QStringList Library::dumpToStringList() const

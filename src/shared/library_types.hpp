@@ -99,10 +99,10 @@ struct TagId : public detail::FromU32
     QString name(const Library &library) const;
 };
 
-JSONIFY_DECLARE_PROXY_ENJSON(SongId, quint32)
-JSONIFY_DECLARE_PROXY_ENJSON(ArtistId, quint32)
-JSONIFY_DECLARE_PROXY_ENJSON(AlbumId, quint32)
-JSONIFY_DECLARE_PROXY_ENJSON(TagId, quint32)
+ENJSON_DECLARE_ALIAS(SongId, quint32)
+ENJSON_DECLARE_ALIAS(ArtistId, quint32)
+ENJSON_DECLARE_ALIAS(AlbumId, quint32)
+ENJSON_DECLARE_ALIAS(TagId, quint32)
 
 template <class T, class IntType = quint32>
 class ItemCollection : public QHash<IntType, T>
@@ -151,7 +151,7 @@ private:
     friend QJsonValue enjson(const ItemCollection<TT, II> &collection);
 
     template <class TT, class II>
-    friend void dejson(const QJsonValue &json, Result<ItemCollection<TT, II>, JsonifyError> &result);
+    friend void dejson(const QJsonValue &json, Result<ItemCollection<TT, II>, EnjsonError> &result);
 
     IntType m_nextId = 1;
 };
@@ -170,11 +170,11 @@ QJsonValue enjson(const ItemCollection<T, IntType> &collection)
 }
 
 template <class T, class IntType>
-void dejson(const QJsonValue &json, Result<ItemCollection<T, IntType>, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<ItemCollection<T, IntType>, EnjsonError> &result)
 {
     using KeyValuePair = QPair<IntType, T>;
-    JSONIFY_DEJSON_GET_MEMBER(json, result, IntType, nextId, "nextId");
-    JSONIFY_DEJSON_GET_MEMBER(json, result, QVector<KeyValuePair>, entries, "entries");
+    DEJSON_GET_MEMBER(json, result, IntType, nextId, "nextId");
+    DEJSON_GET_MEMBER(json, result, QVector<KeyValuePair>, entries, "entries");
 
     ItemCollection<T, IntType> ret;
     for (const KeyValuePair &kv : entries)

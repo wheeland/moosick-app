@@ -129,7 +129,7 @@ Result<DownloadResult, QString> download(
         const QString &toolDir,
         const QString &tempDir)
 {
-    switch (downloadRequest.requestType.data()) {
+    switch (*downloadRequest.requestType) {
     case DownloadRequestType::BandcampAlbum:
         return bandcampDownload(downloadRequest, tempDir);
     case DownloadRequestType::YoutubeVideo:

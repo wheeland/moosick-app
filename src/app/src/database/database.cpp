@@ -251,7 +251,7 @@ HttpRequestId Database::setItemDetails(
 void Database::onNetworkReplyFinished(HttpRequestId reply, const QByteArray &data)
 {
     const RequestType requestType = m_requests.take(reply);
-    Result<Message, JsonifyError> parsedMsg = Message::fromJson(data);
+    Result<Message, EnjsonError> parsedMsg = Message::fromJson(data);
     if (parsedMsg.hasError()) {
         qWarning().noquote() << "Received invalid message:" << parsedMsg.takeError().toString();
         qWarning().noquote() << data;
@@ -326,7 +326,7 @@ Option<QString> Database::onNewLibrary(const LibraryResponse *message)
     Moosick::SerializedLibrary serialized;
     serialized.libraryJson = message->libraryJson;
     serialized.version = message->version;
-    JsonifyError error = m_library.deserializeFromJson(serialized);
+    EnjsonError error = m_library.deserializeFromJson(serialized);
     if (error.isError())
         return "Failed to parse LibraryResponse: " + error.toString();
     m_hasLibrary = true;

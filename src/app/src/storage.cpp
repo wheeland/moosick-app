@@ -60,7 +60,7 @@ bool Storage::readLibrary(Moosick::Library &library) const
         return false;
     }
 
-    JsonifyError error = library.deserializeFromJson(result.takeValue());
+    EnjsonError error = library.deserializeFromJson(result.takeValue());
     if (error.isError()) {
         qWarning().noquote().nospace() << "Failed to parse Library from " << file.fileName() << ": " << error.toString();
         return false;

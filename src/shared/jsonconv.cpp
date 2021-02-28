@@ -2,29 +2,29 @@
 
 #include <QJsonDocument>
 
-JsonifyError::JsonifyError()
+EnjsonError::EnjsonError()
     : m_type(NoError)
 {
 }
 
-JsonifyError::JsonifyError(const JsonifyError &other)
+EnjsonError::EnjsonError(const EnjsonError &other)
     : m_type(NoError)
 {
     *this = other;
 }
 
-JsonifyError::JsonifyError(JsonifyError &&other)
+EnjsonError::EnjsonError(EnjsonError &&other)
     : m_type(NoError)
 {
     *this = std::move(other);
 }
 
-JsonifyError::~JsonifyError()
+EnjsonError::~EnjsonError()
 {
     clear();
 }
 
-void JsonifyError::clear()
+void EnjsonError::clear()
 {
     switch (m_type) {
     case NoError:
@@ -48,12 +48,12 @@ void JsonifyError::clear()
         m_elementError.~ElementErrorDetails();
         break;
     default:
-        qFatal("Invalid JsonifyError type");
+        qFatal("Invalid EnjsonError type");
     }
     m_type = NoError;
 }
 
-JsonifyError &JsonifyError::operator=(const JsonifyError &rhs)
+EnjsonError &EnjsonError::operator=(const EnjsonError &rhs)
 {
     clear();
 
@@ -68,25 +68,25 @@ JsonifyError &JsonifyError::operator=(const JsonifyError &rhs)
         new (&m_typeError) TypeErrorDetails(rhs.m_typeError);
         break;
     case CustomError:
-        new (&m_customError) CustomErrorDetails(rhs.m_customError.message, rhs.m_customError.error ? new JsonifyError(*rhs.m_customError.error.get()) : nullptr);
+        new (&m_customError) CustomErrorDetails(rhs.m_customError.message, rhs.m_customError.error ? new EnjsonError(*rhs.m_customError.error.get()) : nullptr);
         break;
     case MissingMemberError:
         new (&m_missingMemberError) MissingMemberErrorDetails(rhs.m_missingMemberError);
         break;
     case MemberError:
-        new (&m_memberError) MemberErrorDetails(rhs.m_memberError.name, new JsonifyError(*rhs.m_memberError.error.get()));
+        new (&m_memberError) MemberErrorDetails(rhs.m_memberError.name, new EnjsonError(*rhs.m_memberError.error.get()));
         break;
     case ElementError:
-        new (&m_elementError) ElementErrorDetails(rhs.m_elementError.element, new JsonifyError(*rhs.m_elementError.error.get()));
+        new (&m_elementError) ElementErrorDetails(rhs.m_elementError.element, new EnjsonError(*rhs.m_elementError.error.get()));
         break;
     default:
-        qFatal("Invalid JsonifyError type");
+        qFatal("Invalid EnjsonError type");
     }
 
     return *this;
 }
 
-JsonifyError &JsonifyError::operator=(JsonifyError &&rhs)
+EnjsonError &EnjsonError::operator=(EnjsonError &&rhs)
 {
     clear();
 
@@ -113,7 +113,7 @@ JsonifyError &JsonifyError::operator=(JsonifyError &&rhs)
         new (&m_elementError) ElementErrorDetails(rhs.m_elementError.element, rhs.m_elementError.error.take());
         break;
     default:
-        qFatal("Invalid JsonifyError type");
+        qFatal("Invalid EnjsonError type");
     }
 
     rhs.clear();
@@ -136,7 +136,7 @@ static const char *jsonTypeName(QJsonValue::Type jsonType)
     }
 }
 
-QString JsonifyError::toString() const
+QString EnjsonError::toString() const
 {
     switch (m_type) {
     case NoError:
@@ -158,137 +158,149 @@ QString JsonifyError::toString() const
     case ElementError:
         return QString("Element ") + QString::number(m_elementError.element) + ": " + m_elementError.error->toString();
     default:
-        qFatal("Invalid JsonifyError type");
+        qFatal("Invalid EnjsonError type");
     }
 }
 
 
-JsonifyError JsonifyError::buildParseError(const QJsonParseError &parseError)
+EnjsonError EnjsonError::buildParseError(const QJsonParseError &parseError)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = ParseError;
     new (&err.m_parseError) QJsonParseError(parseError);
     return err;
 }
 
-JsonifyError JsonifyError::buildTypeError(QJsonValue::Type expected, QJsonValue::Type found)
+EnjsonError EnjsonError::buildTypeError(QJsonValue::Type expected, QJsonValue::Type found)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = TypeError;
     new (&err.m_typeError) TypeErrorDetails{ expected, found };
     return err;
 }
 
-JsonifyError JsonifyError::buildCustomError(const QString &message)
+EnjsonError EnjsonError::buildCustomError(const QString &message)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = CustomError;
     new (&err.m_customError) CustomErrorDetails{ message, nullptr };
     return err;
 }
 
-JsonifyError JsonifyError::buildCustomError(const QString &message, const JsonifyError &jsonError)
+EnjsonError EnjsonError::buildCustomError(const QString &message, const EnjsonError &jsonError)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = CustomError;
-    new (&err.m_customError) CustomErrorDetails{ message, new JsonifyError(jsonError) };
+    new (&err.m_customError) CustomErrorDetails{ message, new EnjsonError(jsonError) };
     return err;
 }
 
-JsonifyError JsonifyError::buildCustomError(const QString &message, JsonifyError &&jsonError)
+EnjsonError EnjsonError::buildCustomError(const QString &message, EnjsonError &&jsonError)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = CustomError;
-    new (&err.m_customError) CustomErrorDetails{ message, new JsonifyError(std::move(jsonError)) };
+    new (&err.m_customError) CustomErrorDetails{ message, new EnjsonError(std::move(jsonError)) };
     return err;
 }
 
-JsonifyError JsonifyError::buildMissingMemberError(const QString &name)
+EnjsonError EnjsonError::buildMissingMemberError(const QString &name)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = MissingMemberError;
     new (&err.m_missingMemberError) MissingMemberErrorDetails{ name };
     return err;
 }
 
-JsonifyError JsonifyError::buildMemberError(const QString &name, const JsonifyError &memberError)
+EnjsonError EnjsonError::buildMemberError(const QString &name, const EnjsonError &memberError)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = MemberError;
-    new (&err.m_memberError) MemberErrorDetails(name, new JsonifyError(memberError));
+    new (&err.m_memberError) MemberErrorDetails(name, new EnjsonError(memberError));
     return err;
 }
 
-JsonifyError JsonifyError::buildMemberError(const QString &name, JsonifyError &&memberError)
+EnjsonError EnjsonError::buildMemberError(const QString &name, EnjsonError &&memberError)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = MemberError;
-    new (&err.m_memberError) MemberErrorDetails(name, new JsonifyError(std::move(memberError)));
+    new (&err.m_memberError) MemberErrorDetails(name, new EnjsonError(std::move(memberError)));
     return err;
 }
 
-JsonifyError JsonifyError::buildElementError(int element, const JsonifyError &elementError)
+EnjsonError EnjsonError::buildElementError(int element, const EnjsonError &elementError)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = ElementError;
-    new (&err.m_elementError) ElementErrorDetails(element, new JsonifyError(elementError));
+    new (&err.m_elementError) ElementErrorDetails(element, new EnjsonError(elementError));
     return err;
 }
 
-JsonifyError JsonifyError::buildElementError(int element, JsonifyError &&elementError)
+EnjsonError EnjsonError::buildElementError(int element, EnjsonError &&elementError)
 {
-    JsonifyError err;
+    EnjsonError err;
     err.m_type = ElementError;
-    new (&err.m_elementError) ElementErrorDetails(element, new JsonifyError(std::move(elementError)));
+    new (&err.m_elementError) ElementErrorDetails(element, new EnjsonError(std::move(elementError)));
     return err;
 }
 
-void dejson(const QJsonValue &json, Result<quint64, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<quint64, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Double);
+    DEJSON_EXPECT_TYPE(json, result, Double);
     result = (quint64) json.toDouble();
 }
 
-void dejson(const QJsonValue &json, Result<qint64, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<qint64, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Double);
+    DEJSON_EXPECT_TYPE(json, result, Double);
     result = (qint64) json.toDouble();
 }
 
-void dejson(const QJsonValue &json, Result<quint32, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<quint32, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Double);
+    DEJSON_EXPECT_TYPE(json, result, Double);
     result = (quint32) json.toDouble();
 }
 
-void dejson(const QJsonValue &json, Result<qint32, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<qint32, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Double);
+    DEJSON_EXPECT_TYPE(json, result, Double);
     result = (qint32) json.toDouble();
 }
 
-void dejson(const QJsonValue &json, Result<float, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<float, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Double);
+    DEJSON_EXPECT_TYPE(json, result, Double);
     result = (float) json.toDouble();
 }
 
-void dejson(const QJsonValue &json, Result<double, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<double, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Double);
+    DEJSON_EXPECT_TYPE(json, result, Double);
     result = json.toDouble();
 }
 
-void dejson(const QJsonValue &json, Result<QString, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<QString, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, String);
+    DEJSON_EXPECT_TYPE(json, result, String);
     result = json.toString();
 }
 
-void dejson(const QJsonValue &json, Result<bool, JsonifyError> &result)
+void dejson(const QJsonValue &json, Result<bool, EnjsonError> &result)
 {
-    JSONIFY_DEJSON_EXPECT_TYPE(json, result, Bool);
+    DEJSON_EXPECT_TYPE(json, result, Bool);
     result = json.toBool();
+}
+
+void dejson(const QJsonValue &json, Result<QJsonObject, EnjsonError> &result)
+{
+    DEJSON_EXPECT_TYPE(json, result, Object);
+    result = json.toObject();
+}
+
+void dejson(const QJsonValue &json, Result<QJsonArray, EnjsonError> &result)
+{
+    DEJSON_EXPECT_TYPE(json, result, Array);
+    result = json.toArray();
 }
 
 QJsonValue enjson(qint32 value)
@@ -331,52 +343,9 @@ QJsonValue enjson(bool value)
     return QJsonValue(value);
 }
 
-QJsonValue enjson(const JsonObject &value)
+QJsonValue enjson(const QJsonValue &value)
 {
-    return value.serialize();
-}
-
-QJsonValue JsonObject::serialize() const
-{
-    QJsonObject ret;
-
-    for (uintptr_t memberOffset : m_memberOffsets) {
-        JsonMemberBase *member = getMember(memberOffset);
-        ret.insert(member->name(), member->get());
-    }
-
-    return QJsonValue(ret);
-}
-
-JsonifyError JsonObject::deserialize(const QJsonValue &json)
-{
-    if (!json.isObject())
-        return JsonifyError::buildTypeError(QJsonValue::Object, json.type());
-
-    const QJsonObject obj = json.toObject();
-    JsonifyError error;
-
-    for (uintptr_t memberOffset : m_memberOffsets) {
-        JsonMemberBase *member = getMember(memberOffset);
-        const auto val = obj.find(member->name());
-        if (val == obj.end()) {
-            error = JsonifyError::buildMissingMemberError(member->name());
-            break;
-        }
-
-        error = member->set(val.value());
-        if (error.isError())
-            break;
-    }
-
-    if (error.isError()) {
-        for (uintptr_t memberOffset : m_memberOffsets) {
-            JsonMemberBase *member = getMember(memberOffset);
-            member->reset();
-        }
-    }
-
-    return error;
+    return value;
 }
 
 QByteArray jsonSerializeObject(const QJsonObject &jsonObject, QJsonDocument::JsonFormat format)
@@ -389,16 +358,16 @@ QByteArray jsonSerializeArray(const QJsonArray &jsonArray, QJsonDocument::JsonFo
     return QJsonDocument(jsonArray).toJson(format);
 }
 
-Result<QJsonValue, JsonifyError> jsonDeserialize(const QByteArray &json)
+Result<QJsonValue, EnjsonError> jsonDeserialize(const QByteArray &json)
 {
     QJsonParseError error;
     const QJsonDocument doc = QJsonDocument::fromJson(json, &error);
 
     if (error.error != QJsonParseError::NoError)
-        return JsonifyError::buildParseError(error);
+        return EnjsonError::buildParseError(error);
 
     if (doc.isEmpty() || doc.isNull())
-        return JsonifyError::buildTypeError(QJsonValue::Object, QJsonValue::Null);
+        return EnjsonError::buildTypeError(QJsonValue::Object, QJsonValue::Null);
 
     if (doc.isArray()) {
         return QJsonValue(doc.array());
@@ -409,22 +378,22 @@ Result<QJsonValue, JsonifyError> jsonDeserialize(const QByteArray &json)
     }
 }
 
-Result<QJsonObject, JsonifyError> jsonDeserializeObject(const QByteArray &json)
+Result<QJsonObject, EnjsonError> jsonDeserializeObject(const QByteArray &json)
 {
-    Result<QJsonValue, JsonifyError> value = jsonDeserialize(json);
+    Result<QJsonValue, EnjsonError> value = jsonDeserialize(json);
     if (value.hasError())
         return value.takeError();
     if (value.getValue().isArray())
-        return JsonifyError::buildTypeError(QJsonValue::Object, QJsonValue::Array);
+        return EnjsonError::buildTypeError(QJsonValue::Object, QJsonValue::Array);
     return value.takeValue().toObject();
 }
 
-Result<QJsonArray, JsonifyError> jsonDeserializeArray(const QByteArray &json)
+Result<QJsonArray, EnjsonError> jsonDeserializeArray(const QByteArray &json)
 {
-    Result<QJsonValue, JsonifyError> value = jsonDeserialize(json);
+    Result<QJsonValue, EnjsonError> value = jsonDeserialize(json);
     if (value.hasError())
         return value.takeError();
     if (value.getValue().isObject())
-        return JsonifyError::buildTypeError(QJsonValue::Array, QJsonValue::Object);
+        return EnjsonError::buildTypeError(QJsonValue::Array, QJsonValue::Object);
     return value.takeValue().toArray();
 }
