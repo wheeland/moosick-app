@@ -12,7 +12,7 @@ Rectangle {
         onHostValidChanged: {
             if (!httpClient.hostValid) {
                 root.visible = true;
-                hostEntry.text = httpClient.host;
+                hostEntry.text = httpClient.apiUrl;
                 portEntry.text = httpClient.port;
                 userEntry.text = httpClient.user;
                 passEntry.text = httpClient.pass;
@@ -54,7 +54,7 @@ Rectangle {
         y: parent.width / 16
         onClicked: {
             removeFocus();
-            httpClient.host = hostEntry.text;
+            httpClient.apiUrl = hostEntry.text;
             httpClient.port = portEntry.text;
             httpClient.user = userEntry.text;
             httpClient.pass = passEntry.text;

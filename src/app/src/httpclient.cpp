@@ -54,28 +54,22 @@ HttpClient::HttpClient(QObject *parent)
 {
     connect(m_manager, &QNetworkAccessManager::finished, this, &HttpClient::onNetworkReplyFinished);
     connect(m_manager, &QNetworkAccessManager::networkAccessibleChanged, this, &HttpClient::maybeRelaunchRequests);
-    m_hostPath = "/moosick.do";
 }
 
 HttpClient::~HttpClient()
 {
 }
 
-void HttpClient::setHost(const QString &name)
+void HttpClient::setApiUrl(const QString &apiUrl)
 {
-    m_host = name;
+    QUrl url("http://" + apiUrl);
+    m_apiUrl = apiUrl;
+    m_host = url.host();
+    m_hostPath = url.path();
     m_hostValid = true;
     QTimer::singleShot(0, this, &HttpClient::maybeRelaunchRequests);
     emit hostValidChanged(true);
-    emit hostChanged(name);
-}
-
-void HttpClient::setHostPath(const QString &hostPath)
-{
-    m_hostPath = hostPath;
-    QTimer::singleShot(0, this, &HttpClient::maybeRelaunchRequests);
-    emit hostValidChanged(true);
-    emit hostPathChanged(hostPath);
+    emit apiUrlChanged(apiUrl);
 }
 
 void HttpClient::setPort(quint16 port)

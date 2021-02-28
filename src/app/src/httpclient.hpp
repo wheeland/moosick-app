@@ -44,7 +44,7 @@ class HttpClient : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool hostValid READ hostValid NOTIFY hostValidChanged)
-    Q_PROPERTY(QString host READ host WRITE setHost NOTIFY hostChanged)
+    Q_PROPERTY(QString apiUrl READ apiUrl WRITE setApiUrl NOTIFY apiUrlChanged)
     Q_PROPERTY(quint16 port READ port WRITE setPort NOTIFY portChanged)
     Q_PROPERTY(QString user READ user WRITE setUser NOTIFY userChanged)
     Q_PROPERTY(QString pass READ pass WRITE setPass NOTIFY passChanged)
@@ -56,14 +56,12 @@ public:
     HttpClient(QObject *parent = nullptr);
     ~HttpClient() override;
 
-    void setHost(const QString &name);
-    void setHostPath(const QString &hostPath);
+    void setApiUrl(const QString &apiUrl);
     void setPort(quint16 port);
     void setPass(const QString &pass);
     void setUser(const QString &user);
 
-    QString host() const { return m_host; }
-    QString hostPath() const { return m_hostPath; }
+    QString apiUrl() const { return m_apiUrl; }
     quint16 port() const { return m_port; }
     QString user() const { return m_user; }
     QString pass() const { return m_pass; }
@@ -78,11 +76,10 @@ public:
 
 signals:
     void hostValidChanged(bool hostValid);
-    void hostChanged(QString host);
-    void hostPathChanged(QString hostPath);
     void portChanged(quint16 port);
     void passChanged(QString pass);
     void userChanged(QString user);
+    void apiUrlChanged(QString apiUrl);
     void pendingSslErrorChanged();
 
 private slots:
@@ -113,11 +110,12 @@ private:
 
     friend class HttpRequester;
 
+    QString m_apiUrl;
     QString m_host;
+    QString m_hostPath;
     quint16 m_port;
     QString m_pass;
     QString m_user;
-    QString m_hostPath;
     QNetworkAccessManager *m_manager = nullptr;
 
     // all SSL errors that we encounter will be presented to the user
