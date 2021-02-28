@@ -3,6 +3,7 @@
 #include "download.hpp"
 
 #include <QFile>
+#include <QDir>
 #include <QTcpSocket>
 #include <QJsonDocument>
 #include <QDate>
@@ -298,6 +299,10 @@ void Server::finishDownload(const DownloadResult &result)
         m_library.commit(LibraryChangeRequest::CreateSongSetLength(songId, file.duration));
         m_library.commit(LibraryChangeRequest::CreateSongSetFileEnding(songId, 0, file.fileEnding));
     }
+
+    // 4. Remove temp dir
+    if (!result.tempDir.isEmpty() && QDir().exists(result.tempDir))
+        QDir().rmdir(result.tempDir);
 }
 
 #include "server.moc"
