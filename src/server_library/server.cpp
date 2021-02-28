@@ -277,9 +277,19 @@ void Server::finishDownload(const DownloadResult &result)
     // 1. Get or create artist
     ArtistId artistId = result.artistId;
     if (!artistId.isValid() || !artistId.exists(m_library)) {
-        artistId = m_library.commit(LibraryChangeRequest::CreateArtistAdd(0, 0, result.artistName))
-                .mapMember<ArtistId>(&CommittedLibraryChange::createdId)
-                .takeValue();
+        // see if artist with such name alread exists?
+        const QVector<ArtistId> artists = m_library.artistsByName();
+        for (ArtistId artist : artists) {
+            if (artist.name(m_library) == result.artistName) {
+                artistId = artist;
+                break;
+            }
+        }
+
+        if (!artistId.isValid() || !artistId.exists(m_library))
+            artistId = m_library.commit(LibraryChangeRequest::CreateArtistAdd(0, 0, result.artistName))
+                    .mapMember<ArtistId>(&CommittedLibraryChange::createdId)
+                    .takeValue();
     }
 
     // 2. Create album
@@ -298,6 +308,9 @@ void Server::finishDownload(const DownloadResult &result)
         m_library.commit(LibraryChangeRequest::CreateSongSetPosition(songId, file.albumPosition));
         m_library.commit(LibraryChangeRequest::CreateSongSetLength(songId, file.duration));
         m_library.commit(LibraryChangeRequest::CreateSongSetFileEnding(songId, 0, file.fileEnding));
+
+        const QString newFileName = QString::number(songId) + "." + file.fileEnding;
+        QFile(file.fullPath).rename(m_settings.mediaBaseDir() + QDir::separator() + newFileName);
     }
 
     // 4. Remove temp dir
