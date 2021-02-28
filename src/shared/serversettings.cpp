@@ -60,19 +60,14 @@ ServerSettings::ServerSettings()
     m_libraryLogFile = getOrCreate<QString>(*settings, m_valid, "LIBRARY_LOG_FILE");
     m_libraryBackupDir = getOrCreate<QString>(*settings, m_valid, "LIBRARY_BACKUP_DIR");
 
-    m_downloaderPort = getOrCreate<quint16>(*settings, m_valid, "DOWNLOADER_PORT");
     m_dbserverPort = getOrCreate<quint16>(*settings, m_valid, "DBSERVER_PORT");
-
-    m_downloaderHost = getOrCreate<QString>(*settings, m_valid, "DOWNLOADER_HOST");
     m_dbserverHost = getOrCreate<QString>(*settings, m_valid, "DBSERVER_HOST");
 
     m_cgiLogFile = getOrCreate<QString>(*settings, m_valid, "CGI_LOG_FILE");
     m_dbserverLogFile = getOrCreate<QString>(*settings, m_valid, "DBSERVER_LOG_FILE");
-    m_downloaderLogFile = getOrCreate<QString>(*settings, m_valid, "DOWNLOADER_LOG_FILE");
 
     m_cgiLogLevel = getOrCreate<QtMsgType, QString>(*settings, m_valid, "CGI_LOG_LEVEL");
     m_dbserverLogLevel = getOrCreate<QtMsgType, QString>(*settings, m_valid, "DBSERVER_LOG_LEVEL");
-    m_downloaderLogLevel = getOrCreate<QtMsgType, QString>(*settings, m_valid, "DOWNLOADER_LOG_LEVEL");
 
     delete settings;
 }

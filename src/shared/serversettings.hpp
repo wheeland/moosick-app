@@ -29,19 +29,14 @@ public:
     QString libraryLogFile() const { return m_libraryLogFile; }
     QString libraryBackupDir() const { return m_libraryBackupDir; }
 
-    quint16 downloaderPort() const { return m_downloaderPort; }
     quint16 dbserverPort() const { return m_dbserverPort; }
-
-    QString downloaderHost() const { return m_downloaderHost; }
     QString dbserverHost() const { return m_dbserverHost; }
 
     QString cgiLogFile() const { return m_cgiLogFile; }
     QString dbserverLogFile() const { return m_dbserverLogFile; }
-    QString downloaderLogFile() const { return m_downloaderLogFile; }
 
     QtMsgType cgiLogLevel() const { return m_cgiLogLevel; }
     QtMsgType dbserverLogLevel() const { return m_dbserverLogLevel; }
-    QtMsgType downloaderLogLevel() const { return m_downloaderLogLevel; }
 
 private:
     bool m_valid;
@@ -56,17 +51,12 @@ private:
     QString m_libraryLogFile;
     QString m_libraryBackupDir;
 
-    quint16 m_downloaderPort;
     quint16 m_dbserverPort;
-
-    QString m_downloaderHost;
     QString m_dbserverHost;
 
     QString m_cgiLogFile;
     QString m_dbserverLogFile;
-    QString m_downloaderLogFile;
 
     QtMsgType m_cgiLogLevel;
     QtMsgType m_dbserverLogLevel;
-    QtMsgType m_downloaderLogLevel;
 };
