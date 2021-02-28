@@ -414,7 +414,7 @@ QString SongId::filePath(const Library &library) const
 {
     FETCH(song, m_songs, m_value);
     FETCH(ending, m_fileEndings, song->fileEnding);
-    return QString::number(m_value) + ending;
+    return QString::number(m_value) + "." + ending;
 }
 
 bool AlbumId::exists(const Library &library) const
