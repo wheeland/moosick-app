@@ -9,6 +9,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
+#include <array>
+
 namespace Moosick {
 
 struct SerializedLibrary

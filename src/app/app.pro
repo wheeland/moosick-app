@@ -75,8 +75,6 @@ HEADERS += \
     ../shared/serversettings.hpp \
     ../shared/tcpclientserver.hpp \
     ../shared/result.hpp \
-    \
-    src/musicscrape/musicscrape.hpp \
 
 RESOURCES += \
     qml.qrc \
@@ -102,6 +100,4 @@ android {
         android/res/values/libs.xml
 
     ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
-
-    ANDROID_EXTRA_LIBS = bin/libcommon.so
 }
