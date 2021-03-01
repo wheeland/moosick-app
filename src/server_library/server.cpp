@@ -254,8 +254,10 @@ quint32 Server::startDownload(const MoosickMessage::DownloadRequest &request)
 
 void Server::onDownloaderThreadFinished(DownloaderThread *thread)
 {
+    quint32 id = 0;
     for (auto it = m_downloads.begin(); it != m_downloads.end(); ++it) {
         if (it->thread == thread) {
+            id = it.key();
             m_downloads.erase(it);
             break;
         }
@@ -265,14 +267,14 @@ void Server::onDownloaderThreadFinished(DownloaderThread *thread)
         qWarning() << "Failed to download:" << thread->m_result.getError();
     }
     else {
-        finishDownload(thread->m_result.takeValue());
+        finishDownload(id, thread->m_result.takeValue());
     }
 
     thread->wait();
     delete thread;
 }
 
-void Server::finishDownload(const DownloadResult &result)
+void Server::finishDownload(quint32 id, const DownloadResult &result)
 {
     // 1. Get or create artist
     ArtistId artistId = result.artistId;
@@ -323,6 +325,8 @@ void Server::finishDownload(const DownloadResult &result)
     // 4. Remove temp dir
     if (!result.tempDir.isEmpty() && QDir().exists(result.tempDir))
         QDir().rmdir(result.tempDir);
+
+    qDebug() << "Finished download" << id << ":" << artistId.name(m_library) << albumId.name(m_library) << result.files.size() << "songs";
 }
 
 #include "server.moc"

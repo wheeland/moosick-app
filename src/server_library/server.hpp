@@ -24,7 +24,7 @@ protected:
 
 private:
     quint32 startDownload(const MoosickMessage::DownloadRequest &request);
-    void finishDownload(const DownloadResult &result);
+    void finishDownload(quint32 id, const DownloadResult &result);
     void onDownloaderThreadFinished(DownloaderThread *thread);
 
 private:
