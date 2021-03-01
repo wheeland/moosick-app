@@ -1,6 +1,7 @@
 #include "androidutil.hpp"
 
 #include <QEvent>
+#include <QTimer>
 
 namespace AndroidUtil {
 
@@ -20,19 +21,25 @@ static Logger *s_handlingLogger = nullptr;
 static const char *msgTypeStr(QtMsgType type)
 {
     switch (type) {
-    case QtDebugMsg: return "[DEBUG]";
-    case QtWarningMsg: return "[WARNING]";
-    case QtCriticalMsg: return "[CRITICAL]";
-    case QtFatalMsg: return "[FATA]L";
-    case QtInfoMsg: return "[INFO]";
-    default: return "[NONE]";
+    case QtDebugMsg: return "[Dbg]";
+    case QtWarningMsg: return "[Wrn]";
+    case QtCriticalMsg: return "[Crt]";
+    case QtFatalMsg: return "[Ftl]";
+    case QtInfoMsg: return "[Inf]";
+    default: return "[xxx]";
     }
 }
 
 static void messageHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg)
 {
     Q_UNUSED(ctx)
-    const QString out = QString(msgTypeStr(type)) + " " + msg;
+    const QDateTime dt = QDateTime::currentDateTime();
+    const QString dtStr = QString::asprintf("%02d:%02d:%02d.%03d",
+                                            dt.time().hour(),
+                                            dt.time().minute(),
+                                            dt.time().second(),
+                                            dt.time().msec());
+    const QString out = dtStr + " " + QString(msgTypeStr(type)) + " " + msg;
     fprintf(stderr, "%s\n", out.toLocal8Bit().data());
     fflush(stderr);
     s_handlingLogger->add(out);
@@ -69,15 +76,17 @@ void Logger::setLineCount(int lineCount)
 
 void Logger::add(const QString &line)
 {
-    beginInsertRows(QModelIndex(), 0, 0);
-    m_lines.prepend(line);
-    endInsertRows();
+    QTimer::singleShot(0, this, [=]() {
+        beginInsertRows(QModelIndex(), 0, 0);
+        m_lines.append(line);
+        endInsertRows();
 
-    if (m_lines.size() > m_lineCount) {
-        beginRemoveRows(QModelIndex(), m_lineCount, m_lines.size() - 1);
-        m_lines.resize(m_lineCount);
-        endRemoveRows();
-    }
+        while (m_lines.size() > m_lineCount) {
+            beginRemoveRows(QModelIndex(), 0, 0);
+            m_lines.removeFirst();
+            endRemoveRows();
+        }
+    });
 }
 
 int Logger::rowCount(const QModelIndex &parent) const
