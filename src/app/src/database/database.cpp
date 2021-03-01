@@ -92,7 +92,7 @@ HttpRequestId Database::download(MoosickMessage::DownloadRequest request, const 
         return 0;
     }
 
-    m_runningDownloads << Download { request, albumTags, reply };
+    m_runningDownloads << Download { request, albumTags, reply, 0 };
 
     m_downloadsPending = true;
     emit downloadsPendingChanged(m_downloadsPending);
