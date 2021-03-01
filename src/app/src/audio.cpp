@@ -105,7 +105,9 @@ void Audio::onMediaStatusChanged()
 Audio::Status Audio::computeStatus()
 {
     if (m_player->error() != QMediaPlayer::NoError) {
-        qWarning() << "Error:" << m_player->errorString();
+        qWarning() << "Audio playback Error";
+        qWarning() << "  media URL =" << m_player->media().request().url();
+        qWarning() << "  error =" << m_player->error() << ":" << m_player->errorString();
         return Error;
     }
 
