@@ -7,3 +7,6 @@
 [submodule "3rdparty/cpp-musicscrape"]
 	path = 3rdparty/cpp-musicscrape
 	url = https://github.com/wheeland/cpp-musicscrape.git
+[submodule "3rdparty/android_openssl"]
+	path = 3rdparty/android_openssl
+	url = https://github.com/KDAB/android_openssl.git

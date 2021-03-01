@@ -99,5 +99,7 @@ android {
         android/gradlew.bat \
         android/res/values/libs.xml
 
+    include(../../3rdparty/android_openssl/openssl.pri)
+
     ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
 }
