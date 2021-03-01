@@ -256,7 +256,6 @@ void HttpClient::launchRequest(HttpClient::RunningRequest &request)
     Q_ASSERT(request.currentReply.isNull());
 
     if (!m_hostValid || (m_manager->networkAccessible() != QNetworkAccessManager::Accessible)) {
-//        qWarning() << "POSTPONE" << request.globalRequest.url() << request.serverPath << request.serverQuery;
         return;
     }
 
@@ -282,8 +281,6 @@ void HttpClient::launchRequest(HttpClient::RunningRequest &request)
         request.currentReply->ignoreSslErrors(ignoredSslErrors());
         connect(request.currentReply, &QNetworkReply::sslErrors, this, &HttpClient::onSslErrors);
     }
-
-//    qWarning() << "LAUNCH" << request.currentReply->url();
 }
 
 static bool isHostOffline(QNetworkReply::NetworkError error)
