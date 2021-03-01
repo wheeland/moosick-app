@@ -6,10 +6,80 @@
 
 namespace Moosick {
 
+QString LibraryChangeRequest::typeToStr(LibraryChangeRequest::Type tp)
+{
+#define HANDLE_CASE(TYPE) case TYPE: return #TYPE;
+    switch (tp) {
+    HANDLE_CASE(Invalid)
+    HANDLE_CASE(SongAdd)
+    HANDLE_CASE(SongRemove)
+    HANDLE_CASE(SongSetName)
+    HANDLE_CASE(SongSetPosition)
+    HANDLE_CASE(SongSetLength)
+    HANDLE_CASE(SongSetFileEnding)
+    HANDLE_CASE(SongSetHandle)
+    HANDLE_CASE(SongSetAlbum)
+    HANDLE_CASE(SongAddTag)
+    HANDLE_CASE(SongRemoveTag)
+    HANDLE_CASE(AlbumAdd)
+    HANDLE_CASE(AlbumRemove)
+    HANDLE_CASE(AlbumSetName)
+    HANDLE_CASE(AlbumSetArtist)
+    HANDLE_CASE(AlbumAddTag)
+    HANDLE_CASE(AlbumRemoveTag)
+    HANDLE_CASE(ArtistAdd)
+    HANDLE_CASE(ArtistAddOrGet)
+    HANDLE_CASE(ArtistRemove)
+    HANDLE_CASE(ArtistSetName)
+    HANDLE_CASE(ArtistAddTag)
+    HANDLE_CASE(ArtistRemoveTag)
+    HANDLE_CASE(TagAdd)
+    HANDLE_CASE(TagRemove)
+    HANDLE_CASE(TagSetName)
+    HANDLE_CASE(TagSetParent)
+    }
+    qCritical() << "Invalid LibraryChangeRequest type:" << tp;
+    return "";
+#undef HANDLE_CASE
+}
+
+bool LibraryChangeRequest::typeFromStr(const QString &str, LibraryChangeRequest::Type &tp)
+{
+#define HANDLE_CASE(TYPE) if (str == #TYPE) { tp = TYPE; return true; }
+    HANDLE_CASE(SongAdd)
+    HANDLE_CASE(SongRemove)
+    HANDLE_CASE(SongSetName)
+    HANDLE_CASE(SongSetPosition)
+    HANDLE_CASE(SongSetLength)
+    HANDLE_CASE(SongSetFileEnding)
+    HANDLE_CASE(SongSetHandle)
+    HANDLE_CASE(SongSetAlbum)
+    HANDLE_CASE(SongAddTag)
+    HANDLE_CASE(SongRemoveTag)
+    HANDLE_CASE(AlbumAdd)
+    HANDLE_CASE(AlbumRemove)
+    HANDLE_CASE(AlbumSetName)
+    HANDLE_CASE(AlbumSetArtist)
+    HANDLE_CASE(AlbumAddTag)
+    HANDLE_CASE(AlbumRemoveTag)
+    HANDLE_CASE(ArtistAdd)
+    HANDLE_CASE(ArtistAddOrGet)
+    HANDLE_CASE(ArtistRemove)
+    HANDLE_CASE(ArtistSetName)
+    HANDLE_CASE(ArtistAddTag)
+    HANDLE_CASE(ArtistRemoveTag)
+    HANDLE_CASE(TagAdd)
+    HANDLE_CASE(TagRemove)
+    HANDLE_CASE(TagSetName)
+    HANDLE_CASE(TagSetParent)
+#undef HANDLE_CASE
+    return false;
+}
+
 QJsonValue enjson(const Moosick::LibraryChangeRequest &change)
 {
     QJsonObject ret;
-    ret["type"] = ::enjson((int) change.changeType);
+    ret["type"] = ::enjson(Moosick::LibraryChangeRequest::typeToStr(change.changeType));
     ret["targetId"] = ::enjson((int) change.targetId);
     ret["detail"] = ::enjson((int) change.detail);
     ret["name"] = ::enjson(change.name);
@@ -19,13 +89,16 @@ QJsonValue enjson(const Moosick::LibraryChangeRequest &change)
 void dejson(const QJsonValue &json, Result<Moosick::LibraryChangeRequest, EnjsonError> &result)
 {
     DEJSON_EXPECT_TYPE(json, result, Object);
-    DEJSON_GET_MEMBER(json, result, int, tp, "type");
+    DEJSON_GET_MEMBER(json, result, QString, tp, "type");
     DEJSON_GET_MEMBER(json, result, int, targetId, "targetId");
     DEJSON_GET_MEMBER(json, result, int, detail, "detail");
     DEJSON_GET_MEMBER(json, result, QString, name, "name");
 
     Moosick::LibraryChangeRequest change;
-    change.changeType = static_cast<Moosick::LibraryChangeRequest::Type>(tp);
+    if (!Moosick::LibraryChangeRequest::typeFromStr(tp, change.changeType)) {
+        result = EnjsonError::buildCustomError("Invalid type value: " + tp);
+        return;
+    }
     change.targetId = targetId;
     change.detail = detail;
     change.name = name;

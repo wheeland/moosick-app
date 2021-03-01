@@ -21,7 +21,7 @@ template <quint32 LENGTH>
 class UniqueId : public UniqueIdBase
 {
 public:
-    UniqueId() = default;
+    UniqueId() { std::fill(m_bytes.begin(), m_bytes.end(), 0); }
     UniqueId(const UniqueId &other) = default;
     UniqueId &operator=(const UniqueId &other) = default;
 

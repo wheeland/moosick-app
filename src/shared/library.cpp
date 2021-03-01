@@ -64,7 +64,6 @@ Result<CommittedLibraryChange, QString> Library::commit(const LibraryChangeReque
         fetchItem(m_albums, album, change.targetId);
 
         auto song = m_songs.create();
-        song.second->handle = SongHandle::generate();
         song.second->name = change.name;
         song.second->album = change.targetId;
         album->songs << song.first;
@@ -114,6 +113,11 @@ Result<CommittedLibraryChange, QString> Library::commit(const LibraryChangeReque
         song->album = change.detail;
         oldAlbum->songs.removeAll(change.targetId);
         newAlbum->songs << change.targetId;
+        break;
+    }
+    case Moosick::LibraryChangeRequest::SongSetHandle: {
+        fetchItem(m_songs, song, change.targetId);
+        requireThat(song->handle.fromString(change.name.toUtf8()), "Invalid handle string");
         break;
     }
     case Moosick::LibraryChangeRequest::SongAddTag: {
@@ -200,7 +204,7 @@ Result<CommittedLibraryChange, QString> Library::commit(const LibraryChangeReque
                 break;
             }
         }
-        // fall through
+        [[fallthrough]];
     }
     case Moosick::LibraryChangeRequest::ArtistAdd: {
         auto artist = m_artists.create();
@@ -325,8 +329,7 @@ Result<CommittedLibraryChange, QString> Library::commit(const LibraryChangeReque
 
         break;
     }
-    case Moosick::LibraryChangeRequest::Invalid:
-    default: {
+    case Moosick::LibraryChangeRequest::Invalid: {
         return QString("No such LibraryChangeRequest");
     }
     }

@@ -309,7 +309,15 @@ void Server::finishDownload(const DownloadResult &result)
         m_library.commit(LibraryChangeRequest::CreateSongSetLength(songId, file.duration));
         m_library.commit(LibraryChangeRequest::CreateSongSetFileEnding(songId, 0, file.fileEnding));
 
-        QFile(file.fullPath).rename(m_settings.mediaBaseDir() + QDir::separator() + songId.fileName(m_library));
+        // assign handle and move to destination
+        QString dstFileName;
+        do {
+            Moosick::SongHandle handle = Moosick::SongHandle::generate();
+            m_library.commit(LibraryChangeRequest::CreateSongSetHandle(songId, 0, QString::fromUtf8(handle.toString())));
+            dstFileName = m_settings.mediaBaseDir() + QDir::separator() + songId.fileName(m_library);
+        } while (QFile::exists(dstFileName));
+
+        QFile(file.fullPath).rename(dstFileName);
     }
 
     // 4. Remove temp dir

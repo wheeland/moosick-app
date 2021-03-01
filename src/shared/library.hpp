@@ -30,6 +30,7 @@ struct LibraryChangeRequest
         SongSetPosition,
         SongSetLength,
         SongSetFileEnding,
+        SongSetHandle,
         SongSetAlbum,
         SongAddTag,
         SongRemoveTag,
@@ -54,6 +55,9 @@ struct LibraryChangeRequest
         TagSetParent,
     };
 
+    static QString typeToStr(Type tp);
+    static bool typeFromStr(const QString &str, Type &tp);
+
     LibraryChangeRequest() = default;
     LibraryChangeRequest(const LibraryChangeRequest &other) = default;
     LibraryChangeRequest(Type tp, quint32 id, quint32 det = 0, const QString &nm = QString());
@@ -71,6 +75,7 @@ struct LibraryChangeRequest
     LIBRARY_CHANGE_REQUEST_DEFINE_STATIC_CTOR(SongSetLength)
     LIBRARY_CHANGE_REQUEST_DEFINE_STATIC_CTOR(SongSetFileEnding)
     LIBRARY_CHANGE_REQUEST_DEFINE_STATIC_CTOR(SongSetAlbum)
+    LIBRARY_CHANGE_REQUEST_DEFINE_STATIC_CTOR(SongSetHandle)
     LIBRARY_CHANGE_REQUEST_DEFINE_STATIC_CTOR(SongAddTag)
     LIBRARY_CHANGE_REQUEST_DEFINE_STATIC_CTOR(SongRemoveTag)
 
@@ -115,6 +120,7 @@ struct CommittedLibraryChange
 };
 
 using LibraryId = UniqueId<8>;
+using SongHandle = UniqueId<16>;
 
 class Library
 {
@@ -159,8 +165,6 @@ public:
 
 private:
     void deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, EnjsonError> &result);
-
-    using SongHandle = UniqueId<16>;
 
     struct Song
     {
