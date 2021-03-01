@@ -8,6 +8,39 @@
 
 namespace Moosick {
 
+class UniqueIdBase
+{
+protected:
+    static void generate(quint8 *dst, quint32 length);
+    static bool fromString(const QByteArray &src, quint8 *dst, quint32 length);
+    static QByteArray toString(const quint8 *bytes, quint32 length);
+    static bool compare(const quint8 *a, const quint8 *b, quint32 length);
+};
+
+template <quint32 LENGTH>
+class UniqueId : public UniqueIdBase
+{
+public:
+    UniqueId() = default;
+    UniqueId(const UniqueId &other) = default;
+    UniqueId &operator=(const UniqueId &other) = default;
+
+    bool operator!=(const UniqueId &other) const { return !(*this == other); }
+    bool operator==(const UniqueId &other) const { return UniqueIdBase::compare(m_bytes.data(), other.m_bytes.data(), LENGTH); }
+
+    static UniqueId generate() {
+        UniqueId ret;
+        UniqueIdBase::generate(ret.m_bytes.data(), LENGTH);
+        return ret;
+    }
+
+    QByteArray toString() const { return UniqueIdBase::toString(m_bytes.data(), LENGTH); }
+    bool fromString(const QByteArray &string) { return UniqueIdBase::fromString(string, m_bytes.data(), LENGTH); }
+
+private:
+    std::array<quint8, LENGTH> m_bytes;
+};
+
 class Library;
 
 namespace detail {
@@ -58,7 +91,7 @@ struct SongId : public detail::FromU32
     QString name(const Library &library) const;
     quint32 position(const Library &library) const;
     quint32 secs(const Library &library) const;
-    QString filePath(const Library &library) const;
+    QString fileName(const Library &library) const;
 };
 
 struct AlbumId : public detail::FromU32

@@ -64,6 +64,7 @@ Result<CommittedLibraryChange, QString> Library::commit(const LibraryChangeReque
         fetchItem(m_albums, album, change.targetId);
 
         auto song = m_songs.create();
+        song.second->handle = SongHandle::generate();
         song.second->name = change.name;
         song.second->album = change.targetId;
         album->songs << song.first;
@@ -410,11 +411,11 @@ quint32 SongId::secs(const Library &library) const
     return song->secs;
 }
 
-QString SongId::filePath(const Library &library) const
+QString SongId::fileName(const Library &library) const
 {
     FETCH(song, m_songs, m_value);
     FETCH(ending, m_fileEndings, song->fileEnding);
-    return QString::number(m_value) + "." + ending;
+    return QString::fromUtf8(song->handle.toString()) + "." + ending;
 }
 
 bool AlbumId::exists(const Library &library) const

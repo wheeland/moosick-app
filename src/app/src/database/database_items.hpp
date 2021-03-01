@@ -170,7 +170,7 @@ public:
     QString artistName() const;
     QString albumName() const;
     QString durationString() const;
-    QString filePath() const { return m_song.filePath(library()); }
+    QString filePath() const { return m_song.fileName(library()); }
     int secs() const { return m_song.secs(library()); }
     int position() const { return m_song.position(library()); }
 

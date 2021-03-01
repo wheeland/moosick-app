@@ -114,26 +114,7 @@ struct CommittedLibraryChange
     friend void dejson(const QJsonValue &json, Result<Moosick::CommittedLibraryChange, EnjsonError> &result);
 };
 
-class LibraryId
-{
-public:
-    static constexpr int LENGTH = 8;
-
-    LibraryId() = default;
-    LibraryId(const LibraryId &other) = default;
-    LibraryId &operator=(const LibraryId &other) = default;
-
-    bool operator!=(const LibraryId &other) const { return !(*this == other); }
-    bool operator==(const LibraryId &other) const;
-
-    static LibraryId generate();
-
-    QByteArray toString() const;
-    bool fromString(const QByteArray &string);
-
-private:
-    std::array<quint8, LENGTH> m_bytes;
-};
+using LibraryId = UniqueId<8>;
 
 class Library
 {
@@ -179,6 +160,8 @@ public:
 private:
     void deserializeFromJsonInternal(const QJsonObject &libraryJson, const QJsonArray &committedChanges, Result<int, EnjsonError> &result);
 
+    using SongHandle = UniqueId<16>;
+
     struct Song
     {
         QString name;
@@ -186,6 +169,7 @@ private:
         quint32 fileEnding = 0;
         quint32 position = 0;
         quint32 secs = 0;
+        SongHandle handle;
         TagIdList tags;
     };
 

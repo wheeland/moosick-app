@@ -309,8 +309,7 @@ void Server::finishDownload(const DownloadResult &result)
         m_library.commit(LibraryChangeRequest::CreateSongSetLength(songId, file.duration));
         m_library.commit(LibraryChangeRequest::CreateSongSetFileEnding(songId, 0, file.fileEnding));
 
-        const QString newFileName = QString::number(songId) + "." + file.fileEnding;
-        QFile(file.fullPath).rename(m_settings.mediaBaseDir() + QDir::separator() + newFileName);
+        QFile(file.fullPath).rename(m_settings.mediaBaseDir() + QDir::separator() + songId.fileName(m_library));
     }
 
     // 4. Remove temp dir

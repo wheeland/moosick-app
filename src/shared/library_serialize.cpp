@@ -70,12 +70,10 @@ QJsonValue enjson(Moosick::TagId tag)
 
 namespace Moosick {
 
-LibraryId LibraryId::generate()
+void UniqueIdBase::generate(quint8 *dst, quint32 length)
 {
-    LibraryId ret;
-    for (int i = 0; i < LENGTH; ++i)
-        ret.m_bytes[i] = QRandomGenerator::global()->generate();
-    return ret;
+    for (quint32 i = 0; i < length; ++i)
+        dst[i] = QRandomGenerator::global()->generate();
 }
 
 static char toDigit(const quint8 n)
@@ -97,34 +95,34 @@ static bool fromDigit(const char c, quint8 &num)
     return true;
 }
 
-QByteArray LibraryId::toString() const
+QByteArray UniqueIdBase::toString(const quint8 *bytes, quint32 length)
 {
     QByteArray ret;
-    for (quint8 byte : m_bytes) {
-        ret += toDigit(byte / 16);
-        ret += toDigit(byte % 16);
+    for (quint32 i = 0; i < length; ++i) {
+        ret += toDigit(bytes[i] / 16);
+        ret += toDigit(bytes[i] % 16);
     }
     return ret;
 }
 
-bool LibraryId::fromString(const QByteArray &string)
+bool UniqueIdBase::fromString(const QByteArray &src, quint8 *dst, quint32 length)
 {
-    if (string.size() != 2 * LENGTH)
+    if ((quint32) src.size() != 2 * length)
         return false;
 
-    for (int i = 0; i < LENGTH; ++i) {
+    for (quint32 i = 0; i < length; ++i) {
         quint8 high, low;
-        if (!fromDigit(string[2*i], high) || !fromDigit(string[2*i+1], low))
+        if (!fromDigit(src[2*i], high) || !fromDigit(src[2*i+1], low))
             return false;
-        m_bytes[i] = 16 * high + low;
+        dst[i] = 16 * high + low;
     }
     return true;
 }
 
-bool LibraryId::operator==(const LibraryId &other) const
+bool UniqueIdBase::compare(const quint8 *a, const quint8 *b, quint32 length)
 {
-    for (int i = 0; i < LENGTH; ++i) {
-        if (m_bytes[i] != other.m_bytes[i])
+    for (quint32 i = 0; i < length; ++i) {
+        if (a[i] != b[i])
             return false;
     }
     return true;
@@ -139,6 +137,7 @@ QJsonValue enjson(const Library::Song &song)
     json["position"] = QJsonValue((int) song.position);
     json["secs"] = QJsonValue((int) song.secs);
     json["tags"] = enjson(song.tags);
+    json["handle"] = QJsonValue(QString::fromUtf8(song.handle.toString()));
     return json;
 }
 
@@ -175,6 +174,7 @@ void dejson(const QJsonValue &json, Result<Library::Song, EnjsonError> &result)
     DEJSON_GET_MEMBER(json, result, int, position, "position");
     DEJSON_GET_MEMBER(json, result, int, secs, "secs");
     DEJSON_GET_MEMBER(json, result, TagIdList, tags, "tags");
+    DEJSON_GET_MEMBER(json, result, QString, handleString, "handle");
     Library::Song song;
     song.name = name;
     song.album = album;
@@ -182,6 +182,10 @@ void dejson(const QJsonValue &json, Result<Library::Song, EnjsonError> &result)
     song.position = position;
     song.secs = secs;
     song.tags = tags;
+    if (!song.handle.fromString(handleString.toUtf8())) {
+        result = EnjsonError::buildCustomError("invalid song handle");
+        return;
+    }
     result = song;
 }
 
@@ -350,7 +354,7 @@ QStringList Library::dumpToStringList() const
 
             for (SongId song : album.songs(*this)) {
                 const QString pos = QString::asprintf("[%2d] ", song.position(*this));
-                const QString filePath = song.filePath(*this);
+                const QString filePath = song.fileName(*this);
                 const quint32 secs = song.secs(*this);
                 const QString fileInfo = QString::asprintf(" (%s - %d:%02d)", qPrintable(filePath), secs/60, secs%60);
                 ret << QString("     |    |-- ") + pos + song.name(*this) + fileInfo + infoStr(song, song.tags(*this));

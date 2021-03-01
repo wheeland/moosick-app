@@ -247,8 +247,6 @@ void Playlist::addFromLibrary(const QString &fileName, const QString &artist, co
     url.setHost(m_http->host());
     url.setPort(m_http->port());
     url.setPath(m_mediaBaseUrl + fileName);
-    url.setUserName(m_http->user());
-    url.setPassword(m_http->pass());
 
     Entry *entry = createEntry(Entry::Library, artist, album, title, url, duration, "");
     insertEntry(entry, append);
