@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 #ifdef Q_OS_ANDROID
     const QSize screenSize = app.primaryScreen()->size();
 #else
-    const QSize screenSize = QSize(300, 550);
+    const QSize screenSize = QSize(450, 750);
 #endif
 
     Controller controller;
