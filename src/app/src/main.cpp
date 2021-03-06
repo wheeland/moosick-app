@@ -13,18 +13,38 @@
 #include "multichoicecontroller.hpp"
 #include "util/androidutil.hpp"
 
+#ifdef Q_OS_ANDROID
+static bool isService(int argc, char **argv)
+{
+    for (int i = 1; i < argc; ++i) {
+        if (argv[i] == QByteArray("--service"))
+            return true;
+    }
+    return false;
+}
+#endif // Q_OS_ANDROID
+
 int main(int argc, char **argv)
 {
 #ifndef Q_OS_ANDROID
     // only use QtVirtualKeyboard on host builds, doesn't seem to work on Android
     qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
     qputenv("QT_VIRTUALKEYBOARD_LAYOUT_PATH", QByteArray(":/qml/layouts/"));
-#endif
+#endif // Q_OS_ANDROID
+
+#ifdef Q_OS_ANDROID
+    if (isService(argc, argv))
+        return runPlaybackService(argc, argv);
+#endif // Q_OS_ANDROID
 
     QCoreApplication::setOrganizationName("de.wheeland.moosick");
     QCoreApplication::setApplicationName("Moosick");
 
     QGuiApplication app(argc, argv);
+
+#ifdef Q_OS_ANDROID
+    startPlaybackService();
+#endif // Q_OS_ANDROID
 
     AndroidUtil::Logger logger;
     logger.install();
@@ -78,6 +98,8 @@ int main(int argc, char **argv)
 
     view.setSource(QUrl("qrc:/qml/main.qml"));
     view.show();
+
+    qWarning() << "Started";
 
     const int ret = app.exec();
     logger.uninstall();

@@ -3,6 +3,7 @@
 #include "util/modeladapter.hpp"
 #include "result.hpp"
 #include "httpclient.hpp"
+#include "playback.hpp"
 
 namespace Playlist {
 
@@ -66,17 +67,15 @@ class Playlist : public QObject
     Q_PROPERTY(ModelAdapter::Model *entries READ entries CONSTANT)
     Q_PROPERTY(bool hasSelectedSongs READ hasSelectedSongs NOTIFY hasSelectedSongsChanged)
     Q_PROPERTY(bool repeat READ repeat WRITE setRepeat NOTIFY repeatChanged)
-    Q_PROPERTY(bool randomized READ randomized WRITE setRandomized NOTIFY randomizedChanged)
 
 public:
-    Playlist(HttpClient *httpClient, QObject *parent = nullptr);
+    Playlist(HttpClient *httpClient, Playback *playback, QObject *parent = nullptr);
     ~Playlist();
 
     ModelAdapter::Model *entries() const;
     Entry *currentSong() const { return m_currentSong; }
     bool hasSelectedSongs() const { return m_hasSelectedSongs; }
     bool repeat() const { return m_repeat; }
-    bool randomized() const { return m_randomized; }
 
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();
@@ -97,7 +96,6 @@ public:
 
 public slots:
     void setRepeat(bool repeat);
-    void setRandomized(bool randomized);
 
 signals:
     void currentSongChanged();
@@ -133,15 +131,16 @@ private:
     bool m_repeat = false;
 
     Entry *m_currentSong = nullptr;
-    void currentSongMaybeChanged();
+//    void currentSongMaybeChanged();
 
     // if the playlist is randomized, the current entry index doesn't refer to the
     // actual m_entries list, but rather goes through the indirection of the
     // random index overlay
-    bool m_randomized = false;
-    QVector<int> m_randomizedOverlay;
+//    bool m_randomized = false;
+//    QVector<int> m_randomizedOverlay;
 
     HttpRequester *m_http;
+    Playback *m_playback;
 };
 
 } // namespace Playlist

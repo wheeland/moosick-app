@@ -1,0 +1,18 @@
+class Playback {
+    PROP(bool playing=false READONLY)
+    PROP(bool hasSong=false READONLY)
+    PROP(int duration=0 READONLY)
+    PROP(float position=0.0f READONLY)
+
+    SLOT(void setPlaylist(const QVector<QUrl>& urls));
+    SLOT(void addSong(const QUrl& url));
+    SLOT(void removeSong(int pos));
+    SLOT(void insertSong(int pos, const QUrl& url));
+    SLOT(void jump(int index));
+    SLOT(void step(int delta));
+    SLOT(void seek(float position));
+    SLOT(void play());
+    SLOT(void pause());
+
+    SIGNAL(currentSongChanged(int index, const QUrl& url));
+}

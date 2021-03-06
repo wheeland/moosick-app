@@ -2,6 +2,10 @@
 
 #include <QDebug>
 
+#ifdef Q_OS_ANDROID
+#include <QRemoteObjectNode>
+#endif // Q_OS_ANDROID
+
 using Database::DbItem;
 using Database::DbArtist;
 using Database::DbAlbum;
@@ -9,12 +13,19 @@ using Database::DbSong;
 
 Controller::Controller(QObject *parent)
     : QObject(parent)
-    , m_storage(new Storage())
-    , m_httpClient(new HttpClient(this))
-    , m_playlist(new Playlist::Playlist(m_httpClient, this))
-    , m_search(new Search::Query(m_httpClient, this))
-    , m_audio(new Audio(m_playlist, this))
 {
+    m_storage = new Storage();
+    m_httpClient = new HttpClient(this);
+
+#ifdef Q_OS_ANDROID
+    m_playback = connectToPlaybackService();
+#else // Q_OS_ANDROID
+    m_playback = new Playback();
+#endif // Q_OS_ANDROID
+
+    m_playlist = new Playlist::Playlist(m_httpClient, m_playback, this);
+    m_search = new Search::Query(m_httpClient, this);
+
     m_httpClient->setApiUrl(m_storage->host());
     m_httpClient->setPort(m_storage->port());
     m_httpClient->setUser(m_storage->userName());
@@ -52,8 +63,8 @@ Controller::~Controller()
         m_storage->writeLibrary(m_database->library());
 
     // order please!
-    delete m_audio;
     delete m_search;
+    // TODO: delete playback
     delete m_playlist;
     delete m_httpClient;
     delete m_storage;
@@ -162,6 +173,11 @@ void Controller::download(Search::Result *result)
     }
 
     m_database->requestDownload(request, result);
+}
+
+QString Controller::formatTimeString(int msecs)
+{
+    return QString::asprintf("%d:%02d", msecs / 60000, (msecs % 60000) / 1000);
 }
 
 bool Controller::queueBandcampAlbum(Search::BandcampAlbumResult *album, bool append)

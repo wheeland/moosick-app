@@ -24,34 +24,34 @@ Rectangle {
             center: parent.width * 0.2
             size: parent.height
             source: "../data/back.png"
-            enabled: _app.audio.hasSong
-            onClicked: _app.playlist.previous()
+            enabled: _app.playback.hasSong
+            onClicked: _app.playback.step(-1)
         }
 
         SimpleButton {
             x: parent.width * 0.35 - 0.5 * width
             y: 20
             label: "S"
-            background: _app.playlist.randomized ? "#555555" : "#222222"
-            onClicked: _app.playlist.randomized = !_app.playlist.randomized
+//            background: _app.playlist.randomized ? "#555555" : "#222222"
+//            onClicked: _app.playlist.randomized = !_app.playlist.randomized
         }
 
         PlayerBarButton {
             center: parent.width * 0.5
             size: parent.height
-            visible: !_app.audio.playing
+            visible: !_app.playback.playing
             source: "../data/play.png"
-            enabled: _app.audio.hasSong
-            onClicked: _app.audio.play()
+            enabled: _app.playback.hasSong
+            onClicked: _app.playback.play()
         }
 
         PlayerBarButton {
             center: parent.width * 0.5
             size: parent.height
-            visible: _app.audio.playing
+            visible: _app.playback.playing
             source: "../data/pause.png"
-            enabled: _app.audio.hasSong
-            onClicked: _app.audio.pause()
+            enabled: _app.playback.hasSong
+            onClicked: _app.playback.pause()
         }
 
         SimpleButton {
@@ -66,8 +66,8 @@ Rectangle {
             center: parent.width * 0.8
             size: parent.height
             source: "../data/forward.png"
-            enabled: _app.audio.hasSong
-            onClicked: _app.playlist.next()
+            enabled: _app.playback.hasSong
+            onClicked: _app.playback.step(1)
         }
     }
 
@@ -81,7 +81,7 @@ Rectangle {
 
         property bool peeking : false
         property real peekPos : 0.0
-        readonly property real displayPos : peeking ? peekPos : _app.audio.position
+        readonly property real displayPos : peeking ? peekPos : _app.playback.position
 
         function doPeek(pos) {
             peeking = true;
@@ -90,12 +90,12 @@ Rectangle {
 
         function donePeek() {
             peeking = false;
-            _app.audio.seek(peekPos);
+            _app.playback.seek(peekPos);
         }
 
         Text {
             id: leftText
-            text: _app.audio.timeToDisplayString(seekerBandItem.displayPos)
+            text: _app.formatTimeString(_app.playback.duration * seekerBandItem.displayPos)
             color: "white"
             font.pixelSize: _style.fontSizeEntries
             width: 70
@@ -137,7 +137,7 @@ Rectangle {
 
         Text {
             id: rightText
-            text: _app.audio.durationString
+            text: _app.formatTimeString(_app.playback.duration)
             color: "white"
             font.pixelSize: _style.fontSizeEntries
             width: 70

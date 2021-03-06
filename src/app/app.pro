@@ -13,11 +13,11 @@ QT += core quick qml network multimedia
 }
 
 SOURCES += \
-    src/audio.cpp \
     src/controller.cpp \
     src/httpclient.cpp \
     src/main.cpp \
     src/multichoicecontroller.cpp \
+    src/playback.cpp \
     src/playlist.cpp \
     src/search.cpp \
     src/selecttagsmodel.cpp \
@@ -51,10 +51,10 @@ SOURCES += \
     ../../3rdparty/cpp-musicscrape/musicscrape/musicscrape.cpp \
 
 HEADERS += \
-    src/audio.hpp \
     src/controller.hpp \
     src/httpclient.hpp \
     src/multichoicecontroller.hpp \
+    src/playback.hpp \
     src/playlist.hpp \
     src/search.hpp \
     src/selecttagsmodel.hpp \
@@ -89,7 +89,15 @@ INCLUDEPATH += \
 
 DESTDIR = ../bin/
 
+OTHER_FILES += \
+    src/playback.rep
+
 android {
+    QT += androidextras remoteobjects
+
+    REPC_SOURCE += src/playback.rep
+    REPC_REPLICA += src/playback.rep
+
     DISTFILES += \
         android/AndroidManifest.xml \
         android/build.gradle \

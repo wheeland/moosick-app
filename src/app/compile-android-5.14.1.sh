@@ -8,7 +8,7 @@ QT_PLUGIN_PATH=$QT_PATH/plugins
 PATH=$QT_PATH/bin:$PATH
 
 export ANDROID_SDK_ROOT=/home/hagen/software/android-sdk/
-#export ANDROID_NDK_ROOT=/home/hagen/software/android-ndk-r21e/
+export ANDROID_NDK_ROOT=/home/hagen/software/android-sdk/ndk/21.3.6528147
 
 qmake .. CONFIG+=release -spec android-clang ANDROID_ABIS="armeabi-v7a"
 #qmake .. CONFIG+=release CONFIG+=qml_debug -spec android-clang ANDROID_ABIS="armeabi-v7a"
