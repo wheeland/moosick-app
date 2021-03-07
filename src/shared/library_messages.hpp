@@ -217,11 +217,11 @@ public:
 
     template <class T> T *as()
     {
-        return (m_msg->getMessageType() == T::MESSAGE_TYPE) ? static_cast<T*>(m_msg.data()) : nullptr;
+        return (m_msg && m_msg->getMessageType() == T::MESSAGE_TYPE) ? static_cast<T*>(m_msg.data()) : nullptr;
     }
     template <class T> const T *as() const
     {
-        return (m_msg->getMessageType() == T::MESSAGE_TYPE) ? static_cast<const T*>(m_msg.data()) : nullptr;
+        return (m_msg && m_msg->getMessageType() == T::MESSAGE_TYPE) ? static_cast<const T*>(m_msg.data()) : nullptr;
     }
 
     MessageBase *operator->() { return m_msg.data(); }
