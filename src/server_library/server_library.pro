@@ -52,4 +52,4 @@ INCLUDEPATH += \
     ../../3rdparty/rapidjson/include/ \
     ../../3rdparty/cpp-musicscrape/ \
 
-DESTDIR = ../../bin/
+DESTDIR = ../bin/

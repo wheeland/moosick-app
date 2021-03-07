@@ -44,4 +44,4 @@ INCLUDEPATH += \
     ../../3rdparty/gumbo-parser/src/ \
     ../../3rdparty/rapidjson/include/ \
 
-DESTDIR = ../../bin/
+DESTDIR = ../bin/

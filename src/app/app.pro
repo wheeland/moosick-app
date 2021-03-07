@@ -33,8 +33,6 @@ SOURCES += \
     ../shared/jsonconv.cpp \
     ../shared/library.cpp \
     ../shared/library_serialize.cpp \
-    ../shared/serversettings.cpp \
-    ../shared/tcpclientserver.cpp \
     \
     ../../3rdparty/gumbo-parser/src/attribute.c \
     ../../3rdparty/gumbo-parser/src/char_ref.c \
@@ -72,8 +70,6 @@ HEADERS += \
     ../shared/library.hpp \
     ../shared/library_types.hpp \
     ../shared/library_messages.hpp \
-    ../shared/serversettings.hpp \
-    ../shared/tcpclientserver.hpp \
     ../shared/result.hpp \
 
 RESOURCES += \
@@ -86,8 +82,6 @@ INCLUDEPATH += \
     ../../3rdparty/gumbo-parser/src/ \
     ../../3rdparty/rapidjson/include/ \
     ../../3rdparty/cpp-musicscrape/ \
-
-DESTDIR = ../bin/
 
 OTHER_FILES += \
     src/playback.rep
@@ -111,3 +105,5 @@ android {
 
     ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
 }
+
+DESTDIR = ../bin/
