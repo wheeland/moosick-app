@@ -29,6 +29,9 @@ public:
     const T &getValue() const;
     T takeValue();
 
+    T* operator->();
+    const T* operator->() const;
+
     void clear();
 
 private:
@@ -169,4 +172,18 @@ T Option<T>::takeValue()
     m_value.~T();
     m_hasValue = false;
     return std::move(value);
+}
+
+template<class T>
+T *Option<T>::operator->()
+{
+    assert(m_hasValue);
+    return &m_value;
+}
+
+template<class T>
+const T *Option<T>::operator->() const
+{
+    assert(m_hasValue);
+    return &m_value;
 }
