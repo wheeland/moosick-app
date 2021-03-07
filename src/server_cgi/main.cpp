@@ -150,6 +150,10 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
 
+#ifdef Q_OS_WIN32
+    _setmode(_fileno(stdin), _O_BINARY);
+#endif
+
     const ServerSettings settings;
     if (!settings.isValid()) {
         qWarning() << "Settings file not valid";
@@ -164,12 +168,14 @@ int main(int argc, char **argv)
 
     QByteArray contentBytes;
     const int contentLength = qgetenv("CONTENT_LENGTH").toInt();
+
     if (contentLength > 0) {
-        while(!std::cin.eof()) {
-            char arr[1024];
-            std::cin.read(arr,sizeof(arr));
-            int s = std::cin.gcount();
-            contentBytes.append(arr,s);
+        while(contentBytes.size() < contentLength && !std::cin.eof()) {
+            constexpr int bufferSize = 1024;
+            char buffer[bufferSize];
+            std::cin.read(buffer, qMin(bufferSize, contentLength - contentBytes.size()));
+            const int read = std::cin.gcount();
+            contentBytes.append(buffer, read);
         }
     }
 
