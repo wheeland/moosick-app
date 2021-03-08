@@ -26,6 +26,7 @@ private:
     quint32 startDownload(const MoosickMessage::DownloadRequest &request);
     void finishDownload(quint32 id, const DownloadResult &result);
     void onDownloaderThreadFinished(DownloaderThread *thread);
+    QString createSongHandleFile(Moosick::SongId songId);
 
 private:
     void saveLibrary() const;
@@ -40,6 +41,9 @@ private:
     };
     QHash<quint32, RunningDownload> m_downloads;
     quint32 m_nextDownloadId = 1;
+
+    Moosick::ArtistId getOrCreateArtist(const QString &name);
+    Moosick::AlbumId getOrCreateAlbum(Moosick::ArtistId artist, const QString &name);
 
     friend class DownloaderThread;
 };

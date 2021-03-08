@@ -3,6 +3,7 @@
 #include "download.hpp"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QDir>
 #include <QTcpSocket>
 #include <QJsonDocument>
@@ -57,6 +58,17 @@ static Result<QJsonArray, EnjsonError> loadLibraryLogJson(const QString &logPath
 
     const QByteArray logData = "[\n" + libraryLogFile.readAll() + "\n]\n";
     return jsonDeserializeArray(logData);
+}
+
+QString Server::createSongHandleFile(SongId songId)
+{
+    QString dstFileName;
+    do {
+        Moosick::SongHandle handle = Moosick::SongHandle::generate();
+        m_library.commit(LibraryChangeRequest::CreateSongSetHandle(songId, 0, QString::fromUtf8(handle.toString())));
+        dstFileName = m_settings.mediaBaseDir() + QDir::separator() + songId.fileName(m_library);
+    } while (QFile::exists(dstFileName));
+    return dstFileName;
 }
 
 Server::Server()
@@ -165,6 +177,29 @@ QByteArray Server::handleMessage(const QByteArray &data)
         response.changes = appliedChanges;
         return messageToJson(response);
     }
+    case Type::UploadSongRequestInternal: {
+        const UploadSongRequestInternal *uploadSongRequest = message.as<UploadSongRequestInternal>();
+        if (!QFileInfo(uploadSongRequest->filePath).isReadable())
+            return messageToJson(Error("Internal error"));
+
+        const ArtistId artist = getOrCreateArtist(uploadSongRequest->artistName);
+        const AlbumId album = getOrCreateAlbum(artist, uploadSongRequest->albumName);
+        const SongId songId = m_library.commit(LibraryChangeRequest::CreateSongAdd(album, 0, ""))
+                        .mapMember<SongId>(&CommittedLibraryChange::createdId)
+                        .takeValue();
+
+        m_library.commit(LibraryChangeRequest::CreateSongSetFileEnding(songId, 0, uploadSongRequest->fileEnding));
+        m_library.commit(LibraryChangeRequest::CreateSongSetName(songId, 0, uploadSongRequest->title));
+        m_library.commit(LibraryChangeRequest::CreateSongSetLength(songId, uploadSongRequest->duration));
+        m_library.commit(LibraryChangeRequest::CreateSongSetPosition(songId, uploadSongRequest->position));
+
+        // assign handle and move to destination
+        QFile(uploadSongRequest->filePath).rename(createSongHandleFile(songId));
+
+        UploadSongResponse response;
+        response.songId = songId;
+        return messageToJson(response);
+    }
     case Type::LibraryRequest: {
         LibraryResponse response;
         SerializedLibrary serialized = m_library.serializeToJson();
@@ -235,6 +270,32 @@ void Server::saveLibrary() const
     }
 }
 
+ArtistId Server::getOrCreateArtist(const QString &name)
+{
+    const QVector<ArtistId> artists = m_library.artistsByName();
+    for (ArtistId artist : artists) {
+        if (artist.name(m_library) == name)
+            return artist;
+    }
+
+    return m_library.commit(LibraryChangeRequest::CreateArtistAdd(0, 0, name))
+            .mapMember<ArtistId>(&CommittedLibraryChange::createdId)
+            .takeValue();
+}
+
+AlbumId Server::getOrCreateAlbum(ArtistId artist, const QString &name)
+{
+    const QVector<AlbumId> albums = artist.albums(m_library);
+    for (AlbumId album : albums) {
+        if (album.name(m_library) == name)
+            return album;
+    }
+
+    return m_library.commit(LibraryChangeRequest::CreateAlbumAdd(artist, 0, name))
+            .mapMember<AlbumId>(&CommittedLibraryChange::createdId)
+            .takeValue();
+}
+
 quint32 Server::startDownload(const MoosickMessage::DownloadRequest &request)
 {
     const quint32 id = m_nextDownloadId++;
@@ -278,26 +339,11 @@ void Server::finishDownload(quint32 id, const DownloadResult &result)
 {
     // 1. Get or create artist
     ArtistId artistId = result.artistId;
-    if (!artistId.isValid() || !artistId.exists(m_library)) {
-        // see if artist with such name alread exists?
-        const QVector<ArtistId> artists = m_library.artistsByName();
-        for (ArtistId artist : artists) {
-            if (artist.name(m_library) == result.artistName) {
-                artistId = artist;
-                break;
-            }
-        }
-
-        if (!artistId.isValid() || !artistId.exists(m_library))
-            artistId = m_library.commit(LibraryChangeRequest::CreateArtistAdd(0, 0, result.artistName))
-                    .mapMember<ArtistId>(&CommittedLibraryChange::createdId)
-                    .takeValue();
-    }
+    if (!artistId.isValid() || !artistId.exists(m_library))
+        artistId = getOrCreateArtist(result.artistName);
 
     // 2. Create album
-    const AlbumId albumId = m_library.commit(LibraryChangeRequest::CreateAlbumAdd(artistId, 0, result.albumName))
-            .mapMember<AlbumId>(&CommittedLibraryChange::createdId)
-            .takeValue();
+    const AlbumId albumId = getOrCreateAlbum(artistId, result.albumName);
 
     // 3. Add songs
     for (const DownloadResult::File &file : result.files)
@@ -312,14 +358,7 @@ void Server::finishDownload(quint32 id, const DownloadResult &result)
         m_library.commit(LibraryChangeRequest::CreateSongSetFileEnding(songId, 0, file.fileEnding));
 
         // assign handle and move to destination
-        QString dstFileName;
-        do {
-            Moosick::SongHandle handle = Moosick::SongHandle::generate();
-            m_library.commit(LibraryChangeRequest::CreateSongSetHandle(songId, 0, QString::fromUtf8(handle.toString())));
-            dstFileName = m_settings.mediaBaseDir() + QDir::separator() + songId.fileName(m_library);
-        } while (QFile::exists(dstFileName));
-
-        QFile(file.fullPath).rename(dstFileName);
+        QFile(file.fullPath).rename(createSongHandleFile(songId));
     }
 
     // 4. Remove temp dir

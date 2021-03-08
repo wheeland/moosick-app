@@ -3,6 +3,9 @@
 #include <QJsonDocument>
 #include <QDebug>
 #include <QTcpSocket>
+#include <QDir>
+#include <QFile>
+#include <QRandomGenerator>
 #include <iostream>
 
 #include "library.hpp"
@@ -14,7 +17,7 @@
 
 using namespace MoosickMessage;
 
-bool execute(const QString &program, const QStringList &args, QByteArray &out)
+static bool execute(const QString &program, const QStringList &args, QByteArray &out)
 {
     QProcess proc;
     proc.setProgram(program);
@@ -34,7 +37,7 @@ bool execute(const QString &program, const QStringList &args, QByteArray &out)
     }
 }
 
-Message getYoutubeUrl(const QString &toolDir, const QString &videoId)
+static Message getYoutubeUrl(const QString &toolDir, const QString &videoId)
 {
     const QString url = QString("https://www.youtube.com/watch?v=") + videoId;
     QByteArray youtubeDlOut;
@@ -114,15 +117,52 @@ static Message sendMessage(const QString &host, quint16 port, const Message &mes
     return resultMessage.takeValue();
 }
 
-static Message handleMessage(const ServerSettings &settings, const Message &message)
+static Message uploadFile(const ServerSettings &settings, const Message &message, const QByteArray &postData)
+{
+    const QString tmpDir = settings.tempDir();
+
+    const UploadSongRequest *uploadRequest = message.as<UploadSongRequest>();
+    if (uploadRequest->fileSize != postData.size())
+        return new Error("Specified file size doesn't match POST data");
+
+    // write data to temp file
+    QDir().mkpath(tmpDir);
+    const quint64 rand64 = QRandomGenerator::global()->generate64();
+    const QString tempFileName = tmpDir + QDir::separator() + QString::number(rand64);
+    QFile tempFile(tempFileName);
+    if (!tempFile.open(QIODevice::WriteOnly))
+        return new Error("Internal error");
+
+    tempFile.write(postData);
+
+    UploadSongRequestInternal *internalRequest = new UploadSongRequestInternal();
+    internalRequest->artistName = uploadRequest->artistName;
+    internalRequest->albumName = uploadRequest->albumName;
+    internalRequest->title = uploadRequest->title;
+    internalRequest->position = uploadRequest->position;
+    internalRequest->duration = uploadRequest->duration;
+    internalRequest->fileEnding = uploadRequest->fileEnding;
+    internalRequest->filePath = tempFileName;
+
+    return sendMessage(settings.dbserverHost(), settings.dbserverPort(), internalRequest);
+}
+
+/**
+ * if the message was passed via &message64= query, the POST data
+ * is available separately.
+ * Otherwise, postData will just contain the message that has already been parsed.
+ */
+static Message handleMessage(const ServerSettings &settings, const Message &message, const QByteArray &postData)
 {
     const QString toolDir = settings.toolsDir();
-    const QString tmpDir = settings.tempDir();
-    const QString mediaDir = settings.mediaBaseDir();
 
     switch (message.getType()) {
     case Type::Ping: {
         return new Pong();
+    }
+    // in this case, we expect the file data to be POSTed
+    case Type::UploadSongRequest: {
+        return uploadFile(settings, message, postData);
     }
     // forward messages to DB server
     case Type::LibraryRequest:
@@ -166,32 +206,49 @@ int main(int argc, char **argv)
         Logger::install();
     }
 
-    QByteArray contentBytes;
-    const int contentLength = qgetenv("CONTENT_LENGTH").toInt();
+    // For file uploads we don't want to go through JSON, as
+    // this would incur a huge overhead for parsing and base64 decoding.
+    // Instead, we pass the request message base64-encoded via query string,
+    // and the actual file data raw via POST
+    QByteArray queryMessage;
+    const QByteArray requestUri = qgetenv("REQUEST_URI");
+    static const char* message64Query = "?message64=";
+    const int message64Index = requestUri.indexOf(message64Query);
+    if (message64Index >= 0) {
+        const QByteArray message64 = requestUri.mid(message64Index + strlen(message64Query));
+        queryMessage = QByteArray::fromBase64(message64, QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
+    }
 
+    // Read POST data from stdin
+    QByteArray postData;
+    const int contentLength = qgetenv("CONTENT_LENGTH").toInt();
     if (contentLength > 0) {
-        while(contentBytes.size() < contentLength && !std::cin.eof()) {
+        while(postData.size() < contentLength && !std::cin.eof()) {
             constexpr int bufferSize = 1024;
             char buffer[bufferSize];
-            std::cin.read(buffer, qMin(bufferSize, contentLength - contentBytes.size()));
+            std::cin.read(buffer, qMin(bufferSize, contentLength - postData.size()));
             const int read = std::cin.gcount();
-            contentBytes.append(buffer, read);
+            postData.append(buffer, read);
         }
     }
 
-    Result<Message, EnjsonError> messageParsingResult = Message::fromJson(contentBytes);
+    const QByteArray messageJson = queryMessage.isEmpty() ? postData : queryMessage;
+    Result<Message, EnjsonError> messageParsingResult = Message::fromJson(messageJson);
 
     if (messageParsingResult.hasError()) {
         Error error;
         error.errorMessage = "Failed to parse message";
         qWarning().noquote() << "Failed to parse message:" << messageParsingResult.getError().toString();
-        qWarning().noquote() << contentBytes;
+        if (messageJson.size() < 1024)
+            qWarning().noquote() << messageJson;
+        else
+            qWarning() << "Omitting message, size =" << messageJson.size();
         std::cout << Message(error).toJson().constData() << std::endl;
         return 0;
     }
 
     Message message = messageParsingResult.takeValue();
-    Message response = handleMessage(settings, message);
+    Message response = handleMessage(settings, message, postData);
 
     std::cout << response.toJson().constData() << std::endl;
 

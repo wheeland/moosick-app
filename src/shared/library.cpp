@@ -547,6 +547,9 @@ QString typeString(Type messageType)
     case Type::MediaUrlResponse: return "MediaUrlResponse";
     case Type::ChangesRequest: return "ChangesRequest";
     case Type::ChangesResponse: return "ChangesResponse";
+    case Type::UploadSongRequest: return "UploadSongRequest";
+    case Type::UploadSongRequestInternal: return "UploadSongRequestInternal";
+    case Type::UploadSongResponse: return "UploadSongResponse";
     case Type::ChangeListRequest: return "ChangeListRequest";
     case Type::ChangeListResponse: return "ChangeListResponse";
     case Type::DownloadRequest: return "DownloadRequest";
@@ -584,39 +587,43 @@ Result<Message, EnjsonError> Message::fromJson(const QByteArray &message)
 
     // See if we find a matching message
     #define CHECK_MESSAGE_TYPE(TYPE) \
-    if (id == typeString(TYPE::MESSAGE_TYPE)) { \
+    do { if (id == typeString(TYPE::MESSAGE_TYPE)) { \
         Result<TYPE, EnjsonError> result = ::dejson<TYPE>(data); \
         if (!result.hasValue()) \
             return result.takeError(); \
         return Message(new TYPE(result.takeValue())); \
-    }
+    } } while (0)
 
-    CHECK_MESSAGE_TYPE(Error)
-    CHECK_MESSAGE_TYPE(Ping)
-    CHECK_MESSAGE_TYPE(Pong)
+    CHECK_MESSAGE_TYPE(Error);
+    CHECK_MESSAGE_TYPE(Ping);
+    CHECK_MESSAGE_TYPE(Pong);
 
-    CHECK_MESSAGE_TYPE(LibraryRequest)
-    CHECK_MESSAGE_TYPE(LibraryResponse)
+    CHECK_MESSAGE_TYPE(LibraryRequest);
+    CHECK_MESSAGE_TYPE(LibraryResponse);
 
-    CHECK_MESSAGE_TYPE(MediaUrlRequest)
-    CHECK_MESSAGE_TYPE(MediaUrlResponse)
+    CHECK_MESSAGE_TYPE(MediaUrlRequest);
+    CHECK_MESSAGE_TYPE(MediaUrlResponse);
 
-    CHECK_MESSAGE_TYPE(IdRequest)
-    CHECK_MESSAGE_TYPE(IdResponse)
+    CHECK_MESSAGE_TYPE(IdRequest);
+    CHECK_MESSAGE_TYPE(IdResponse);
 
-    CHECK_MESSAGE_TYPE(ChangesRequest)
-    CHECK_MESSAGE_TYPE(ChangesResponse)
+    CHECK_MESSAGE_TYPE(ChangesRequest);
+    CHECK_MESSAGE_TYPE(ChangesResponse);
 
-    CHECK_MESSAGE_TYPE(ChangeListRequest)
-    CHECK_MESSAGE_TYPE(ChangeListResponse)
+    CHECK_MESSAGE_TYPE(UploadSongRequest);
+    CHECK_MESSAGE_TYPE(UploadSongRequestInternal);
+    CHECK_MESSAGE_TYPE(UploadSongResponse);
 
-    CHECK_MESSAGE_TYPE(DownloadRequest)
-    CHECK_MESSAGE_TYPE(DownloadResponse)
-    CHECK_MESSAGE_TYPE(DownloadQuery)
-    CHECK_MESSAGE_TYPE(DownloadQueryResponse)
+    CHECK_MESSAGE_TYPE(ChangeListRequest);
+    CHECK_MESSAGE_TYPE(ChangeListResponse);
 
-    CHECK_MESSAGE_TYPE(YoutubeUrlQuery)
-    CHECK_MESSAGE_TYPE(YoutubeUrlResponse)
+    CHECK_MESSAGE_TYPE(DownloadRequest);
+    CHECK_MESSAGE_TYPE(DownloadResponse);
+    CHECK_MESSAGE_TYPE(DownloadQuery);
+    CHECK_MESSAGE_TYPE(DownloadQueryResponse);
+
+    CHECK_MESSAGE_TYPE(YoutubeUrlQuery);
+    CHECK_MESSAGE_TYPE(YoutubeUrlResponse);
 
     return EnjsonError::buildCustomError(QString("No such message ID: ") + id);
 }

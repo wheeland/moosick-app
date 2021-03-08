@@ -27,6 +27,11 @@ enum class Type : quint32
     ChangesRequest,
     ChangesResponse,
 
+    /** Upload a song and return its ID */
+    UploadSongRequest,
+    UploadSongRequestInternal,
+    UploadSongResponse,
+
     /** Request a list of changes made since revision N */
     ChangeListRequest,
     ChangeListResponse,
@@ -137,6 +142,36 @@ struct ChangesResponse : public MessageBase
 {
     DEFINE_MESSAGE_TYPE(ChangesResponse)
     ENJSON_MEMBER(QVector<Moosick::CommittedLibraryChange>, changes);
+};
+
+struct UploadSongRequest : public MessageBase
+{
+    DEFINE_MESSAGE_TYPE(UploadSongRequest)
+    ENJSON_MEMBER(QString, artistName);
+    ENJSON_MEMBER(QString, albumName);
+    ENJSON_MEMBER(QString, title);
+    ENJSON_MEMBER(int, position);
+    ENJSON_MEMBER(int, duration);
+    ENJSON_MEMBER(int, fileSize);
+    ENJSON_MEMBER(QString, fileEnding);
+};
+
+struct UploadSongRequestInternal : public MessageBase
+{
+    DEFINE_MESSAGE_TYPE(UploadSongRequestInternal)
+    ENJSON_MEMBER(QString, artistName);
+    ENJSON_MEMBER(QString, albumName);
+    ENJSON_MEMBER(QString, title);
+    ENJSON_MEMBER(int, position);
+    ENJSON_MEMBER(int, duration);
+    ENJSON_MEMBER(QString, filePath);
+    ENJSON_MEMBER(QString, fileEnding);
+};
+
+struct UploadSongResponse : public MessageBase
+{
+    DEFINE_MESSAGE_TYPE(UploadSongResponse)
+    ENJSON_MEMBER(quint32, songId);
 };
 
 struct ChangeListRequest : public MessageBase
